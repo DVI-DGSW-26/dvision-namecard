@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+/*
+ * 브랜드 컬러 토큰 (Tailwind v4 — tailwind.config.ts 대신 CSS 에서 정의)
+ * src/config/brand.ts 와 값을 맞춰야 합니다. 한쪽만 바꾸면 서명 HTML 과 화면 색이 어긋납니다.
+ * 사용 예: class="bg-brand-primary text-white" / class="text-brand-muted"
+ */
+@theme {
+  /* config/brand.ts 와 1:1 대응하는 시맨틱 토큰 */
+  --color-brand-primary: #6b4ee6;
+  --color-brand-ink: #1a1a1e;
+  --color-brand-muted: #6b6b75;
+  --color-brand-line: #e5e5ea;
+
+  /* primary(#6B4EE6) 기준 음영 단계. brand-500 == brand-primary */
+  --color-brand-50: #f3f0fd;
+  --color-brand-100: #e6e0fb;
+  --color-brand-200: #cdc2f7;
+  --color-brand-300: #b0a0f1;
+  --color-brand-400: #8e74eb;
+  --color-brand-500: #6b4ee6;
+  --color-brand-600: #5a3fd0;
+  --color-brand-700: #4a33ab;
+  --color-brand-800: #3a2886;
+  --color-brand-900: #2b1e63;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
