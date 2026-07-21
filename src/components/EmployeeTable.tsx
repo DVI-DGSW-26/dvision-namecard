@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
 import { Input, Select } from "@/components/form";
 import { SearchIcon } from "@/components/icons";
 import {
@@ -103,6 +104,11 @@ export function EmployeeTable() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+
+  // 직원을 추가한 뒤 같은 조회 조건 그대로 목록을 다시 받기 위한 값입니다.
+  // URL 파라미터가 아니라 fetch effect 의 의존성으로만 씁니다.
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   // 타이핑 중에 매 글자 요청이 나가지 않도록 한 박자 늦춥니다.
   useEffect(() => {
@@ -166,7 +172,7 @@ export function EmployeeTable() {
       });
 
     return () => controller.abort();
-  }, [queryKey]);
+  }, [queryKey, reloadNonce]);
 
   // 이번 조회의 결과가 아직 안 왔으면 로딩 중입니다.
   const isLoading = result?.key !== queryKey && failure?.key !== queryKey;
@@ -255,10 +261,8 @@ export function EmployeeTable() {
           {/* CTA — 이 화면에서 primary 를 채워 쓰는 유일한 요소입니다. */}
           <button
             type="button"
-            // TODO: 직원 추가 모달 + POST /api/employees (현재 501 스텁)
-            disabled
-            title="준비 중입니다"
-            className="h-12 rounded-card bg-primary px-group text-body-bold text-white whitespace-nowrap transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text"
+            onClick={() => setIsAdding(true)}
+            className="h-12 rounded-card bg-primary px-group text-body-bold text-white whitespace-nowrap transition-colors hover:bg-primary-hover"
           >
             직원 추가
           </button>
@@ -449,6 +453,17 @@ export function EmployeeTable() {
           </button>
         </nav>
       </div>
+
+      <AddEmployeeDialog
+        open={isAdding}
+        onClose={() => setIsAdding(false)}
+        // 추가 직후에는 수정일이 가장 최근이라 1페이지 맨 위에 옵니다.
+        onCreated={() => {
+          setPage(1);
+          setReloadNonce((n) => n + 1);
+        }}
+        departments={data?.departments ?? []}
+      />
     </div>
   );
 }

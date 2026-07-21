@@ -3,6 +3,8 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { listQuerySchema, type EmployeeListResponse } from "@/lib/employee-list";
 import { prisma } from "@/lib/prisma";
+import { buildSlug } from "@/lib/slug";
+import { employeeCreateSchema, fieldErrors } from "@/lib/validation";
 import type { Prisma } from "@/generated/prisma/client";
 
 /**
@@ -100,10 +102,108 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * 직원 추가. (스텁)
- * 구현 시: admin 세션인지 getSession() 으로 확인 → zod 검증 → buildSlug() 로 slug 생성.
- * middleware 는 /api/* 를 지나가지 않으므로 여기서 직접 권한을 확인해야 합니다.
+ * 직원 추가. (admin 전용)
+ *
+ * middleware 는 /api/* 를 지나가지 않으므로 여기서 직접 권한을 확인합니다.
+ * 새 직원은 PENDING(초대중)으로 만듭니다. 본인이 /edit 에서 정보를 채우기 전까지
+ * 공개 프로필에 완성된 명함이 뜨면 안 되기 때문입니다.
  */
-export async function POST(_request: NextRequest) {
-  return NextResponse.json({ todo: "employees:create" }, { status: 501 });
+export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  }
+  if (session.role !== "admin") {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
+  }
+
+  const parsed = employeeCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ errors: fieldErrors(parsed.error) }, { status: 422 });
+  }
+
+  const { familyName, givenName, email, rank, department, slug } = parsed.data;
+
+  const company = await prisma.company.findFirst({ select: { id: true } });
+  if (!company) {
+    return NextResponse.json(
+      { error: "회사 정보가 없습니다. 먼저 회사 정보를 등록해 주세요." },
+      { status: 409 },
+    );
+  }
+
+  // 이메일과 slug 는 둘 다 unique 입니다. 어느 쪽이 걸렸는지 알려주려고 미리 확인하고,
+  // 확인과 INSERT 사이의 경쟁은 아래 P2002 처리로 받습니다.
+  const existingEmail = await prisma.employee.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  if (existingEmail) {
+    return NextResponse.json(
+      { errors: { email: "이미 등록된 이메일입니다." } },
+      { status: 409 },
+    );
+  }
+
+  let finalSlug = slug;
+  if (finalSlug) {
+    const taken = await prisma.employee.findUnique({
+      where: { slug: finalSlug },
+      select: { id: true },
+    });
+    if (taken) {
+      return NextResponse.json(
+        { errors: { slug: "이미 사용 중인 주소입니다." } },
+        { status: 409 },
+      );
+    }
+  } else {
+    const rows = await prisma.employee.findMany({ select: { slug: true } });
+    finalSlug = buildSlug(
+      { familyName, givenName },
+      rows.map((row) => row.slug),
+    );
+    // 표에 없는 성이라 자동 생성이 불가능한 경우입니다. 관리자가 직접 정해야 합니다.
+    if (!finalSlug) {
+      return NextResponse.json(
+        { errors: { slug: "이 성은 주소를 자동으로 만들 수 없습니다. 직접 입력해 주세요." } },
+        { status: 422 },
+      );
+    }
+  }
+
+  try {
+    const created = await prisma.employee.create({
+      data: {
+        slug: finalSlug,
+        email,
+        // vCard 를 위해 성·이름은 나눠서도 보관합니다. nameKo 는 표시용 합본입니다.
+        nameKo: `${familyName}${givenName}`,
+        familyName,
+        givenName,
+        rank,
+        department,
+        status: "PENDING",
+        companyId: company.id,
+      },
+      select: { id: true, slug: true, nameKo: true },
+    });
+    return NextResponse.json(created, { status: 201 });
+  } catch (cause: unknown) {
+    // 확인 이후에 같은 값이 먼저 들어간 경우. unique 제약이 최종 방어선입니다.
+    if (typeof cause === "object" && cause !== null && "code" in cause && cause.code === "P2002") {
+      return NextResponse.json(
+        { error: "이미 등록된 이메일 또는 주소입니다. 다시 시도해 주세요." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  }
 }

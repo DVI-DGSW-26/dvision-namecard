@@ -76,6 +76,36 @@ export const employeeProfileSchema = z.object({
   ),
 });
 
+/**
+ * 직원 추가(관리자 전용).
+ *
+ * nameKo 를 받지 않고 성·이름을 따로 받습니다. vCard N 필드(`류;영균;;;`)가 둘을
+ * 나눠 요구하는데, 합쳐 받은 뒤 서버에서 쪼개면 두 글자 성(남궁·선우·제갈)에서
+ * 반드시 틀립니다. nameKo 는 서버가 둘을 이어 붙여 만듭니다.
+ */
+export const employeeCreateSchema = z.object({
+  familyName: z.string().trim().min(1, "성을 입력해 주세요.").max(10, "성이 너무 깁니다."),
+  givenName: z.string().trim().min(1, "이름을 입력해 주세요.").max(10, "이름이 너무 깁니다."),
+  email: z.preprocess(emptyToNull, z.email({ message: "이메일 형식이 올바르지 않습니다." })),
+  rank: z.enum(RANKS, { message: "직급을 선택해 주세요." }),
+  department: optionalText(30, "부서"),
+  /**
+   * 공개 URL(/c/[slug])에 그대로 들어갑니다. 비우면 성에서 자동 생성합니다.
+   * 표에 없는 성이라 자동 생성이 안 되면 서버가 이 필드로 에러를 돌려줍니다.
+   */
+  slug: z.preprocess(
+    emptyToNull,
+    z
+      .string()
+      .regex(/^[a-z0-9]+$/, "주소는 영문 소문자와 숫자만 쓸 수 있습니다.")
+      .max(30, "주소가 너무 깁니다.")
+      .nullable(),
+  ),
+});
+
+export type EmployeeCreateInput = z.input<typeof employeeCreateSchema>;
+export type EmployeeCreateValues = z.output<typeof employeeCreateSchema>;
+
 /** 설립연도 상한은 서버 시각 기준입니다. 클라이언트 시계를 믿지 않습니다. */
 const currentYear = () => new Date().getFullYear();
 
