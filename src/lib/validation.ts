@@ -18,8 +18,15 @@ export const RANKS = [
   "대표이사",
 ] as const;
 
-/** 빈 문자열·공백만 있는 값을 null 로 바꿉니다. 선택 입력 칸을 비웠을 때의 정상 경로입니다. */
+/**
+ * 빈 문자열·공백만 있는 값을 null 로 바꿉니다. 선택 입력 칸을 비웠을 때의 정상 경로입니다.
+ *
+ * 키 자체가 없는 경우(undefined)도 null 로 봅니다. 뒤에 붙는 .nullable() 은 null 만
+ * 허용하고 undefined 는 막기 때문에, 이걸 안 하면 "선택" 필드를 생략한 요청이
+ * `expected string, received undefined` 로 422 가 납니다.
+ */
 const emptyToNull = (value: unknown) => {
+  if (value === undefined || value === null) return null;
   if (typeof value !== "string") return value;
   const trimmed = value.trim();
   return trimmed === "" ? null : trimmed;
