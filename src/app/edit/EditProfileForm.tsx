@@ -10,7 +10,7 @@ import {
   employeeProfileSchema,
   fieldErrors,
   formatPhone,
-  formatThousands,
+
 } from "@/lib/validation";
 import type { Company, Employee } from "@/types";
 
@@ -27,6 +27,7 @@ type EmployeeForm = {
   nameKo: string;
   nameEn: string;
   rank: string;
+  position: string;
   credential: string;
   telWork: string;
   telMobile: string;
@@ -39,14 +40,9 @@ type CompanyForm = {
   industry: string;
   address: string;
   homepageUrl: string;
-  foundedYear: string;
-  capacity: string;
-  equipmentCount: string;
-  employeeCount: string;
 };
 
 const str = (value: string | null | undefined) => value ?? "";
-const num = (value: number | null | undefined) => (value === null || value === undefined ? "" : String(value));
 
 export function EditProfileForm({
   role,
@@ -64,6 +60,7 @@ export function EditProfileForm({
       nameKo: employee.nameKo,
       nameEn: str(employee.nameEn),
       rank: employee.rank,
+      position: str(employee.position),
       credential: str(employee.credential),
       telWork: str(employee.telWork),
       telMobile: str(employee.telMobile),
@@ -79,10 +76,6 @@ export function EditProfileForm({
       industry: str(company.industry),
       address: company.address,
       homepageUrl: str(company.homepageUrl),
-      foundedYear: num(company.foundedYear),
-      capacity: formatThousands(company.capacity),
-      equipmentCount: num(company.equipmentCount),
-      employeeCount: num(company.employeeCount),
     }),
     [company],
   );
@@ -210,6 +203,7 @@ export function EditProfileForm({
     () => ({
       nameKo: emp.nameKo,
       rank: emp.rank,
+      position: emp.position,
       credential: emp.credential,
       photoUrl: employee.photoUrl,
       telWork: emp.telWork,
@@ -224,9 +218,6 @@ export function EditProfileForm({
         certifications: Array.isArray(company.certifications)
           ? company.certifications.filter((c): c is string => typeof c === "string")
           : [],
-        foundedYear: Number(co.foundedYear) || null,
-        employeeCount: Number(co.employeeCount.replace(/,/g, "")) || null,
-        equipmentCount: Number(co.equipmentCount.replace(/,/g, "")) || null,
       },
     }),
     [emp, co, employee.photoUrl, employee.mobilePublic, company.tagline, company.certifications],
@@ -294,6 +285,16 @@ export function EditProfileForm({
           <p className="mt-sibling text-body text-sub-text">
             여기서 저장하면 이미 보낸 메일의 링크에도 즉시 반영됩니다.
           </p>
+          {/*
+            서명 화면으로 가는 유일한 입구입니다. 저장 안 한 변경이 있으면 위쪽
+            클릭 가로채기가 확인 다이얼로그를 띄웁니다 — 내부 경로라 그대로 걸립니다.
+          */}
+          <a
+            href="/edit/signature"
+            className="mt-group inline-block text-caption-bold text-primary hover:text-primary-hover"
+          >
+            이메일 서명 받기 →
+          </a>
         </header>
 
         {/* 01 기본 정보 ------------------------------------------------------ */}
@@ -326,7 +327,7 @@ export function EditProfileForm({
                     onChange={(e) => setEmpField("nameKo", e.target.value)}
                   />
                 </Field>
-                <Field label="영문명" htmlFor="nameEn" error={err("nameEn")}>
+                <Field label="영문명 (선택)" htmlFor="nameEn" error={err("nameEn")}>
                   <Input
                     id="nameEn"
                     value={emp.nameEn}
@@ -350,9 +351,22 @@ export function EditProfileForm({
                     ))}
                   </Select>
                 </Field>
-                <Field label="자격 / 학위" htmlFor="credential" error={err("credential")}>
+                {/* 직책은 직급과 별개입니다. 같은 부장이어도 팀장일 수도, 아닐 수도 있습니다. */}
+                <Field label="직책 (선택)" htmlFor="position" error={err("position")}>
+                  <Input
+                    id="position"
+                    placeholder="예: 기술영업팀장"
+                    value={emp.position}
+                    invalid={Boolean(err("position"))}
+                    onChange={(e) => setEmpField("position", e.target.value)}
+                  />
+                </Field>
+              </FieldRow>
+              <FieldRow>
+                <Field label="자격 / 학위 (선택)" htmlFor="credential" error={err("credential")}>
                   <Input
                     id="credential"
+                    placeholder="예: 공학박사"
                     value={emp.credential}
                     invalid={Boolean(err("credential"))}
                     onChange={(e) => setEmpField("credential", e.target.value)}
@@ -432,7 +446,7 @@ export function EditProfileForm({
               </Field>
             </FieldRow>
 
-            <Field label="사업 분야" htmlFor="co-industry" error={err("company.industry")}>
+            <Field label="사업 분야 (선택)" htmlFor="co-industry" error={err("company.industry")}>
               <Input
                 id="co-industry"
                 value={co.industry}
@@ -451,58 +465,12 @@ export function EditProfileForm({
             </Field>
 
             <FieldRow>
-              <Field label="홈페이지" htmlFor="co-homepageUrl" error={err("company.homepageUrl")}>
+              <Field label="홈페이지 (선택)" htmlFor="co-homepageUrl" error={err("company.homepageUrl")}>
                 <Input
                   id="co-homepageUrl"
                   value={co.homepageUrl}
                   invalid={Boolean(err("company.homepageUrl"))}
                   onChange={(e) => setCoField("homepageUrl", e.target.value)}
-                />
-              </Field>
-              <Field label="설립연도" htmlFor="co-foundedYear" error={err("company.foundedYear")}>
-                <Input
-                  id="co-foundedYear"
-                  inputMode="numeric"
-                  suffix="년"
-                  value={co.foundedYear}
-                  invalid={Boolean(err("company.foundedYear"))}
-                  onChange={(e) => setCoField("foundedYear", e.target.value)}
-                />
-              </Field>
-            </FieldRow>
-
-            <FieldRow>
-              <Field label="연간 생산능력" htmlFor="co-capacity" error={err("company.capacity")}>
-                <Input
-                  id="co-capacity"
-                  inputMode="numeric"
-                  suffix="T / 년"
-                  value={co.capacity}
-                  invalid={Boolean(err("company.capacity"))}
-                  onChange={(e) => setCoField("capacity", formatThousands(e.target.value))}
-                />
-              </Field>
-              <Field label="보유 설비" htmlFor="co-equipmentCount" error={err("company.equipmentCount")}>
-                <Input
-                  id="co-equipmentCount"
-                  inputMode="numeric"
-                  suffix="대"
-                  value={co.equipmentCount}
-                  invalid={Boolean(err("company.equipmentCount"))}
-                  onChange={(e) => setCoField("equipmentCount", e.target.value)}
-                />
-              </Field>
-            </FieldRow>
-
-            <FieldRow>
-              <Field label="임직원" htmlFor="co-employeeCount" error={err("company.employeeCount")}>
-                <Input
-                  id="co-employeeCount"
-                  inputMode="numeric"
-                  suffix="명"
-                  value={co.employeeCount}
-                  invalid={Boolean(err("company.employeeCount"))}
-                  onChange={(e) => setCoField("employeeCount", e.target.value)}
                 />
               </Field>
             </FieldRow>
