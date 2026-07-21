@@ -1,18 +1,48 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { employeeProfileSchema, fieldErrors } from "@/lib/validation";
 
 type Context = {
   params: Promise<{ id: string }>;
 };
 
 /**
- * 직원 정보 저장. (스텁)
+ * 직원 정보 저장.
  *
- * 구현 시: getSession() 으로 세션 확인(middleware 는 /api/* 를 안 탑니다) →
- * zod 검증. member 세션은 slug·email·status 를 못 바꾸게 막고, 그 필드들은
- * admin 세션에서만 허용하세요. 공용 비밀번호라 누구나 아무 id 나 수정할 수 있는
- * 구조이므로, 감사 로그가 필요하면 ProfileView 에 action 으로 남기는 걸 고려할 것.
+ * middleware 는 /api/* 를 지나가지 않으므로 여기서 직접 세션을 확인합니다.
+ * slug 와 status 는 이 엔드포인트로 바꿀 수 없습니다 — 공개 URL 과 노출 여부에
+ * 직결되는 값이라 관리자 화면에서만 다룹니다. 스키마에 아예 없으니 body 에
+ * 끼워 넣어도 무시됩니다.
+ *
+ * 공용 비밀번호 구조라 세션만으로는 "본인"을 특정할 수 없습니다. 즉 세션이 있는
+ * 사람은 누구나 아무 id 나 수정할 수 있습니다. 사내 도구라 지금은 허용하지만,
+ * 감사 로그가 필요해지면 ProfileView.action 에 남기는 걸 검토하세요.
  */
-export async function PATCH(_request: NextRequest, { params }: Context) {
+export async function PATCH(request: NextRequest, { params }: Context) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  }
+
   const { id } = await params;
-  return NextResponse.json({ todo: "employees:update", id }, { status: 501 });
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
+  }
+
+  const parsed = employeeProfileSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ errors: fieldErrors(parsed.error) }, { status: 422 });
+  }
+
+  try {
+    await prisma.employee.update({ where: { id }, data: parsed.data });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  }
 }

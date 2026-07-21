@@ -1,0 +1,154 @@
+import { z } from "zod";
+
+/**
+ * 폼 검증 스키마. 클라이언트와 서버가 같은 규칙을 씁니다.
+ *
+ * 폼 인풋은 값이 항상 문자열이라("" 포함) 숫자 필드는 preprocess 로 정규화합니다.
+ * 이걸 클라이언트에서만 하면 API 를 직접 호출했을 때 규칙이 뚫립니다.
+ */
+
+export const RANKS = [
+  "사원",
+  "주임",
+  "대리",
+  "과장",
+  "차장",
+  "부장",
+  "이사",
+  "대표이사",
+] as const;
+
+/** 빈 문자열·공백만 있는 값을 null 로 바꿉니다. 선택 입력 칸을 비웠을 때의 정상 경로입니다. */
+const emptyToNull = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+};
+
+const optionalText = (max: number, label: string) =>
+  z.preprocess(emptyToNull, z.string().max(max, `${label}은(는) ${max}자 이내로 입력해 주세요.`).nullable());
+
+/**
+ * 숫자 칸. "" 는 null, 그 외에는 정수로 변환합니다.
+ *
+ * 문자가 섞이면 zod 기본 영어 메시지가 새어 나오므로, 타입 에러 메시지를 직접 지정한
+ * z.number() 를 만들어 넘깁니다. build 콜백이 그 위에 범위 제약을 얹습니다.
+ */
+const optionalInt = (label: string, build: (base: z.ZodNumber) => z.ZodNumber) =>
+  z.preprocess(
+    (value) => {
+      const normalized = emptyToNull(value);
+      if (normalized === null || normalized === undefined) return null;
+      if (typeof normalized === "number") return normalized;
+      // 3자리 구분 쉼표(12,000)를 허용합니다. 폼에서 그대로 보여주기 때문입니다.
+      const digits = String(normalized).replace(/,/g, "");
+      const parsed = Number(digits);
+      return digits !== "" && !Number.isNaN(parsed) ? parsed : String(normalized);
+    },
+    // "항목은" 을 붙여 두면 라벨의 받침 유무와 상관없이 조사가 어색해지지 않습니다.
+    build(z.number({ error: `${label} 항목은 숫자로 입력해 주세요.` })).nullable(),
+  );
+
+/** 숫자와 하이픈만. 자동 포맷팅은 formatPhone 이 담당하고 여기서는 형식만 봅니다. */
+const phone = z.preprocess(
+  emptyToNull,
+  z
+    .string()
+    .regex(/^[0-9-]+$/, "전화번호는 숫자와 하이픈만 입력할 수 있습니다.")
+    .max(20, "전화번호가 너무 깁니다.")
+    .nullable(),
+);
+
+export const employeeProfileSchema = z.object({
+  nameKo: z
+    .string()
+    .trim()
+    .min(1, "이름을 입력해 주세요.")
+    .max(20, "이름은 20자 이내로 입력해 주세요."),
+  nameEn: optionalText(60, "영문명"),
+  rank: z.enum(RANKS, { message: "직급을 선택해 주세요." }),
+  credential: optionalText(40, "자격 · 학위"),
+  telWork: phone,
+  telMobile: phone,
+  email: z.preprocess(
+    emptyToNull,
+    z.email({ message: "이메일 형식이 올바르지 않습니다." }),
+  ),
+});
+
+/** 설립연도 상한은 서버 시각 기준입니다. 클라이언트 시계를 믿지 않습니다. */
+const currentYear = () => new Date().getFullYear();
+
+export const companyProfileSchema = z.object({
+  nameKo: z.string().trim().min(1, "회사명을 입력해 주세요.").max(60, "회사명이 너무 깁니다."),
+  nameEn: z.string().trim().min(1, "영문 회사명을 입력해 주세요.").max(80, "영문 회사명이 너무 깁니다."),
+  industry: optionalText(60, "사업 분야"),
+  address: z.string().trim().min(1, "주소를 입력해 주세요.").max(120, "주소가 너무 깁니다."),
+  homepageUrl: optionalText(120, "홈페이지"),
+  foundedYear: optionalInt("설립연도", (n) =>
+    n
+      .int("설립연도는 정수여야 합니다.")
+      .min(1900, "설립연도는 1900년 이후여야 합니다.")
+      .max(currentYear(), `설립연도는 ${currentYear()}년 이후일 수 없습니다.`),
+  ),
+  capacity: optionalInt("생산능력", (n) =>
+    n.int("생산능력은 정수여야 합니다.").positive("생산능력은 0보다 커야 합니다."),
+  ),
+  equipmentCount: optionalInt("설비 수", (n) =>
+    n.int("설비 수는 정수여야 합니다.").positive("설비 수는 0보다 커야 합니다."),
+  ),
+  employeeCount: optionalInt("임직원 수", (n) =>
+    n.int("임직원 수는 정수여야 합니다.").positive("임직원 수는 0보다 커야 합니다."),
+  ),
+});
+
+export type EmployeeProfileInput = z.input<typeof employeeProfileSchema>;
+export type EmployeeProfileValues = z.output<typeof employeeProfileSchema>;
+export type CompanyProfileInput = z.input<typeof companyProfileSchema>;
+export type CompanyProfileValues = z.output<typeof companyProfileSchema>;
+
+/**
+ * 한국 전화번호 자동 하이픈.
+ *
+ * 입력 중에도 호출되므로 자릿수가 모자란 상태를 정상으로 취급합니다.
+ * 02 는 지역번호가 2자리, 나머지는 3자리입니다.
+ */
+export function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (!digits) return "";
+
+  const groups = digits.startsWith("02")
+    ? digits.length <= 9
+      ? [2, 3, 4]
+      : [2, 4, 4]
+    : digits.length <= 10
+      ? [3, 3, 4]
+      : [3, 4, 4];
+
+  const parts: string[] = [];
+  let cursor = 0;
+  for (const size of groups) {
+    if (cursor >= digits.length) break;
+    parts.push(digits.slice(cursor, cursor + size));
+    cursor += size;
+  }
+  return parts.join("-");
+}
+
+/** 폼에 보여줄 때만 쓰는 3자리 구분. 저장 값에는 쉼표가 들어가지 않습니다. */
+export function formatThousands(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "";
+  const digits = String(value).replace(/[^\d]/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("ko-KR");
+}
+
+/** zod 에러를 필드명 → 첫 메시지 맵으로 눌러 담습니다. 폼에서 바로 쓰기 위한 형태입니다. */
+export function fieldErrors(error: z.ZodError): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const key = issue.path.join(".");
+    if (key && !(key in result)) result[key] = issue.message;
+  }
+  return result;
+}

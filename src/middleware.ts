@@ -7,7 +7,7 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/session-token";
  * Edge 런타임에서 돌기 때문에 prisma 나 lib/auth.ts(node:crypto 의존)를 여기서
  * import 하면 안 됩니다. jose 기반인 lib/session-token.ts 만 사용하세요.
  *
- * /p/[slug] 는 공개 경로라 matcher 에 넣지 않습니다.
+ * /c/[slug] 는 공개 경로라 matcher 에 넣지 않습니다.
  */
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;

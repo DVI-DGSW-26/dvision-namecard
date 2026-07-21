@@ -33,10 +33,17 @@ model Company {
   fax            String?
   logoUrl        String
   homepageUrl    String?
-  brandColor     String   @default("#6B4EE6")
+  brandColor     String   @default("#931B82")
   tagline        String?
   certifications Json
-  stats          Json
+
+  // 공개 프로필 카드의 회사 지표. Json(stats) 대신 명시적 컬럼으로 둡니다 —
+  // zod 검증과 폼 바인딩이 훨씬 단순해지고, 오타 난 키가 조용히 통과하지 않습니다.
+  industry       String? // 사업 분야: "알루미늄 압출 · 정밀가공"
+  foundedYear    Int? // 설립연도
+  capacity       Int? // 연간 생산능력 (T/년)
+  equipmentCount Int? // 보유 설비 (대)
+  employeeCount  Int? // 임직원 (명)
 
   employees Employee[]
 }
