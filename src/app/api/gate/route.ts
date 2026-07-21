@@ -10,16 +10,52 @@ import { createSession, destroySession, verifyPassword } from "@/lib/auth";
  *
  * 실패 응답에 어느 비밀번호가 틀렸는지 힌트를 주지 않습니다. 성공 시에도 role 은
  * 쿠키 안에만 있고 본문으로 내보내지 않습니다.
- *
- * TODO: 무차별 대입 방어가 없습니다. 사내 배포라 당장은 열어 두지만, 외부에
- * 노출되는 순간 IP 단위 rate limit 이 필요합니다.
  */
 
 const bodySchema = z.object({
-  password: z.string().min(1),
+  // 상한이 없으면 거대한 문자열로 해시 연산을 반복시킬 수 있습니다.
+  password: z.string().min(1).max(200),
 });
 
+/**
+ * IP 당 시도 횟수 제한.
+ *
+ * 프로세스 메모리라 인스턴스가 여러 개면 그만큼 한도가 늘어나고 재배포하면 초기화됩니다.
+ * 그래도 단일 IP 에서의 단순 반복 대입은 막습니다. 사내 도구라 이 정도로 두되,
+ * 외부에 열게 되면 Upstash 같은 공유 저장소로 옮겨야 합니다.
+ */
+const WINDOW_MS = 10 * 60 * 1000;
+const MAX_ATTEMPTS = 10;
+const attempts = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = attempts.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    return true;
+  }
+
+  entry.count += 1;
+  return entry.count <= MAX_ATTEMPTS;
+}
+
+function clientIp(request: NextRequest): string {
+  // 프록시 뒤에 있으면 x-forwarded-for 의 첫 항목이 원 클라이언트입니다.
+  const forwarded = request.headers.get("x-forwarded-for");
+  return forwarded?.split(",")[0]?.trim() || "unknown";
+}
+
 export async function POST(request: NextRequest) {
+  const ip = clientIp(request);
+  if (!rateLimit(ip)) {
+    return NextResponse.json(
+      { error: "시도가 너무 잦습니다. 잠시 후 다시 시도해 주세요." },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -38,6 +74,8 @@ export async function POST(request: NextRequest) {
   }
 
   await createSession(role);
+  // 정상 사용자가 오타 몇 번 뒤에 한도에 걸리지 않도록 성공 시 기록을 지웁니다.
+  attempts.delete(ip);
   return NextResponse.json({ ok: true });
 }
 
