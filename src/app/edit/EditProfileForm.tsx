@@ -285,6 +285,16 @@ export function EditProfileForm({
           <p className="mt-sibling text-body text-sub-text">
             여기서 저장하면 이미 보낸 메일의 링크에도 즉시 반영됩니다.
           </p>
+          {/*
+            서명 화면으로 가는 유일한 입구입니다. 저장 안 한 변경이 있으면 위쪽
+            클릭 가로채기가 확인 다이얼로그를 띄웁니다 — 내부 경로라 그대로 걸립니다.
+          */}
+          <a
+            href="/edit/signature"
+            className="mt-group inline-block text-caption-bold text-primary hover:text-primary-hover"
+          >
+            이메일 서명 받기 →
+          </a>
         </header>
 
         {/* 01 기본 정보 ------------------------------------------------------ */}
