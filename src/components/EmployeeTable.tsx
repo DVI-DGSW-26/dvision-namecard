@@ -281,33 +281,39 @@ export function EmployeeTable() {
           />
         </div>
 
-        <Select
-          value={department}
-          onChange={(event) => changeDepartment(event.target.value)}
-          aria-label="부서 필터"
-          className="w-44"
-        >
-          <option value="">전체 부서</option>
-          {(data?.departments ?? []).map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </Select>
+        {/*
+          Select 는 기본 클래스에 w-full 을 갖고 있어서 className 으로 폭을 넘기면
+          Tailwind 규칙 순서상 밀립니다. 폭은 바깥 div 로 잡습니다.
+        */}
+        <div className="w-44">
+          <Select
+            value={department}
+            onChange={(event) => changeDepartment(event.target.value)}
+            aria-label="부서 필터"
+          >
+            <option value="">전체 부서</option>
+            {(data?.departments ?? []).map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </Select>
+        </div>
 
-        <Select
-          value={status}
-          onChange={(event) => changeStatus(event.target.value as Status | "")}
-          aria-label="상태 필터"
-          className="w-44"
-        >
-          <option value="">전체 상태</option>
-          {STATUS_OPTIONS.map((value) => (
-            <option key={value} value={value}>
-              {STATUS_LABEL[value]}
-            </option>
-          ))}
-        </Select>
+        <div className="w-44">
+          <Select
+            value={status}
+            onChange={(event) => changeStatus(event.target.value as Status | "")}
+            aria-label="상태 필터"
+          >
+            <option value="">전체 상태</option>
+            {STATUS_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {STATUS_LABEL[value]}
+              </option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       {/* 에러도 색이 아니라 문구로 알립니다. 빨강을 추가하면 팔레트가 늘어납니다. */}
