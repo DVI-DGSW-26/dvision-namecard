@@ -11,7 +11,8 @@
     "test": "tsx --test \"src/**/*.test.ts\"",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "sig:preview": "tsx scripts/preview-signature.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
