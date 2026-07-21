@@ -37,13 +37,7 @@ model Company {
   tagline        String?
   certifications Json
 
-  // 공개 프로필 카드의 회사 지표. Json(stats) 대신 명시적 컬럼으로 둡니다 —
-  // zod 검증과 폼 바인딩이 훨씬 단순해지고, 오타 난 키가 조용히 통과하지 않습니다.
-  industry       String? // 사업 분야: "알루미늄 압출 · 정밀가공"
-  foundedYear    Int? // 설립연도
-  capacity       Int? // 연간 생산능력 (T/년)
-  equipmentCount Int? // 보유 설비 (대)
-  employeeCount  Int? // 임직원 (명)
+  industry String? // 사업 분야: "알루미늄 압출 · 정밀가공"
 
   employees Employee[]
 }
@@ -62,6 +56,8 @@ model Employee {
   nameEn     String?
 
   rank       Rank
+  // 직책(팀장·본부장·공장장). 직급(rank)과 별개입니다 — 같은 부장이어도 직책은 다를 수 있습니다.
+  position   String?
   department String?
   credential String?
   bio        String? @db.VarChar(80)

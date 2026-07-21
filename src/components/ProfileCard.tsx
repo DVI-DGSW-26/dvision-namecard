@@ -18,6 +18,8 @@ import type { Company, Employee } from "@/types";
 export type ProfileCardData = {
   nameKo: string;
   rank: string;
+  /** 직책(팀장·본부장). 직급과 별개이고 선택 입력입니다. */
+  position?: string | null;
   credential?: string | null;
   photoUrl?: string | null;
   telWork?: string | null;
@@ -30,9 +32,6 @@ export type ProfileCardData = {
     industry?: string | null;
     tagline?: string | null;
     certifications: string[];
-    foundedYear?: number | null;
-    employeeCount?: number | null;
-    equipmentCount?: number | null;
   };
 };
 
@@ -41,6 +40,7 @@ export function toProfileCardData(employee: Employee, company: Company): Profile
   return {
     nameKo: employee.nameKo,
     rank: employee.rank,
+    position: employee.position,
     credential: employee.credential,
     photoUrl: employee.photoUrl,
     telWork: employee.telWork,
@@ -56,9 +56,6 @@ export function toProfileCardData(employee: Employee, company: Company): Profile
       certifications: Array.isArray(company.certifications)
         ? company.certifications.filter((c): c is string => typeof c === "string")
         : [],
-      foundedYear: company.foundedYear,
-      employeeCount: company.employeeCount,
-      equipmentCount: company.equipmentCount,
     },
   };
 }
@@ -106,46 +103,22 @@ function ActionButton({
   );
 }
 
-/**
- * 지표 한 칸.
- *
- * value 는 이미 포맷된 문자열입니다. 연도(1998)에 3자리 구분을 넣으면 1,998 이 되므로
- * 포맷 여부는 호출부가 항목별로 정합니다.
- */
-function Stat({ value, unit, label }: { value: string; unit?: string; label: string }) {
-  return (
-    <div className="flex flex-col gap-tight">
-      <p className="text-title text-text">
-        {value}
-        {unit ? <span className="text-caption text-sub-text"> {unit}</span> : null}
-      </p>
-      <p className="text-caption text-sub-text">{label}</p>
-    </div>
-  );
-}
-
 export function ProfileCard({ data }: { data: ProfileCardData }) {
   const { company } = data;
 
-  // 직급과 자격·학위는 한 줄. 자격이 없으면 구분자가 혼자 남지 않게 배열로 조립합니다.
-  const roleText = [data.rank, data.credential?.trim()].filter(Boolean).join(" · ");
+  // 직급 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고 구분자가 혼자 남지 않도록
+  // 배열로 모아 join 합니다. (서명 조립 규칙과 같은 방식)
+  const roleText = [data.rank, data.position?.trim(), data.credential?.trim()]
+    .filter(Boolean)
+    .join(" · ");
 
   const tel = data.telWork?.trim() || null;
   // mobilePublic 이 false 면 번호가 있어도 공개하지 않습니다. (서명 규칙과 동일)
   const mobile = data.mobilePublic ? data.telMobile?.trim() || null : null;
   const email = data.email?.trim() || null;
 
-  const count = (n: number) => n.toLocaleString("ko-KR");
-
-  const stats = [
-    // 연도는 3자리 구분 없이 그대로. (1998 이지 1,998 이 아닙니다)
-    company.foundedYear ? { value: String(company.foundedYear), label: "설립" } : null,
-    company.employeeCount ? { value: count(company.employeeCount), unit: "명", label: "임직원" } : null,
-    company.equipmentCount ? { value: count(company.equipmentCount), unit: "대", label: "설비" } : null,
-  ].filter((s): s is { value: string; unit?: string; label: string } => s !== null);
-
   const hasCompanyBlock =
-    company.industry || company.tagline || company.certifications.length > 0 || stats.length > 0;
+    company.industry || company.tagline || company.certifications.length > 0;
 
   return (
     <article className="bg-bg text-text">
@@ -206,14 +179,6 @@ export function ProfileCard({ data }: { data: ProfileCardData }) {
                 </li>
               ))}
             </ul>
-          ) : null}
-
-          {stats.length > 0 ? (
-            <div className="mt-block flex gap-block">
-              {stats.map((stat) => (
-                <Stat key={stat.label} {...stat} />
-              ))}
-            </div>
           ) : null}
         </div>
       ) : null}

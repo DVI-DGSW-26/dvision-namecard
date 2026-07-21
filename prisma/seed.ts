@@ -40,10 +40,6 @@ async function main() {
       industry: "알루미늄 압출 · 정밀가공",
       tagline: "자동차 경량 부품 전문",
       certifications: ["IATF 16949", "ISO 9001"],
-      foundedYear: 1998,
-      capacity: 12000,
-      equipmentCount: 86,
-      employeeCount: 142,
     },
   });
 
@@ -81,6 +77,8 @@ async function main() {
       familyName: "홍",
       givenName: "민지",
       rank: "부장",
+      // 직급(부장)과 직책(팀장)이 다른 케이스 — 카드에서 둘 다 나오는지 확인용입니다.
+      position: "기술영업팀장",
       department: "기술영업팀",
       telWork: "031-355-1235",
       telMobile: "010-2345-6789",

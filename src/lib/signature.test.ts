@@ -21,10 +21,6 @@ const company: Company = {
   tagline: "자동차 경량 부품 전문",
   certifications: ["IATF 16949", "ISO 9001"],
   industry: "알루미늄 압출 · 정밀가공",
-  foundedYear: 1998,
-  capacity: 12000,
-  equipmentCount: 86,
-  employeeCount: 142,
 };
 
 const employee: Employee = {
@@ -37,6 +33,7 @@ const employee: Employee = {
   nameEn: null,
   rank: "대표이사",
   department: null,
+  position: null,
   credential: "공학박사",
   bio: null,
   telWork: "053-710-1022",
