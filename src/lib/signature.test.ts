@@ -29,18 +29,18 @@ const company: Company = {
 
 const employee: Employee = {
   id: "emp_1",
-  slug: "ryu",
-  email: "yg.ryu@dvi-ind.com",
-  nameKo: "류영균",
-  familyName: "류",
-  givenName: "영균",
+  slug: "hong",
+  email: "hong@dvi-ind.com",
+  nameKo: "홍길동",
+  familyName: "홍",
+  givenName: "길동",
   nameEn: null,
   rank: "대표이사",
   department: null,
   credential: "공학박사",
   bio: null,
   telWork: "053-710-1022",
-  telMobile: "010-3131-6834",
+  telMobile: "010-1234-5678",
   mobilePublic: true,
   photoUrl: null,
   status: "ACTIVE",
@@ -68,16 +68,16 @@ describe("renderSignature", () => {
   it("모든 값이 있으면 T·M·F 가 모두 나온다", () => {
     const html = renderSignature(emp(), co());
 
-    assert.match(html, /류영균/);
+    assert.match(html, /홍길동/);
     assert.match(html, /대표이사 · 공학박사/);
     assert.match(html, /\(주\)디비전/);
     assert.match(html, /DVISION Inc\./);
     assert.match(html, />T<\/span>&nbsp; 053-710-1022/);
-    assert.match(html, />M<\/span>&nbsp; 010-3131-6834/);
+    assert.match(html, />M<\/span>&nbsp; 010-1234-5678/);
     assert.match(html, />F<\/span>&nbsp; 053-715-2096/);
-    assert.match(html, /mailto:yg\.ryu@dvi-ind\.com/);
+    assert.match(html, /mailto:hong@dvi-ind\.com/);
     assert.match(html, /대구광역시 달성군 구지면 국가산단대로33길 237/);
-    assert.match(html, /href="https:\/\/dvi-ind\.com\/c\/ryu"/);
+    assert.match(html, /href="https:\/\/dvi-ind\.com\/c\/hong"/);
   });
 
   it("검증된 A안 마크업 구조를 유지한다", () => {
@@ -108,7 +108,7 @@ describe("renderSignature", () => {
     const html = renderSignature(emp({ mobilePublic: false }), co());
 
     assert.ok(!html.includes(">M</span>"), "M 라벨이 남으면 안 된다");
-    assert.ok(!html.includes("010-3131-6834"), "비공개 번호가 노출되면 안 된다");
+    assert.ok(!html.includes("010-1234-5678"), "비공개 번호가 노출되면 안 된다");
   });
 
   it("credential 이 없으면 rank 만 표시한다", () => {
@@ -119,10 +119,10 @@ describe("renderSignature", () => {
   });
 
   it("이름의 & 를 이스케이프한다", () => {
-    const html = renderSignature(emp({ nameKo: "류영균 & 김철수" }), co());
+    const html = renderSignature(emp({ nameKo: "홍길동 & 김철수" }), co());
 
-    assert.match(html, /류영균 &amp; 김철수/);
-    assert.ok(!/류영균 & 김/.test(html), "원본 & 가 그대로 남으면 안 된다");
+    assert.match(html, /홍길동 &amp; 김철수/);
+    assert.ok(!/홍길동 & 김/.test(html), "원본 & 가 그대로 남으면 안 된다");
   });
 
   it("이름에 태그가 들어와도 마크업으로 해석되지 않는다", () => {
@@ -182,12 +182,12 @@ describe("renderSignatureText", () => {
     assert.equal(
       text,
       [
-        "류영균 대표이사 · 공학박사",
+        "홍길동 대표이사 · 공학박사",
         "(주)디비전 DVISION Inc.",
-        "T 053-710-1022  M 010-3131-6834  F 053-715-2096",
-        "E yg.ryu@dvi-ind.com",
+        "T 053-710-1022  M 010-1234-5678  F 053-715-2096",
+        "E hong@dvi-ind.com",
         "A 대구광역시 달성군 구지면 국가산단대로33길 237",
-        "명함 보기: https://dvi-ind.com/c/ryu",
+        "명함 보기: https://dvi-ind.com/c/hong",
       ].join("\n"),
     );
     assert.ok(!text.includes("<"), "태그가 들어가면 안 된다");
@@ -195,9 +195,9 @@ describe("renderSignatureText", () => {
   });
 
   it("평문이므로 & 를 이스케이프하지 않는다", () => {
-    const text = renderSignatureText(emp({ nameKo: "류영균 & 김철수" }), co());
+    const text = renderSignatureText(emp({ nameKo: "홍길동 & 김철수" }), co());
 
-    assert.match(text, /류영균 & 김철수/);
+    assert.match(text, /홍길동 & 김철수/);
     assert.ok(!text.includes("&amp;"));
   });
 
@@ -205,7 +205,7 @@ describe("renderSignatureText", () => {
     const text = renderSignatureText(emp({ mobilePublic: false }), co({ fax: null }));
 
     assert.match(text, /^T 053-710-1022$/m);
-    assert.ok(!text.includes("010-3131-6834"));
+    assert.ok(!text.includes("010-1234-5678"));
     assert.ok(!text.includes("F "));
   });
 });
