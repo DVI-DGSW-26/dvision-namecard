@@ -12,7 +12,11 @@ export const brand = {
   ink: tokens.color.text,
   muted: tokens.color.subText,
   line: tokens.color.border,
+  /** 공식 로고(세로형 — 심볼 위, 워드마크 아래). 비율 0.9:1 이라 좁은 가로 공간에는 맞지 않습니다. */
   logo: "/brand/logo.png",
+
+  /** 로고에서 심볼만 분리한 정사각 버전. 헤더처럼 높이가 좁은 자리에 씁니다. */
+  symbol: "/brand/symbol.png",
 
   /** compact | standard | wide | minimal */
   signatureTemplate: "compact",

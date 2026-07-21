@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { brand } from "@/config/brand";
 import { UserIcon } from "./icons";
 
 /**
@@ -31,9 +33,20 @@ export function TopNav({
   return (
     <header className="border-b border-border bg-bg">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-block px-section">
-        <Link href="/edit" className="text-title" aria-label="디비전 디지털 명함 홈">
-          <span className="text-primary">D</span>
-          <span className="text-text">VISION</span>
+        {/*
+          공식 로고는 심볼 위에 워드마크가 놓인 세로형(0.9:1)이라 64px 헤더에 그대로
+          넣으면 글자가 8px 이하로 뭉갭니다. 심볼만 쓰고 워드마크는 텍스트로 잇습니다.
+        */}
+        <Link
+          href="/edit"
+          className="flex shrink-0 items-center gap-sibling text-title"
+          aria-label="디비전 디지털 명함 홈"
+        >
+          <Image src={brand.symbol} alt="" width={256} height={256} priority className="h-7 w-7" />
+          <span>
+            <span className="text-primary">D</span>
+            <span className="text-text">VISION</span>
+          </span>
         </Link>
 
         <nav className="flex items-center gap-section">
