@@ -79,7 +79,7 @@ export default async function SignaturePage({ searchParams }: Props) {
 
   return (
     <>
-      <TopNav role={role} email={employee.email} current="/edit" />
+      <TopNav role={role} email={employee.email} current="/edit/signature" />
       <main className="mx-auto w-full max-w-[1000px] px-section py-block">
         <header>
           <p className="text-caption text-sub-text">내 명함</p>
