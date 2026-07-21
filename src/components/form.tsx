@@ -64,10 +64,12 @@ export function Field({
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   /** 인풋 오른쪽 안쪽에 붙는 단위 표시 (년, 대, 명, T / 년) */
   suffix?: string;
+  /** 인풋 왼쪽 안쪽에 붙는 아이콘 (검색 등) */
+  icon?: React.ReactNode;
   invalid?: boolean;
 };
 
-export function Input({ suffix, invalid, className = "", ...props }: InputProps) {
+export function Input({ suffix, icon, invalid, className = "", ...props }: InputProps) {
   const field = (
     <input
       {...props}
@@ -80,19 +82,27 @@ export function Input({ suffix, invalid, className = "", ...props }: InputProps)
         "disabled:bg-sub-bg disabled:text-sub-text",
         invalid ? "border-text" : "border-border",
         suffix ? "pr-block" : "",
+        icon ? "pl-block" : "",
         className,
       ].join(" ")}
     />
   );
 
-  if (!suffix) return field;
+  if (!suffix && !icon) return field;
 
   return (
     <div className="relative">
       {field}
-      <span className="pointer-events-none absolute inset-y-0 right-group flex items-center text-caption text-sub-text">
-        {suffix}
-      </span>
+      {icon ? (
+        <span className="pointer-events-none absolute inset-y-0 left-group flex items-center text-sub-text">
+          {icon}
+        </span>
+      ) : null}
+      {suffix ? (
+        <span className="pointer-events-none absolute inset-y-0 right-group flex items-center text-caption text-sub-text">
+          {suffix}
+        </span>
+      ) : null}
     </div>
   );
 }
