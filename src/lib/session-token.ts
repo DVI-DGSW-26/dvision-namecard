@@ -14,7 +14,21 @@ export const SESSION_COOKIE = "dvi_session";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
 
 export type Role = "member" | "admin";
-export type Session = { role: Role };
+
+export type Session = {
+  role: Role;
+  /**
+   * 로그인한 본인의 Employee.id.
+   *
+   * 공용 비밀번호는 "우리 회사 사람인지" 만 증명하므로, 신원은 게이트에서 받은
+   * 사내 이메일로 따로 확인해 여기 담습니다. 이게 없으면 /edit 이 누구 명함을
+   * 열어야 할지 알 수 없습니다.
+   *
+   * null 인 경우는 하나뿐입니다 — 직원이 한 명도 없는 상태에서 관리자가 처음
+   * 들어온 경우. 그래야 첫 직원을 등록할 수 있습니다. (부트스트랩)
+   */
+  employeeId: string | null;
+};
 
 function getSecret(): Uint8Array {
   const secret = process.env.SESSION_SECRET;
@@ -24,9 +38,9 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-/** 역할을 담은 세션 JWT 를 서명해 문자열로 만듭니다. */
-export async function signSessionToken(role: Role): Promise<string> {
-  return new SignJWT({ role })
+/** 역할과 본인 식별자를 담은 세션 JWT 를 서명해 문자열로 만듭니다. */
+export async function signSessionToken(session: Session): Promise<string> {
+  return new SignJWT({ role: session.role, employeeId: session.employeeId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
@@ -39,7 +53,11 @@ export async function verifySessionToken(token: string): Promise<Session | null>
     const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
     const role = payload.role;
     if (role !== "member" && role !== "admin") return null;
-    return { role };
+
+    const employeeId = payload.employeeId;
+    // 토큰에 담기는 값이라 문자열인지 확인합니다. 예전 형식(employeeId 없음)의
+    // 쿠키를 들고 오면 null 로 떨어지고, /edit 이 다시 로그인하도록 안내합니다.
+    return { role, employeeId: typeof employeeId === "string" ? employeeId : null };
   } catch {
     return null;
   }

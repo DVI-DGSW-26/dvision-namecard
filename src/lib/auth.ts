@@ -56,8 +56,8 @@ export function verifyPassword(input: string): Role | null {
 }
 
 /** 인증 성공 시 서명된 httpOnly 세션 쿠키를 심습니다. (Route Handler / Server Action 전용) */
-export async function createSession(role: Role): Promise<void> {
-  const token = await signSessionToken(role);
+export async function createSession(session: Session): Promise<void> {
+  const token = await signSessionToken(session);
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
