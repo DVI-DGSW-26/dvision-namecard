@@ -11,10 +11,21 @@ import { copyRichText } from "@/lib/clipboard";
  * 여기서 문자열을 이어 붙이기 시작하면 이스케이프 책임이 두 곳으로 쪼개집니다.
  */
 
+/**
+ * 메일 클라이언트별 설치 안내.
+ *
+ * settingsUrl 은 "설정 화면까지" 만 데려다줍니다. 서명 편집기 자체를 가리키는 깊은
+ * 주소는 넣지 않았습니다 — Microsoft 가 서명 위치를 `메일 > 작성 및 회신` 에서
+ * `계정 > 서명` 으로 옮긴 전례가 있고, 그런 주소는 바뀌어도 404 가 아니라 엉뚱한
+ * 화면으로 조용히 데려갑니다. 그러면 안내가 틀렸다는 걸 아무도 모릅니다.
+ *
+ * 데스크톱 앱은 웹 주소로 열 방법이 없어 단계 안내만 둡니다.
+ */
 const GUIDES = [
   {
     id: "outlook",
-    label: "Outlook (데스크톱)",
+    label: "Outlook (데스크톱 앱)",
+    settingsUrl: null,
     steps: [
       "파일 → 옵션 → 메일 → 서명 클릭",
       "새로 만들기 로 서명을 하나 만들고 이름을 지정",
@@ -25,25 +36,28 @@ const GUIDES = [
   {
     id: "outlook-web",
     label: "Outlook (웹)",
+    settingsUrl: "https://outlook.office.com/mail/options/",
     steps: [
-      "설정(톱니) → 메일 → 작성 및 회신",
-      "전자 메일 서명 편집기에 붙여넣기",
-      "새 메시지용 / 회신 및 전달용 서명을 각각 선택 후 저장",
+      "설정에서 계정 → 서명 으로 이동 (예전 버전은 메일 → 작성 및 회신)",
+      "새 서명 을 만들고 편집 영역에 붙여넣기",
+      "새 메시지용 / 회신 및 전달용 서명을 각각 지정 후 저장",
     ],
   },
   {
     id: "gmail",
     label: "Gmail",
+    settingsUrl: "https://mail.google.com/mail/u/0/#settings/general",
     steps: [
-      "설정(톱니) → 모든 설정 보기 → 기본설정 탭",
-      "서명 항목에서 새로 만들기",
-      "편집 영역에 붙여넣기 (Ctrl+V)",
-      "아래 서명 기본값 에서 새 메일 / 답장에 각각 지정 후 맨 아래 변경사항 저장",
+      "기본설정 탭에서 아래로 내려 서명 항목 찾기",
+      "새로 만들기 로 서명을 추가하고 편집 영역에 붙여넣기",
+      "서명 기본값 에서 새 메일 / 답장에 각각 지정",
+      "맨 아래 변경사항 저장 클릭 (이걸 안 누르면 사라집니다)",
     ],
   },
   {
     id: "naver",
     label: "네이버 메일",
+    settingsUrl: "https://mail.naver.com/",
     steps: [
       "환경설정 → 기본 설정 → 서명/이름 관리",
       "서명 사용 을 켜고 편집 영역에 붙여넣기",
@@ -122,11 +136,27 @@ export function SignaturePanel({ html, text }: { html: string; text: string }) {
                   <span className="text-caption text-sub-text">{open ? "닫기" : "열기"}</span>
                 </button>
                 {open ? (
-                  <ol className="flex list-decimal flex-col gap-sibling border-t border-border px-block py-section pl-block text-body text-sub-text">
-                    {guide.steps.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ol>
+                  <div className="border-t border-border px-block py-section">
+                    {/*
+                      복사 → 설정 열기 순서로 눌러야 합니다. 설정은 새 탭에서 열리므로
+                      클립보드 내용은 그대로 유지됩니다.
+                    */}
+                    {guide.settingsUrl ? (
+                      <a
+                        href={guide.settingsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mb-section inline-block rounded-card border border-border px-group py-sibling text-caption-bold text-text hover:border-text"
+                      >
+                        설정 열기 (새 탭) →
+                      </a>
+                    ) : null}
+                    <ol className="flex list-decimal flex-col gap-sibling pl-group text-body text-sub-text">
+                      {guide.steps.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
                 ) : null}
               </div>
             );

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { resolveEditTarget } from "@/lib/current-employee";
 import { renderSignature, renderSignatureText } from "@/lib/signature";
 import { TopNav } from "@/components/TopNav";
 import { SignaturePanel } from "./SignaturePanel";
@@ -35,29 +35,31 @@ function Notice({ title, detail }: { title: string; detail: string }) {
 }
 
 export default async function SignaturePage({ searchParams }: Props) {
-  const session = await getSession();
   const { e } = await searchParams;
+  const result = await resolveEditTarget(e);
 
-  let employee: Awaited<ReturnType<typeof prisma.employee.findFirst>> = null;
-  let company: Awaited<ReturnType<typeof prisma.company.findFirst>> = null;
+  if (result.kind === "no-session") redirect("/gate?next=%2Fedit%2Fsignature");
 
-  try {
-    employee = e
-      ? await prisma.employee.findUnique({ where: { slug: e } })
-      : await prisma.employee.findFirst({
-          where: { status: "ACTIVE" },
-          orderBy: { createdAt: "asc" },
-        });
-    company = await prisma.company.findFirst();
-  } catch {
+  if (result.kind === "db-error") {
     return (
       <Notice title="데이터를 불러오지 못했습니다" detail="데이터베이스에 연결하지 못했습니다." />
     );
   }
 
-  if (!employee || !company) {
+  if (result.kind === "no-self") {
+    return (
+      <Notice
+        title="등록된 명함이 없습니다"
+        detail="아직 직원이 등록되지 않아 서명을 만들 수 없습니다. 임직원 관리에서 직원을 추가하세요."
+      />
+    );
+  }
+
+  if (result.kind === "not-found") {
     return <Notice title="데이터가 아직 없습니다" detail="직원 또는 회사 정보를 찾을 수 없습니다." />;
   }
+
+  const { role, employee, company } = result;
 
   let html: string;
   let text: string;
@@ -75,11 +77,10 @@ export default async function SignaturePage({ searchParams }: Props) {
     );
   }
 
-  const role = session?.role ?? "member";
 
   return (
     <>
-      <TopNav role={role} email={employee.email} current="/edit" />
+      <TopNav role={role} email={employee.email} current="/edit/signature" />
       <main className="mx-auto w-full max-w-[1000px] px-section py-block">
         <header>
           <p className="text-caption text-sub-text">내 명함</p>

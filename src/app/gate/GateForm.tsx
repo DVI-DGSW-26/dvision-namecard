@@ -13,6 +13,7 @@ import { Field, Input } from "@/components/form";
  */
 export function GateForm({ next }: { next: string }) {
   const router = useRouter();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +27,7 @@ export function GateForm({ next }: { next: string }) {
       const response = await fetch("/api/gate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
@@ -35,8 +36,12 @@ export function GateForm({ next }: { next: string }) {
         return;
       }
 
+      const payload = await response.json().catch(() => null);
+      // 직원이 아직 없는 상태로 들어온 관리자는 "내 명함" 이 없습니다.
+      const destination = payload?.bootstrap ? "/admin/employees" : next;
+
       // 세션 쿠키가 생겼으니 서버 컴포넌트를 다시 그려야 합니다.
-      router.replace(next);
+      router.replace(destination);
       router.refresh();
     } catch {
       setError("네트워크 오류로 로그인하지 못했습니다.");
@@ -47,12 +52,29 @@ export function GateForm({ next }: { next: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-section">
+      {/*
+        이메일은 "누구인지" 를 받는 칸입니다. 비밀번호는 회사 전체가 같은 값이라
+        그것만으로는 신원을 알 수 없습니다.
+      */}
+      <Field label="사내 이메일" htmlFor="email">
+        <Input
+          id="email"
+          type="email"
+          autoComplete="username"
+          placeholder="hong@dvi-ind.com"
+          autoFocus
+          value={email}
+          invalid={Boolean(error)}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </Field>
+
+      {/* 에러는 두 칸 중 어디가 틀렸는지 알려주지 않으므로 아래쪽에 한 번만 띄웁니다. */}
       <Field label="비밀번호" htmlFor="password" error={error ?? undefined}>
         <Input
           id="password"
           type="password"
           autoComplete="current-password"
-          autoFocus
           value={password}
           invalid={Boolean(error)}
           onChange={(e) => setPassword(e.target.value)}
@@ -61,7 +83,7 @@ export function GateForm({ next }: { next: string }) {
 
       <button
         type="submit"
-        disabled={!password || submitting}
+        disabled={!email || !password || submitting}
         className="h-12 w-full rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text"
       >
         {submitting ? "확인 중…" : "들어가기"}

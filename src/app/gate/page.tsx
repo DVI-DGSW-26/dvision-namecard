@@ -27,7 +27,7 @@ export default async function GatePage({ searchParams }: Props) {
         <span className="text-primary">D</span>VISION
       </h1>
       <p className="mt-sibling text-body text-sub-text">
-        사내 공지로 받은 비밀번호를 입력해 주세요.
+        사내 이메일과 공지로 받은 비밀번호를 입력해 주세요.
       </p>
 
       <div className="mt-block">

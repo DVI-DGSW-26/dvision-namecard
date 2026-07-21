@@ -15,9 +15,9 @@ type Context = {
  * 직결되는 값이라 관리자 화면에서만 다룹니다. 스키마에 아예 없으니 body 에
  * 끼워 넣어도 무시됩니다.
  *
- * 공용 비밀번호 구조라 세션만으로는 "본인"을 특정할 수 없습니다. 즉 세션이 있는
- * 사람은 누구나 아무 id 나 수정할 수 있습니다. 사내 도구라 지금은 허용하지만,
- * 감사 로그가 필요해지면 ProfileView.action 에 남기는 걸 검토하세요.
+ * 신원은 게이트에서 사내 이메일로 확인해 세션에 employeeId 로 담깁니다. 회원은
+ * 본인 것만, 관리자는 아무나 수정할 수 있습니다. 다만 공용 비밀번호를 아는 사람은
+ * 남의 이메일로 로그인할 수 있어 사칭 자체는 막지 못합니다.
  */
 export async function PATCH(request: NextRequest, { params }: Context) {
   const session = await getSession();
@@ -26,6 +26,12 @@ export async function PATCH(request: NextRequest, { params }: Context) {
   }
 
   const { id } = await params;
+
+  // 회원은 본인 것만 고칠 수 있습니다. 관리자는 임직원 관리에서 남의 것도 고칩니다.
+  // 화면에서 막는 것과 별개로 여기서 다시 확인해야 합니다 — API 는 직접 호출됩니다.
+  if (session.role !== "admin" && session.employeeId !== id) {
+    return NextResponse.json({ error: "본인의 명함만 수정할 수 있습니다." }, { status: 403 });
+  }
 
   let body: unknown;
   try {
