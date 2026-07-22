@@ -1,4 +1,5 @@
 import { MailIcon, MessageIcon, PhoneIcon, UserIcon } from "./icons";
+import { brand } from "@/config/brand";
 import type { Company, Employee } from "@/types";
 
 /**
@@ -31,9 +32,24 @@ export type ProfileCardData = {
     nameEn: string;
     industry?: string | null;
     tagline?: string | null;
+    /** 스킴 없이 "dvi-ind.com" 으로 들어와도 됩니다. 카드가 붙여서 씁니다. */
+    homepageUrl?: string | null;
     certifications: string[];
   };
 };
+
+/**
+ * 홈페이지 주소를 링크로 쓸 수 있는 형태로 만듭니다.
+ *
+ * /edit 는 자유 입력이라 "dvi-ind.com" 처럼 스킴 없이 저장된 값이 섞입니다.
+ * 그대로 href 에 넣으면 브라우저가 상대 경로로 읽어 /c/dvi-ind.com 으로 갑니다.
+ * 값이 비면 브랜드 기본 주소로 떨어져 CTA 가 사라지지 않게 합니다.
+ */
+function homepageHref(raw?: string | null): string {
+  const url = raw?.trim();
+  if (!url) return brand.homepage;
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
 
 /** DB 레코드 → 카드 데이터. /c/[slug] 쪽 어댑터입니다. */
 export function toProfileCardData(employee: Employee, company: Company): ProfileCardData {
@@ -52,6 +68,7 @@ export function toProfileCardData(employee: Employee, company: Company): Profile
       nameEn: company.nameEn,
       industry: company.industry,
       tagline: company.tagline,
+      homepageUrl: company.homepageUrl,
       // certifications 는 Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 통과시킵니다.
       certifications: Array.isArray(company.certifications)
         ? company.certifications.filter((c): c is string => typeof c === "string")
@@ -145,12 +162,18 @@ export function ProfileCard({ data }: { data: ProfileCardData }) {
           <span className="text-caption-bold text-text">{company.nameKo}</span>
         </p>
 
-        {/* CTA — 화면에서 primary 를 채워 쓰는 유일한 요소입니다. */}
+        {/*
+          CTA — 화면에서 primary 를 채워 쓰는 유일한 요소입니다.
+          명함을 받은 사람이 다음에 하는 행동은 "회사가 뭐 하는 곳인지 보기" 라서
+          회사 홈페이지로 보냅니다. 카드는 닫히지 않도록 새 탭으로 엽니다.
+        */}
         <a
-          href="./vcard"
+          href={homepageHref(company.homepageUrl)}
+          target="_blank"
+          rel="noreferrer"
           className="mt-section flex h-12 w-full items-center justify-center rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover"
         >
-          연락처 저장
+          홈페이지 바로가기
         </a>
 
         <div className="mt-group flex w-full gap-sibling">

@@ -217,6 +217,8 @@ export function EditProfileForm({
         nameEn: co.nameEn,
         industry: co.industry,
         tagline: company.tagline,
+        // 홈페이지를 고치면 미리보기 CTA 도 그 자리에서 따라갑니다.
+        homepageUrl: co.homepageUrl,
         certifications: Array.isArray(company.certifications)
           ? company.certifications.filter((c): c is string => typeof c === "string")
           : [],

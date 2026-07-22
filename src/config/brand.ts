@@ -46,6 +46,15 @@ export const brand = {
    */
   serviceMark: "/brand/dingdong-mark.png",
 
+  /**
+   * 회사 홈페이지. 공개 카드의 CTA(홈페이지 바로가기)가 여기로 갑니다.
+   *
+   * 정식 출처는 DB 의 Company.homepageUrl 이고(/edit 에서 고칩니다) 이 값은
+   * 그게 비어 있을 때만 쓰는 바닥값입니다. 회사가 하나뿐인 서비스라 CTA 가
+   * 조용히 사라지는 쪽이 더 나쁩니다.
+   */
+  homepage: "https://dvi-ind.com/",
+
   /** compact | standard | wide | minimal */
   signatureTemplate: "compact",
 
