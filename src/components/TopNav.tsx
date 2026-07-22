@@ -4,20 +4,23 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { brand } from "@/config/brand";
-import { CloseIcon, MenuIcon, UserIcon } from "./icons";
+import { navItemsFor } from "@/config/nav";
+import type { Role } from "@/lib/session-token";
+import { CloseIcon, UserIcon } from "./icons";
 import { LogoutButton } from "./LogoutButton";
 
 /**
- * 상단 네비게이션.
- *
- * `임직원 관리` 는 관리자 세션에만 보입니다. /admin 아래라 middleware 가 이미
- * 막고 있지만, 회원에게 보여주고 눌렀을 때 튕기는 것보다 아예 안 보이는 편이 낫습니다.
+ * 상단 네비게이션. 항목은 config/nav.ts 에 있습니다 — 모바일 하단 탭바와 같은 목록입니다.
  *
  * `이메일 서명` 은 시안에 없던 항목입니다. 이 제품이 최종적으로 만들어 주는 게
  * 서명인데 진입로가 /edit 헤더의 링크 하나뿐이라 찾기 어려웠습니다.
  *
- * md(768px) 미만에서는 메뉴·이메일·로그아웃을 드로어로 접습니다. 375px 에 로고와
- * 메뉴 3개와 이메일 주소를 한 줄로 밀어 넣으면 가로 스크롤이 생깁니다.
+ * md(768px) 미만에서는 가로 메뉴를 숨깁니다. 375px 에 로고와 메뉴 3개와 이메일
+ * 주소를 한 줄로 밀어 넣으면 가로 스크롤이 생깁니다. 그 폭에서의 이동은
+ * BottomTabBar 가 맡고, 여기 남는 드로어는 계정(이메일·로그아웃) 전용입니다.
+ * 예전에는 드로어에 메뉴도 함께 있었는데, 이동할 때마다 열고 고르는 두 번을
+ * 거쳐야 해서 탭바로 옮겼습니다.
+ *
  * 드로어는 덮개(overlay)가 아니라 헤더 아래로 밀고 들어오는 방식입니다 —
  * body 스크롤을 잠글 필요가 없어 사고가 날 여지가 적습니다.
  *
@@ -25,24 +28,16 @@ import { LogoutButton } from "./LogoutButton";
  * 값이라 서버 페이지에서 그대로 넘기면 됩니다.
  */
 
-type NavItem = { href: string; label: string; adminOnly?: boolean };
-
-const NAV_ITEMS: NavItem[] = [
-  { href: "/edit", label: "내 명함" },
-  { href: "/edit/signature", label: "이메일 서명" },
-  { href: "/admin/employees", label: "임직원 관리", adminOnly: true },
-];
-
 export function TopNav({
   role,
   email,
   current,
 }: {
-  role: "member" | "admin";
+  role: Role;
   email?: string | null;
   current: string;
 }) {
-  const items = NAV_ITEMS.filter((item) => !item.adminOnly || role === "admin");
+  const items = navItemsFor(role);
   const [open, setOpen] = useState(false);
 
   // 라우트가 바뀌면 닫습니다. 페이지마다 TopNav 를 새로 그리지만 React 가 같은
@@ -118,51 +113,39 @@ export function TopNav({
           </span>
         </div>
 
-        {/* 손가락으로 눌러야 하므로 아이콘(20px)보다 넉넉한 44px 판을 줍니다. */}
+        {/*
+          계정 메뉴. 이동은 하단 탭바가 맡으므로 햄버거(MenuIcon)가 아니라 사람
+          아이콘을 씁니다 — 열어 보면 이메일과 로그아웃뿐인데 햄버거를 두면
+          메뉴가 더 있는 것처럼 보입니다.
+
+          손가락으로 눌러야 하므로 아이콘(24px)보다 넉넉한 44px 판을 줍니다.
+        */}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          aria-controls="mobile-nav"
-          aria-label={open ? "메뉴 닫기" : "메뉴 열기"}
+          aria-controls="account-menu"
+          aria-label={open ? "계정 메뉴 닫기" : "계정 메뉴 열기"}
           className="-mr-tight ml-auto flex h-11 w-11 items-center justify-center rounded-card text-text md:hidden"
         >
-          {open ? <CloseIcon className="h-6 w-6" /> : <MenuIcon className="h-6 w-6" />}
+          {open ? <CloseIcon className="h-6 w-6" /> : <UserIcon className="h-6 w-6" />}
         </button>
       </div>
 
       {open ? (
-        <div id="mobile-nav" className="border-t border-border md:hidden">
-          <nav className="flex flex-col px-group py-sibling">
-            {items.map((item) => {
-              const active = current === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  onClick={() => setOpen(false)}
-                  className={`flex min-h-11 items-center ${
-                    active ? "text-body-bold text-text" : "text-body text-sub-text"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="flex min-h-11 items-center justify-between gap-group border-t border-border px-group py-sibling">
-            {email ? (
-              // 긴 주소가 로그아웃 버튼을 밀어내지 않도록 자릅니다.
-              <span className="truncate text-caption text-sub-text">{email}</span>
-            ) : (
-              <span />
-            )}
-            <span className="shrink-0">
-              <LogoutButton />
-            </span>
-          </div>
+        <div
+          id="account-menu"
+          className="flex min-h-11 items-center justify-between gap-group border-t border-border px-group py-sibling md:hidden"
+        >
+          {email ? (
+            // 긴 주소가 로그아웃 버튼을 밀어내지 않도록 자릅니다.
+            <span className="truncate text-caption text-sub-text">{email}</span>
+          ) : (
+            <span />
+          )}
+          <span className="shrink-0">
+            <LogoutButton />
+          </span>
         </div>
       ) : null}
     </header>

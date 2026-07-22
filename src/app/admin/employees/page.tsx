@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { EmployeeTable } from "@/components/EmployeeTable";
 import { TopNav } from "@/components/TopNav";
 import { getSession } from "@/lib/auth";
@@ -24,6 +25,7 @@ export default async function AdminEmployeesPage() {
       <main className="mx-auto w-full max-w-[1440px] px-group py-section sm:px-section sm:py-block">
         <EmployeeTable />
       </main>
+      <BottomTabBar role={session.role} current="/admin/employees" />
     </>
   );
 }

@@ -489,12 +489,14 @@ export function EditProfileForm({
           </fieldset>
         </section>
 
-        {/* 저장 바 — 폼 하단 고정 */}
         {/*
           저장 바 — 폼 하단 고정. 모바일에서는 안내 문구와 버튼이 한 줄에 들어가지
           않아 세로로 쌓고, 버튼을 화면 폭만큼 늘려 엄지로 누르기 쉽게 합니다.
+
+          md 미만에서는 하단 탭바(h-14)가 화면 바닥을 차지하므로 그만큼 올려 붙입니다.
+          bottom-0 으로 두면 저장 버튼이 탭바 뒤에 깔려 눌리지 않습니다.
         */}
-        <div className="sticky bottom-0 mt-section border-t border-border bg-bg py-group sm:mt-block">
+        <div className="sticky bottom-14 mt-section border-t border-border bg-bg py-group sm:mt-block md:bottom-0">
           <div className="flex flex-col items-stretch gap-sibling sm:flex-row sm:items-center sm:justify-between sm:gap-group">
             <p className="text-caption text-sub-text">
               {saveError ?? (dirty ? "저장하지 않은 변경사항이 있습니다." : "모든 변경사항이 저장되었습니다.")}

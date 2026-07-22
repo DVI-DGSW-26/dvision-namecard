@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveEditTarget } from "@/lib/current-employee";
 import { renderSignature, renderSignatureText } from "@/lib/signature";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { TopNav } from "@/components/TopNav";
 import { SignaturePanel } from "./SignaturePanel";
 
@@ -101,6 +102,7 @@ export default async function SignaturePage({ searchParams }: Props) {
           <SignaturePanel html={html} text={text} />
         </div>
       </main>
+      <BottomTabBar role={role} current="/edit/signature" />
     </>
   );
 }
