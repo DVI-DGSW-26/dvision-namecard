@@ -203,6 +203,7 @@ export function EditProfileForm({
   // 폼 state 를 카드 데이터로 변환합니다. debounce 없이 매 입력마다 다시 만듭니다.
   const previewData = useMemo<ProfileCardData>(
     () => ({
+      slug: employee.slug,
       nameKo: emp.nameKo,
       rank: emp.rank,
       position: emp.position,
@@ -219,12 +220,25 @@ export function EditProfileForm({
         tagline: company.tagline,
         // 홈페이지를 고치면 미리보기 CTA 도 그 자리에서 따라갑니다.
         homepageUrl: co.homepageUrl,
+        address: co.address,
+        fax: co.fax,
+        // 대표번호는 폼에 없는 값이라 DB 값을 그대로 씁니다.
+        tel: company.tel,
         certifications: Array.isArray(company.certifications)
           ? company.certifications.filter((c): c is string => typeof c === "string")
           : [],
       },
     }),
-    [emp, co, employee.photoUrl, employee.mobilePublic, company.tagline, company.certifications],
+    [
+      emp,
+      co,
+      employee.slug,
+      employee.photoUrl,
+      employee.mobilePublic,
+      company.tel,
+      company.tagline,
+      company.certifications,
+    ],
   );
 
   const previewUrl = `/c/${employee.slug}`;

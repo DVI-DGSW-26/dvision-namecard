@@ -64,6 +64,16 @@ export function MessageIcon({ className }: IconProps) {
   );
 }
 
+/** 아래로 내려받기 — 공개 카드의 "명함 이미지 저장" 안내에 씁니다. */
+export function DownloadIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 4v10.5M8 11l4 4 4-4" />
+      <path d="M4.5 17.5v1a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1" />
+    </svg>
+  );
+}
+
 export function ArrowRightIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>
