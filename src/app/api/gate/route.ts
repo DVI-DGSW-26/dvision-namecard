@@ -42,6 +42,15 @@ const WINDOW_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 10;
 const attempts = new Map<string, { count: number; resetAt: number }>();
 
+/**
+ * 로컬 개발에서는 한도를 적용하지 않습니다.
+ *
+ * 프록시가 없어 x-forwarded-for 가 비고, clientIp 가 전부 "unknown" 을 돌려주기 때문에
+ * 개발자 한 명의 오타가 곧바로 한도를 채웁니다. 막아야 할 무차별 대입은 배포 환경에서
+ * 오는 것이므로 여기서 끄더라도 잃는 방어가 없습니다.
+ */
+const RATE_LIMIT_ENABLED = process.env.NODE_ENV === "production";
+
 function rateLimit(ip: string): boolean {
   const now = Date.now();
   const entry = attempts.get(ip);
@@ -93,7 +102,7 @@ async function createSelfServeEmployee(email: string, companyId: string) {
 
 export async function POST(request: NextRequest) {
   const ip = clientIp(request);
-  if (!rateLimit(ip)) {
+  if (RATE_LIMIT_ENABLED && !rateLimit(ip)) {
     return NextResponse.json(
       { error: "시도가 너무 잦습니다. 잠시 후 다시 시도해 주세요." },
       { status: 429 },

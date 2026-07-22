@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveEditTarget } from "@/lib/current-employee";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { TopNav } from "@/components/TopNav";
 import { EditProfileForm } from "./EditProfileForm";
 
@@ -95,6 +96,7 @@ export default async function EditPage({ searchParams }: Props) {
         </div>
       ) : null}
       <EditProfileForm role={role} employee={employee} company={company} />
+      <BottomTabBar role={role} current="/edit" />
     </>
   );
 }

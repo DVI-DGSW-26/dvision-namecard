@@ -1,7 +1,7 @@
 /**
  * 인라인 SVG 아이콘.
  *
- * 아이콘 라이브러리를 넣지 않은 이유: 지금 필요한 게 5개뿐이고, 서명 HTML 과 달리
+ * 아이콘 라이브러리를 넣지 않은 이유: 필요한 게 몇 개뿐이고, 서명 HTML 과 달리
  * 여기서는 stroke 색을 currentColor 로 상속받는 게 중요해서입니다.
  * 크기는 호출부에서 className 으로 지정합니다.
  */
@@ -23,6 +23,18 @@ export function UserIcon({ className }: IconProps) {
     <svg {...base} className={className}>
       <circle cx="12" cy="8.5" r="3.75" />
       <path d="M4.5 20c0-3.6 3.36-6 7.5-6s7.5 2.4 7.5 6" />
+    </svg>
+  );
+}
+
+/** 여러 명 — 임직원 관리 탭. UserIcon 과 달리 뒤에 한 명이 더 서 있습니다. */
+export function UsersIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="9.5" cy="8.5" r="3.25" />
+      <path d="M3 19.5c0-3.15 2.9-5.25 6.5-5.25s6.5 2.1 6.5 5.25" />
+      <path d="M16.25 5.6a3.25 3.25 0 0 1 0 5.8" />
+      <path d="M18 14.6c1.9.7 3 2.35 3 4.9" />
     </svg>
   );
 }
