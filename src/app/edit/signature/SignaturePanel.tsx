@@ -100,10 +100,11 @@ export function SignaturePanel({ html, text }: { html: string; text: string }) {
               실제 메일에 붙는 모습입니다. 값을 바꾸려면 프로필 편집에서 수정하세요.
             </p>
           </div>
+          {/* 이 화면의 목적이 복사 하나라, 좁은 화면에서는 폭을 다 씁니다. */}
           <button
             type="button"
             onClick={handleCopy}
-            className="h-12 rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover"
+            className="h-12 w-full rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover sm:w-auto"
           >
             서명 복사
           </button>
@@ -118,7 +119,7 @@ export function SignaturePanel({ html, text }: { html: string; text: string }) {
           바깥에 흰 배경과 테두리를 두는 건 미리보기 장식일 뿐입니다. 복사되는 것은
           div 안쪽 문자열이지 이 테두리가 아닙니다.
         */}
-        <div className="mt-section overflow-x-auto rounded-card border border-border bg-bg p-section">
+        <div className="mt-section overflow-x-auto rounded-card border border-border bg-bg p-group sm:p-section">
           <div dangerouslySetInnerHTML={{ __html: html }} />
         </div>
       </section>
@@ -144,7 +145,7 @@ export function SignaturePanel({ html, text }: { html: string; text: string }) {
                   <span className="text-caption text-sub-text">{open ? "닫기" : "열기"}</span>
                 </button>
                 {open ? (
-                  <div className="border-t border-border px-block py-section">
+                  <div className="border-t border-border px-group py-section sm:px-block">
                     {/*
                       복사 → 설정 열기 순서로 눌러야 합니다. 설정은 새 탭에서 열리므로
                       클립보드 내용은 그대로 유지됩니다.

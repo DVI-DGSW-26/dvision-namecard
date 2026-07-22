@@ -263,7 +263,7 @@ export function EditProfileForm({
   const err = (key: string) => errors[key];
 
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-block px-section py-block xl:flex-row xl:items-start">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-section px-group py-section sm:gap-block sm:px-section sm:py-block xl:flex-row xl:items-start">
       {/* 1280px 미만 — 미리보기를 폼 위로 올리고 접기/펴기 */}
       <section className="order-first xl:hidden">
         <button
@@ -490,8 +490,12 @@ export function EditProfileForm({
         </section>
 
         {/* 저장 바 — 폼 하단 고정 */}
-        <div className="sticky bottom-0 mt-block border-t border-border bg-bg py-group">
-          <div className="flex items-center justify-between gap-group">
+        {/*
+          저장 바 — 폼 하단 고정. 모바일에서는 안내 문구와 버튼이 한 줄에 들어가지
+          않아 세로로 쌓고, 버튼을 화면 폭만큼 늘려 엄지로 누르기 쉽게 합니다.
+        */}
+        <div className="sticky bottom-0 mt-section border-t border-border bg-bg py-group sm:mt-block">
+          <div className="flex flex-col items-stretch gap-sibling sm:flex-row sm:items-center sm:justify-between sm:gap-group">
             <p className="text-caption text-sub-text">
               {saveError ?? (dirty ? "저장하지 않은 변경사항이 있습니다." : "모든 변경사항이 저장되었습니다.")}
             </p>
@@ -499,7 +503,7 @@ export function EditProfileForm({
               type="button"
               onClick={handleSave}
               disabled={!dirty || saving}
-              className="h-12 rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text"
+              className="h-12 w-full shrink-0 rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text sm:w-auto"
             >
               {saving ? "저장 중…" : "저장"}
             </button>

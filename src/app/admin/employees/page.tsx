@@ -21,7 +21,7 @@ export default async function AdminEmployeesPage() {
     <>
       <TopNav role={session.role} current="/admin/employees" />
       {/* 7열 표라 다른 화면(720·1000)보다 넓게, TopNav 와 같은 1440 에 맞춥니다. */}
-      <main className="mx-auto w-full max-w-[1440px] px-section py-block">
+      <main className="mx-auto w-full max-w-[1440px] px-group py-section sm:px-section sm:py-block">
         <EmployeeTable />
       </main>
     </>
