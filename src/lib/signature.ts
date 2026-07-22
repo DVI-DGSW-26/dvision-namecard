@@ -1,23 +1,20 @@
 import type { Company, Employee } from "@/types";
 
 /**
- * 이메일 서명 HTML 생성.
+ * 이메일 서명 생성.
  *
- * 마크업은 signature-test.html 의 A안(Compact)을 그대로 옮긴 것입니다.
- * 아웃룩 데스크톱/모바일에서 검증된 구조라 table 중첩, 인라인 스타일, mso-line-height-rule,
- * 1px 스페이서 셀 하나까지 바꾸면 안 됩니다. 값만 치환합니다.
+ * 서명 본체는 명함을 통째로 구운 PNG 한 장입니다(/c/[slug]/card.png). Gmail 이 CSS
+ * 배경 이미지를 지우고 요소 겹침도 지원하지 않아, 디자인의 "글자 뒤 워터마크" 를 HTML
+ * 로는 못 만듭니다. 카드 전체를 이미지로 두면 워터마크까지 디자인 그대로, 어느 메일
+ * 클라이언트에서든 동일하게 보입니다.
  *
- * 메일 클라이언트는 태그 사이 개행도 공백으로 렌더링할 수 있어서 한 줄로 이어 붙입니다.
- * 반대로 텍스트 안의 공백(`(주)디비전 DVISION Inc.` 사이 등)은 의미가 있으니 건드리지 마세요.
+ * 대가: 이미지라 안의 글자·번호는 눌리지 않습니다. 그래서 이미지 전체를 명함 프로필
+ * 링크로 감쌉니다(클릭 → /c/[slug], 거기서 전화·저장 등 실제 동작). 이미지를 막은
+ * 수신자는 alt 텍스트를 보고, text/plain 만 읽는 클라이언트는 renderSignatureText 를 받습니다.
+ *
+ * 이미지 주소는 절대경로(NEXT_PUBLIC_BASE_URL)여야 합니다 — Gmail 은 이미지를 구글 프록시로
+ * 불러오므로 공개된 https 주소가 아니면(로컬 localhost 등) 뜨지 않습니다.
  */
-
-const FONT = "font-family:'맑은 고딕','Malgun Gothic',sans-serif;";
-
-/** 서명 안에서 라벨(T/M/F/E/A)과 회사 영문명에 쓰는 흐린 회색. 브랜드 컬러와 무관하게 고정입니다. */
-const LABEL_GRAY = "#A8A8B0";
-
-/** company.brandColor 가 비었거나 형식이 깨졌을 때 쓰는 값. Company.brandColor 의 스키마 기본값과 같습니다. */
-const DEFAULT_BRAND = "#931B82";
 
 /**
  * HTML 이스케이프. 사용자가 입력한 값은 예외 없이 전부 통과시킵니다.
@@ -32,19 +29,6 @@ export function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-/**
- * 색상값 검증.
- *
- * brandColor 는 관리자가 자유롭게 입력하는 값이라 그대로 style 속성에 넣으면
- * `red;background:url(...)` 같은 문자열로 CSS 를 주입할 수 있습니다.
- * HTML 이스케이프는 이걸 막지 못합니다(따옴표도 꺾쇠도 필요 없으므로).
- * 그래서 hex 형식인지 확인하고, 아니면 기본값으로 되돌립니다.
- */
-function safeColor(value: string | null | undefined): string {
-  if (value && /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(value)) return value;
-  return DEFAULT_BRAND;
 }
 
 /** 값이 있는 문자열만 남깁니다. 공백만 있는 값도 없는 것으로 취급합니다. */
@@ -63,107 +47,61 @@ function baseUrl(): string {
   return url.replace(/\/+$/, "");
 }
 
-/** 서명에 실제로 노출할 값들을 한곳에서 정리합니다. HTML 판과 텍스트 판이 같은 규칙을 쓰도록. */
+/** 서명 텍스트 폴백에 쓸 값들. HTML 이미지 카드(card.png)와 같은 노출 규칙을 따릅니다. */
 function resolveFields(employee: Employee, company: Company) {
-  const credential = present(employee.credential);
-
   return {
     nameKo: employee.nameKo,
-    // credential 이 없으면 rank 만. 구분자가 혼자 남지 않도록 배열로 조립합니다.
-    roleText: [employee.rank as string, credential].filter(Boolean).join(" · "),
-    companyKo: company.nameKo,
-    companyEn: present(company.nameEn),
+    // 직급 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고 구분자가 혼자 남지 않도록 조립합니다.
+    roleText: [employee.rank as string, present(employee.position), present(employee.credential)]
+      .filter(Boolean)
+      .join(" · "),
+    // TEL 은 개인 사무실 번호 우선, 없으면 회사 대표번호.
     tel: present(employee.telWork) ?? present(company.tel),
     // mobilePublic 이 false 면 번호가 있어도 공개하지 않습니다.
     mobile: employee.mobilePublic ? present(employee.telMobile) : null,
+    // 팩스는 회사 공용 번호입니다.
     fax: present(company.fax),
     email: present(employee.email),
     address: present(company.address),
     profileUrl: `${baseUrl()}/c/${employee.slug}`,
-    brand: safeColor(company.brandColor),
   };
 }
 
-export function renderSignature(employee: Employee, company: Company): string {
-  const f = resolveFields(employee, company);
-
-  const label = (text: string) => `<span style="color:${LABEL_GRAY};">${text}</span>&nbsp; `;
-
-  // T / M / F 는 한 줄에 모입니다. 없는 항목은 통째로 빠지고, 구분자가 끝에 남지 않도록
-  // 배열로 모아 join 합니다.
-  const phoneItems = [
-    f.tel && `${label("T")}${escapeHtml(f.tel)}`,
-    f.mobile && `${label("M")}${escapeHtml(f.mobile)}`,
-    f.fax && `${label("F")}${escapeHtml(f.fax)}`,
-  ].filter(Boolean) as string[];
-
-  // 각 줄도 마찬가지. 빈 줄이 생기면 <br> 까지 같이 사라집니다.
-  const contactLines = [
-    phoneItems.length ? phoneItems.join("&nbsp;&nbsp;&nbsp;") : null,
-    f.email &&
-      `${label("E")}<a href="mailto:${escapeHtml(f.email)}" style="color:#4A4A52;text-decoration:none;">${escapeHtml(f.email)}</a>`,
-    f.address && `${label("A")}${escapeHtml(f.address)}`,
-  ].filter(Boolean) as string[];
-
-  // 연락처가 하나도 없으면 구분선과 셀 자체를 넣지 않습니다.
-  const contactRows = contactLines.length
-    ? `<tr><td height="1" bgcolor="#E5E5EA" style="height:1px;background-color:#E5E5EA;font-size:1px;line-height:1px;">&nbsp;</td></tr>` +
-      `<tr><td style="${FONT}font-size:12px;line-height:20px;mso-line-height-rule:exactly;color:#4A4A52;padding-top:12px;">${contactLines.join("<br>")}</td></tr>`
-    : "";
-
-  const nameCell =
-    escapeHtml(f.nameKo) +
-    (f.roleText
-      ? `&nbsp;&nbsp;<span style="font-size:12px;font-weight:normal;color:#6B6B75;">${escapeHtml(f.roleText)}</span>`
-      : "");
-
-  const companyCell =
-    escapeHtml(f.companyKo) +
-    (f.companyEn
-      ? ` <span style="color:${LABEL_GRAY};font-weight:normal;">${escapeHtml(f.companyEn)}</span>`
-      : "");
+/**
+ * 서명 HTML — 명함 이미지 한 장을 프로필 링크로 감쌉니다.
+ *
+ * 카드의 실제 모양(이름·역할·로고·주소·연락처·워터마크)과 값 노출 규칙은 이미지 라우트
+ * (app/c/[slug]/card.png)가 정합니다. 여기서는 그 이미지를 가리키고 클릭을 걸 뿐입니다.
+ */
+export function renderSignature(employee: Employee, _company: Company): string {
+  // _company 는 renderSignatureText 와 시그니처를 맞추려고 받습니다. 카드의 실제 값은
+  // 이미지 라우트가 DB 에서 직접 읽으므로 여기서는 slug·이름만 있으면 됩니다.
+  const base = baseUrl();
+  const cardUrl = `${base}/c/${employee.slug}/card.png`;
+  const profileUrl = `${base}/c/${employee.slug}`;
 
   return (
-    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="520" style="border-collapse:collapse;width:520px;">` +
-    `<tr>` +
-    `<td width="3" bgcolor="${f.brand}" style="width:3px;background-color:${f.brand};font-size:1px;line-height:1px;">&nbsp;</td>` +
-    `<td width="18" style="width:18px;font-size:1px;line-height:1px;">&nbsp;</td>` +
-    `<td style="${FONT}">` +
-    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">` +
-    `<tr><td style="${FONT}font-size:17px;line-height:24px;mso-line-height-rule:exactly;color:#1A1A1E;font-weight:bold;padding-bottom:2px;">${nameCell}</td></tr>` +
-    `<tr><td style="${FONT}font-size:13px;line-height:19px;mso-line-height-rule:exactly;color:${f.brand};font-weight:bold;padding-bottom:12px;">${companyCell}</td></tr>` +
-    contactRows +
-    `<tr><td style="${FONT}font-size:12px;line-height:18px;mso-line-height-rule:exactly;padding-top:12px;">` +
-    `<a href="${escapeHtml(f.profileUrl)}" style="color:${f.brand};text-decoration:none;font-weight:bold;">명함 보기 &rsaquo;</a>` +
-    `</td></tr>` +
-    `</table>` +
-    `</td>` +
-    `</tr>` +
-    `</table>`
+    `<a href="${escapeHtml(profileUrl)}" style="display:inline-block;text-decoration:none;">` +
+    `<img src="${escapeHtml(cardUrl)}" alt="${escapeHtml(`${employee.nameKo} 명함`)}" width="600" style="display:block;border:0;width:600px;max-width:100%;height:auto;" />` +
+    `</a>`
   );
 }
 
 /**
- * Clipboard API 의 text/plain 폴백용 순수 텍스트 서명.
+ * Clipboard API 의 text/plain 폴백용 순수 텍스트 서명. 이미지를 아예 못 쓰는 환경의 마지막 보루입니다.
  *
- * 평문이므로 이스케이프하지 않습니다. 여기서 escapeHtml 을 쓰면
- * 이름의 `&` 가 `&amp;` 로 그대로 보입니다.
+ * 평문이므로 이스케이프하지 않습니다. 여기서 escapeHtml 을 쓰면 이름의 `&` 가 `&amp;` 로 그대로 보입니다.
  */
 export function renderSignatureText(employee: Employee, company: Company): string {
   const f = resolveFields(employee, company);
 
-  const phoneItems = [
-    f.tel && `T ${f.tel}`,
-    f.mobile && `M ${f.mobile}`,
-    f.fax && `F ${f.fax}`,
-  ].filter(Boolean) as string[];
-
   const lines = [
     [f.nameKo, f.roleText].filter(Boolean).join(" "),
-    [f.companyKo, f.companyEn].filter(Boolean).join(" "),
-    phoneItems.length ? phoneItems.join("  ") : null,
-    f.email && `E ${f.email}`,
-    f.address && `A ${f.address}`,
+    f.address,
+    f.tel && `TEL ${f.tel}`,
+    f.fax && `FAX ${f.fax}`,
+    f.mobile && `MOBILE ${f.mobile}`,
+    f.email && `E-MAIL ${f.email}`,
     `명함 보기: ${f.profileUrl}`,
   ].filter(Boolean) as string[];
 

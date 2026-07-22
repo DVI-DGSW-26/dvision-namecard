@@ -62,113 +62,37 @@ describe("escapeHtml", () => {
 });
 
 describe("renderSignature", () => {
-  it("모든 값이 있으면 T·M·F 가 모두 나온다", () => {
+  it("명함 이미지를 프로필 링크로 감싼다", () => {
     const html = renderSignature(emp(), co());
 
-    assert.match(html, /홍길동/);
-    assert.match(html, /대표이사 · 공학박사/);
-    assert.match(html, /\(주\)디비전/);
-    assert.match(html, /DVISION Inc\./);
-    assert.match(html, />T<\/span>&nbsp; 053-710-1022/);
-    assert.match(html, />M<\/span>&nbsp; 010-1234-5678/);
-    assert.match(html, />F<\/span>&nbsp; 053-715-2096/);
-    assert.match(html, /mailto:hong@dvi-ind\.com/);
-    assert.match(html, /대구광역시 달성군 구지면 국가산단대로33길 237/);
-    assert.match(html, /href="https:\/\/dvi-ind\.com\/c\/hong"/);
+    // 이미지 본체 — 절대경로 card.png (Gmail 프록시가 불러올 수 있어야 하므로 https 절대경로)
+    assert.match(html, /<img src="https:\/\/dvi-ind\.com\/c\/hong\/card\.png"/);
+    // 이미지 전체가 프로필로 연결
+    assert.match(html, /<a href="https:\/\/dvi-ind\.com\/c\/hong"/);
+    // 이미지를 막은 수신자를 위한 alt
+    assert.match(html, /alt="홍길동 명함"/);
+    assert.match(html, /width="600"/);
   });
 
-  it("검증된 A안 마크업 구조를 유지한다", () => {
-    const html = renderSignature(emp(), co());
+  it("이미지 주소·링크가 어긋나지 않는다 (card.png 는 프로필 경로 + /card.png)", () => {
+    const html = renderSignature(emp({ slug: "yeonghui" }), co());
 
-    // 아웃룩 호환의 핵심 요소들. 이게 깨지면 서명이 무너집니다.
-    assert.match(html, /^<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="520"/);
-    assert.match(html, /border-collapse:collapse;width:520px;/);
-    assert.match(html, /mso-line-height-rule:exactly/);
-    assert.match(html, /<td width="3" bgcolor="#931B82"/); // 좌측 세로 바
-    assert.match(html, /명함 보기 &rsaquo;/);
-    assert.ok(!html.includes("\n"), "개행이 없어야 한다");
-    assert.ok(!html.includes("<style"), "style 블록을 쓰지 않는다");
-    assert.ok(!html.includes("class="), "CSS 클래스를 쓰지 않는다");
+    assert.match(html, /href="https:\/\/dvi-ind\.com\/c\/yeonghui"/);
+    assert.match(html, /src="https:\/\/dvi-ind\.com\/c\/yeonghui\/card\.png"/);
   });
 
-  it("telMobile 이 없으면 M 항목이 통째로 빠진다", () => {
-    const html = renderSignature(emp({ telMobile: null }), co());
-
-    assert.ok(!html.includes(">M</span>"), "M 라벨이 남으면 안 된다");
-    assert.match(html, />T<\/span>/);
-    assert.match(html, />F<\/span>/);
-    // T 와 F 가 구분자 하나로 이어지고, 구분자가 중복되지 않아야 합니다.
-    assert.match(html, /053-710-1022&nbsp;&nbsp;&nbsp;<span[^>]*>F<\/span>/);
-  });
-
-  it("mobilePublic 이 false 면 번호가 있어도 M 이 빠진다", () => {
-    const html = renderSignature(emp({ mobilePublic: false }), co());
-
-    assert.ok(!html.includes(">M</span>"), "M 라벨이 남으면 안 된다");
-    assert.ok(!html.includes("010-1234-5678"), "비공개 번호가 노출되면 안 된다");
-  });
-
-  it("credential 이 없으면 rank 만 표시한다", () => {
-    const html = renderSignature(emp({ credential: null }), co());
-
-    assert.match(html, /대표이사<\/span>/);
-    assert.ok(!html.includes("·"), "구분자가 혼자 남으면 안 된다");
-  });
-
-  it("이름의 & 를 이스케이프한다", () => {
+  it("alt 의 이름에 든 & 를 이스케이프한다", () => {
     const html = renderSignature(emp({ nameKo: "홍길동 & 김철수" }), co());
 
-    assert.match(html, /홍길동 &amp; 김철수/);
-    assert.ok(!/홍길동 & 김/.test(html), "원본 & 가 그대로 남으면 안 된다");
+    assert.match(html, /alt="홍길동 &amp; 김철수 명함"/);
+    assert.ok(!/alt="홍길동 & 김/.test(html), "원본 & 가 그대로 남으면 안 된다");
   });
 
-  it("이름에 태그가 들어와도 마크업으로 해석되지 않는다", () => {
-    const html = renderSignature(emp({ nameKo: `<script>alert('x')</script>` }), co());
+  it("이름에 태그가 들어와도 alt 가 마크업으로 해석되지 않는다", () => {
+    const html = renderSignature(emp({ nameKo: `<script>` }), co());
 
     assert.ok(!html.includes("<script>"), "태그가 그대로 들어가면 안 된다");
     assert.match(html, /&lt;script&gt;/);
-  });
-
-  it("fax 가 없으면 F 항목이 빠진다", () => {
-    const html = renderSignature(emp(), co({ fax: null }));
-
-    assert.ok(!html.includes(">F</span>"));
-    assert.match(html, />M<\/span>/);
-  });
-
-  it("전화 정보가 하나도 없으면 그 줄과 <br> 이 함께 사라진다", () => {
-    const html = renderSignature(
-      emp({ telWork: null, telMobile: null }),
-      co({ tel: "", fax: null }),
-    );
-
-    assert.ok(!html.includes(">T</span>"));
-    assert.ok(!html.includes(">M</span>"));
-    assert.ok(!html.includes(">F</span>"));
-    // E 줄이 <br> 로 시작하면 앞에 빈 줄이 남은 것입니다.
-    assert.ok(!/padding-top:12px;"><br>/.test(html), "빈 줄이 남으면 안 된다");
-  });
-
-  it("telWork 가 없으면 회사 대표번호로 대체한다", () => {
-    const html = renderSignature(emp({ telWork: null }), co({ tel: "053-000-0000" }));
-
-    assert.match(html, />T<\/span>&nbsp; 053-000-0000/);
-  });
-
-  it("brandColor 를 서명 전체에 반영한다", () => {
-    const html = renderSignature(emp(), co({ brandColor: "#FF0000" }));
-
-    assert.match(html, /bgcolor="#FF0000"/);
-    assert.match(html, /background-color:#FF0000;/);
-    assert.match(html, /color:#FF0000;text-decoration:none;font-weight:bold;/);
-    assert.ok(!html.includes("#931B82"), "기본 브랜드 컬러가 남으면 안 된다");
-  });
-
-  it("brandColor 로 CSS 를 주입할 수 없다", () => {
-    const html = renderSignature(emp(), co({ brandColor: "red;background:url(http://evil)" }));
-
-    assert.ok(!html.includes("evil"), "주입된 CSS 가 통과되면 안 된다");
-    assert.match(html, /bgcolor="#931B82"/); // 기본값으로 되돌아감
   });
 });
 
@@ -180,10 +104,11 @@ describe("renderSignatureText", () => {
       text,
       [
         "홍길동 대표이사 · 공학박사",
-        "(주)디비전 DVISION Inc.",
-        "T 053-710-1022  M 010-1234-5678  F 053-715-2096",
-        "E hong@dvi-ind.com",
-        "A 대구광역시 달성군 구지면 국가산단대로33길 237",
+        "대구광역시 달성군 구지면 국가산단대로33길 237",
+        "TEL 053-710-1022",
+        "FAX 053-715-2096",
+        "MOBILE 010-1234-5678",
+        "E-MAIL hong@dvi-ind.com",
         "명함 보기: https://dvi-ind.com/c/hong",
       ].join("\n"),
     );
@@ -198,11 +123,17 @@ describe("renderSignatureText", () => {
     assert.ok(!text.includes("&amp;"));
   });
 
-  it("HTML 판과 같은 빈 값 규칙을 따른다", () => {
+  it("mobilePublic 이 false 면 휴대폰이, fax 가 없으면 FAX 가 빠진다", () => {
     const text = renderSignatureText(emp({ mobilePublic: false }), co({ fax: null }));
 
-    assert.match(text, /^T 053-710-1022$/m);
+    assert.match(text, /^TEL 053-710-1022$/m);
     assert.ok(!text.includes("010-1234-5678"));
-    assert.ok(!text.includes("F "));
+    assert.ok(!text.includes("FAX "));
+    assert.ok(!text.includes("MOBILE "));
+  });
+
+  it("credential 이 없으면 rank 만, 있으면 함께 표시한다", () => {
+    assert.match(renderSignatureText(emp({ credential: null }), co()), /^홍길동 대표이사$/m);
+    assert.match(renderSignatureText(emp(), co()), /^홍길동 대표이사 · 공학박사$/m);
   });
 });
