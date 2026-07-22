@@ -63,9 +63,19 @@ export default async function ProfilePage({ params }: Props) {
   if (!employee) notFound();
 
   return (
-    // 회사명·직급은 ProfileCard 안에 이미 있습니다. 여기서 또 적으면 중복입니다.
-    <main className="mx-auto flex w-full max-w-[375px] flex-1 flex-col justify-center px-group py-section">
-      <ProfileCard data={toProfileCardData(employee, employee.company)} />
+    /*
+      회사명·직급은 ProfileCard 안에 이미 있습니다. 여기서 또 적으면 중복입니다.
+
+      카드 껍데기(테두리·모서리·그림자)는 이 페이지가 그립니다. ProfileCard 는
+      내용만 담당한다는 규칙이라, 껍데기를 그 안에 넣으면 /edit 미리보기가
+      이미 두르고 있는 테두리와 겹쳐 이중선이 됩니다.
+
+      바닥을 회색으로 깔지 않으면 흰 카드가 흰 화면에 묻혀 형태가 사라집니다.
+    */
+    <main className="flex flex-1 flex-col justify-center bg-sub-bg px-group py-section">
+      <div className="mx-auto w-full max-w-[375px] overflow-hidden rounded-card border border-border bg-bg shadow-sm">
+        <ProfileCard data={toProfileCardData(employee, employee.company)} />
+      </div>
     </main>
   );
 }

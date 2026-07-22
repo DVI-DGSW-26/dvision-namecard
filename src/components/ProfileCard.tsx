@@ -122,20 +122,25 @@ export function ProfileCard({ data }: { data: ProfileCardData }) {
 
   return (
     <article className="bg-bg text-text">
-      <div className="p-section">
+      {/*
+        신원 블록은 가운데 정렬입니다. 명함은 훑어보는 화면이라 사진 → 이름 → 소속이
+        한 축에 놓여야 눈이 한 번에 내려갑니다. 왼쪽 정렬이면 원형 사진만 축에서
+        벗어나 보입니다.
+      */}
+      <div className="flex flex-col items-center p-section text-center">
         {/* 사진 — 업로드는 아직 구현 전이라 placeholder 를 그립니다. */}
-        <div className="mb-group flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-sub-bg">
+        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-border bg-sub-bg">
           {data.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- 업로드 도메인이 정해지기 전이라 next/image 설정을 미룹니다.
             <img src={data.photoUrl} alt="" className="h-full w-full object-cover" />
           ) : (
-            <UserIcon className="h-8 w-8 text-sub-text" />
+            <UserIcon className="h-10 w-10 text-sub-text" />
           )}
         </div>
 
-        <h1 className="text-display">{data.nameKo}</h1>
+        <h1 className="mt-group text-display">{data.nameKo}</h1>
         {roleText ? <p className="mt-tight text-body text-sub-text">{roleText}</p> : null}
-        <p className="mt-tight flex items-center gap-tight">
+        <p className="mt-sibling flex items-center justify-center gap-tight">
           <Wordmark />
           <span className="text-caption-bold text-text">{company.nameKo}</span>
         </p>
@@ -143,12 +148,12 @@ export function ProfileCard({ data }: { data: ProfileCardData }) {
         {/* CTA — 화면에서 primary 를 채워 쓰는 유일한 요소입니다. */}
         <a
           href="./vcard"
-          className="mt-group flex h-12 w-full items-center justify-center rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover"
+          className="mt-section flex h-12 w-full items-center justify-center rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover"
         >
           연락처 저장
         </a>
 
-        <div className="mt-group flex gap-sibling">
+        <div className="mt-group flex w-full gap-sibling">
           <ActionButton href={tel ? `tel:${tel}` : null} label="전화">
             <PhoneIcon className="h-5 w-5" />
           </ActionButton>
@@ -161,19 +166,25 @@ export function ProfileCard({ data }: { data: ProfileCardData }) {
         </div>
       </div>
 
+      {/*
+        회사 블록은 회색 바닥에 얹어 신원 블록과 층을 나눕니다. 선 하나로만 나누면
+        흰 면이 계속 이어져서 카드가 아니라 문서처럼 보입니다. 색이 아니라 명도로
+        나누는 것이라 primary 예산과는 무관합니다.
+      */}
       {hasCompanyBlock ? (
-        <div className="border-t border-border p-section">
+        <div className="border-t border-border bg-sub-bg p-section text-center">
           {company.industry ? <h2 className="text-title">{company.industry}</h2> : null}
           {company.tagline ? (
             <p className="mt-tight text-caption text-sub-text">{company.tagline}</p>
           ) : null}
 
           {company.certifications.length > 0 ? (
-            <ul className="mt-group flex flex-wrap gap-sibling">
+            <ul className="mt-group flex flex-wrap justify-center gap-sibling">
               {company.certifications.map((cert) => (
+                // 회색 바닥이라 칩은 흰 면으로 띄웁니다. 배경이 같으면 테두리만 남아 흐릿합니다.
                 <li
                   key={cert}
-                  className="rounded-card border border-border px-sibling py-tight text-caption whitespace-nowrap"
+                  className="rounded-card border border-border bg-bg px-sibling py-tight text-caption whitespace-nowrap"
                 >
                   {cert}
                 </li>
