@@ -27,7 +27,7 @@ function Notice({
   action?: { href: string; label: string };
 }) {
   return (
-    <main className="mx-auto w-full max-w-[720px] px-section py-block">
+    <main className="mx-auto w-full max-w-[720px] px-group py-section sm:px-section sm:py-block">
       <p className="text-caption text-sub-text">내 명함</p>
       <h1 className="mt-tight text-display">{title}</h1>
       <p className="mt-group text-body text-sub-text">{detail}</p>
@@ -83,7 +83,8 @@ export default async function EditPage({ searchParams }: Props) {
       {/* 관리자가 남의 명함을 열었을 때, 본인 것으로 착각하고 고치는 일이 없도록 표시합니다. */}
       {viewingOther ? (
         <div className="border-b border-border bg-sub-bg">
-          <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-group px-section py-sibling">
+          {/* 좁은 화면에서는 안내 문구가 길어 링크가 밀려나므로 줄을 나눕니다. */}
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-group gap-y-tight px-group py-sibling sm:px-section">
             <p className="text-caption text-sub-text">
               다른 임직원의 명함을 보고 있습니다 — {employee.nameKo} ({employee.email})
             </p>

@@ -249,12 +249,13 @@ export function EmployeeTable() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-sibling">
+        {/* 좁은 화면에서는 두 버튼이 한 줄을 반씩 나눠 씁니다. */}
+        <div className="flex w-full items-center gap-sibling sm:w-auto">
           <button
             type="button"
             onClick={exportCsv}
             disabled={isExporting || total === 0}
-            className="h-12 rounded-card border border-border px-group text-body whitespace-nowrap transition-colors hover:border-text disabled:cursor-not-allowed disabled:text-sub-text disabled:hover:border-border"
+            className="h-12 flex-1 rounded-card border border-border px-group text-body whitespace-nowrap transition-colors hover:border-text disabled:cursor-not-allowed disabled:text-sub-text disabled:hover:border-border sm:flex-none"
           >
             {isExporting ? "내보내는 중…" : "CSV 내보내기"}
           </button>
@@ -262,7 +263,7 @@ export function EmployeeTable() {
           <button
             type="button"
             onClick={() => setIsAdding(true)}
-            className="h-12 rounded-card bg-primary px-group text-body-bold text-white whitespace-nowrap transition-colors hover:bg-primary-hover"
+            className="h-12 flex-1 rounded-card bg-primary px-group text-body-bold text-white whitespace-nowrap transition-colors hover:bg-primary-hover sm:flex-none"
           >
             직원 추가
           </button>
@@ -270,7 +271,8 @@ export function EmployeeTable() {
       </div>
 
       <div className="flex flex-wrap items-center gap-sibling">
-        <div className="min-w-64 flex-1">
+        {/* 검색은 모바일에서 한 줄을 통째로 씁니다. 아래 줄에 필터 두 개가 나란히 옵니다. */}
+        <div className="w-full sm:min-w-64 sm:flex-1">
           <Input
             type="search"
             value={search}
@@ -284,8 +286,9 @@ export function EmployeeTable() {
         {/*
           Select 는 기본 클래스에 w-full 을 갖고 있어서 className 으로 폭을 넘기면
           Tailwind 규칙 순서상 밀립니다. 폭은 바깥 div 로 잡습니다.
+          min-w-0 이 없으면 flex 아이템이 내용 폭 밑으로 안 줄어들어 줄이 터집니다.
         */}
-        <div className="w-44">
+        <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
           <Select
             value={department}
             onChange={(event) => changeDepartment(event.target.value)}
@@ -300,7 +303,7 @@ export function EmployeeTable() {
           </Select>
         </div>
 
-        <div className="w-44">
+        <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
           <Select
             value={status}
             onChange={(event) => changeStatus(event.target.value as Status | "")}
@@ -323,7 +326,81 @@ export function EmployeeTable() {
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-card border border-border">
+      {/*
+        md 미만 — 카드 리스트.
+        7열 표를 가로 스크롤로 밀어 넣으면 이름 말고는 아무것도 안 보입니다.
+        같은 items/selected 를 쓰므로 표와 내용이 어긋날 일은 없습니다.
+      */}
+      <div className="flex flex-col gap-sibling md:hidden">
+        <label className="flex min-h-11 items-center gap-sibling text-caption text-sub-text">
+          <input
+            type="checkbox"
+            checked={allOnPageSelected}
+            onChange={toggleAllOnPage}
+            disabled={items.length === 0}
+            className="h-4 w-4 accent-primary"
+          />
+          이 페이지 전체 선택
+        </label>
+
+        {isLoading && items.length === 0 ? (
+          <p className="rounded-card border border-border px-group py-block text-center text-body text-sub-text">
+            불러오는 중…
+          </p>
+        ) : items.length === 0 ? (
+          <p className="rounded-card border border-border px-group py-block text-center text-body text-sub-text">
+            조건에 맞는 직원이 없습니다.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-sibling">
+            {items.map((row) => (
+              <li
+                key={row.id}
+                // primary-soft 는 "선택 상태 배경"으로만 쓰기로 되어 있습니다. 여기가 그 자리입니다.
+                className={`flex gap-sibling rounded-card border border-border p-group ${
+                  selected.has(row.id) ? "bg-primary-soft" : ""
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.has(row.id)}
+                  onChange={() => toggleOne(row.id)}
+                  aria-label={`${row.nameKo} 선택`}
+                  className="mt-tight h-4 w-4 shrink-0 accent-primary"
+                />
+
+                {/* min-w-0 이 없으면 긴 이메일이 카드 밖으로 삐져나갑니다. */}
+                <div className="flex min-w-0 flex-1 flex-col gap-tight">
+                  <div className="flex items-start justify-between gap-sibling">
+                    <div className="flex min-w-0 items-center gap-sibling">
+                      <span
+                        aria-hidden
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sub-bg text-caption text-sub-text"
+                      >
+                        {[...row.nameKo][0] ?? "?"}
+                      </span>
+                      <span className="truncate text-body-bold">{row.nameKo}</span>
+                    </div>
+                    <span
+                      className={`inline-flex shrink-0 rounded-card border border-border px-sibling py-tight whitespace-nowrap ${STATUS_STYLE[row.status]}`}
+                    >
+                      {STATUS_LABEL[row.status]}
+                    </span>
+                  </div>
+
+                  <p className="text-caption text-sub-text">
+                    {[row.department, row.rank].filter(Boolean).join(" · ")}
+                  </p>
+                  <p className="truncate text-caption text-sub-text">{row.email ?? "—"}</p>
+                  <p className="text-caption text-sub-text">{formatDate(row.updatedAt)}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-card border border-border md:block">
         <table className="w-full border-collapse text-left">
           <thead className="bg-sub-bg">
             <tr>
@@ -415,7 +492,11 @@ export function EmployeeTable() {
             : `${firstRow} – ${lastRow} / ${total.toLocaleString("ko-KR")}`}
         </p>
 
-        <nav aria-label="페이지 이동" className="flex items-center gap-tight">
+        {/* 좁은 화면에서는 페이지 번호가 여러 줄로 접힙니다. 가로 스크롤보다 낫습니다. */}
+        <nav
+          aria-label="페이지 이동"
+          className="flex w-full flex-wrap items-center justify-center gap-tight sm:w-auto sm:justify-end"
+        >
           <button
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}

@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+/*
+ * 서비스 이름은 로고 표기대로 "dingdong" 한 단어입니다. 띄어 쓰지 마세요 —
+ * 브라우저 탭·북마크·공유 링크에 그대로 나가는 문자열이라 표기가 갈리면
+ * 같은 서비스가 두 이름으로 돌아다니게 됩니다.
+ */
 export const metadata: Metadata = {
-  title: "ding dong 사내 디지털 명함",
+  title: "dingdong 사내 디지털 명함",
   description: "DVISION Co., Ltd. 사내 디지털 명함 · 이메일 서명 서비스",
 };
 

@@ -1,3 +1,5 @@
+import Image from "next/image";
+import { brand } from "@/config/brand";
 import { safeRedirect } from "@/lib/safe-redirect";
 import { GateForm } from "./GateForm";
 
@@ -21,12 +23,20 @@ export default async function GatePage({ searchParams }: Props) {
   const destination = safeRedirect(next);
 
   return (
-    <main className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center px-section py-block">
-      <p className="text-caption text-sub-text">(주)디비전 디지털 명함</p>
-      <h1 className="mt-tight text-display">
-        <span className="text-primary">D</span>VISION
+    <main className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center px-group py-section sm:px-section sm:py-block">
+      <p className="text-caption text-sub-text">(주)디비전 사내 디지털 명함</p>
+      {/* 로고가 곧 제목입니다. 화면에 글자가 없으므로 alt 가 h1 의 텍스트 역할을 합니다. */}
+      <h1 className="mt-sibling">
+        <Image
+          src={brand.serviceLogo}
+          alt="dingdong"
+          width={brand.serviceLogoWidth}
+          height={brand.serviceLogoHeight}
+          priority
+          className="h-10 w-auto"
+        />
       </h1>
-      <p className="mt-sibling text-body text-sub-text">
+      <p className="mt-group text-body text-sub-text">
         사내 이메일과 공지로 받은 비밀번호를 입력해 주세요.
       </p>
 

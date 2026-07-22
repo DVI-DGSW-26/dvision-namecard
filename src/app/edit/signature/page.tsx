@@ -23,7 +23,7 @@ type Props = {
 
 function Notice({ title, detail }: { title: string; detail: string }) {
   return (
-    <main className="mx-auto w-full max-w-[720px] px-section py-block">
+    <main className="mx-auto w-full max-w-[720px] px-group py-section sm:px-section sm:py-block">
       <p className="text-caption text-sub-text">내 명함</p>
       <h1 className="mt-tight text-display">{title}</h1>
       <p className="mt-group text-body text-sub-text">{detail}</p>
@@ -81,7 +81,7 @@ export default async function SignaturePage({ searchParams }: Props) {
   return (
     <>
       <TopNav role={role} email={employee.email} current="/edit/signature" />
-      <main className="mx-auto w-full max-w-[1000px] px-section py-block">
+      <main className="mx-auto w-full max-w-[1000px] px-group py-section sm:px-section sm:py-block">
         <header>
           <p className="text-caption text-sub-text">내 명함</p>
           <h1 className="mt-tight text-display">이메일 서명</h1>
