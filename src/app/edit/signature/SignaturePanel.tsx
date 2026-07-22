@@ -23,6 +23,21 @@ import { copyRichText } from "@/lib/clipboard";
  */
 const GUIDES = [
   {
+    // 사내 메일이 전부 Gmail 이라 맨 위에 두고 기본으로 펼칩니다. (openGuide 초기값과 맞춰야 함)
+    id: "gmail",
+    label: "Gmail",
+    settingsUrl: "https://mail.google.com/mail/u/0/#settings/general",
+    steps: [
+      "위의 서명 복사 버튼을 먼저 누르세요.",
+      "설정 열기 를 눌러 새 탭에서 Gmail 설정(기본설정)을 엽니다.",
+      "아래로 스크롤해 서명 항목에서 새로 만들기 로 서명을 추가",
+      "편집 영역을 클릭하고 붙여넣기 (Windows Ctrl+V · Mac ⌘+V)",
+      "서명 기본값 에서 새 메일용 · 답장/전달용 서명을 각각 지정",
+      "맨 아래 변경사항 저장 을 꼭 클릭 (이걸 안 누르면 저장되지 않습니다)",
+    ],
+    note: "휴대폰 Gmail 앱의 서명은 이것과 별개이고 서식 없는 글자만 됩니다. 색·링크가 살아 있는 이 서명은 PC(웹)에서 넣으세요.",
+  },
+  {
     id: "outlook",
     label: "Outlook (데스크톱 앱)",
     settingsUrl: null,
@@ -32,6 +47,7 @@ const GUIDES = [
       "편집 영역에 붙여넣기 (Ctrl+V)",
       "새 메시지 / 회신 및 전달 에 방금 만든 서명을 지정",
     ],
+    note: null,
   },
   {
     id: "outlook-web",
@@ -42,17 +58,7 @@ const GUIDES = [
       "새 서명 을 만들고 편집 영역에 붙여넣기",
       "새 메시지용 / 회신 및 전달용 서명을 각각 지정 후 저장",
     ],
-  },
-  {
-    id: "gmail",
-    label: "Gmail",
-    settingsUrl: "https://mail.google.com/mail/u/0/#settings/general",
-    steps: [
-      "기본설정 탭에서 아래로 내려 서명 항목 찾기",
-      "새로 만들기 로 서명을 추가하고 편집 영역에 붙여넣기",
-      "서명 기본값 에서 새 메일 / 답장에 각각 지정",
-      "맨 아래 변경사항 저장 클릭 (이걸 안 누르면 사라집니다)",
-    ],
+    note: null,
   },
   {
     id: "naver",
@@ -63,12 +69,14 @@ const GUIDES = [
       "서명 사용 을 켜고 편집 영역에 붙여넣기",
       "확인 을 눌러 저장",
     ],
+    note: null,
   },
 ] as const;
 
 export function SignaturePanel({ html, text }: { html: string; text: string }) {
   const [status, setStatus] = useState<"idle" | "ok" | "plain" | "error">("idle");
-  const [openGuide, setOpenGuide] = useState<string>("outlook");
+  // 사내 메일이 전부 Gmail 이라 Gmail 안내를 기본으로 펼칩니다. (GUIDES 첫 항목과 맞춤)
+  const [openGuide, setOpenGuide] = useState<string>("gmail");
 
   async function handleCopy() {
     const result = await copyRichText(html, text);
@@ -156,6 +164,9 @@ export function SignaturePanel({ html, text }: { html: string; text: string }) {
                         <li key={step}>{step}</li>
                       ))}
                     </ol>
+                    {guide.note ? (
+                      <p className="mt-section text-caption text-sub-text">{guide.note}</p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

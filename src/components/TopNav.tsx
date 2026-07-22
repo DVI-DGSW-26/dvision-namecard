@@ -7,9 +7,8 @@ import { LogoutButton } from "./LogoutButton";
 /**
  * 상단 네비게이션.
  *
- * `임직원 관리`·`템플릿` 은 관리자 세션에만 보입니다. 두 경로 모두 /admin 아래라
- * middleware 가 이미 막고 있지만, 회원에게 보여주고 눌렀을 때 튕기는 것보다
- * 아예 안 보이는 편이 낫습니다.
+ * `임직원 관리` 는 관리자 세션에만 보입니다. /admin 아래라 middleware 가 이미
+ * 막고 있지만, 회원에게 보여주고 눌렀을 때 튕기는 것보다 아예 안 보이는 편이 낫습니다.
  *
  * `이메일 서명` 은 시안에 없던 항목입니다. 이 제품이 최종적으로 만들어 주는 게
  * 서명인데 진입로가 /edit 헤더의 링크 하나뿐이라 찾기 어려웠습니다.
@@ -21,7 +20,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/edit", label: "내 명함" },
   { href: "/edit/signature", label: "이메일 서명" },
   { href: "/admin/employees", label: "임직원 관리", adminOnly: true },
-  { href: "/admin/templates", label: "템플릿", adminOnly: true },
 ];
 
 export function TopNav({

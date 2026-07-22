@@ -39,6 +39,7 @@ type CompanyForm = {
   nameEn: string;
   industry: string;
   address: string;
+  fax: string;
   homepageUrl: string;
 };
 
@@ -75,6 +76,7 @@ export function EditProfileForm({
       nameEn: company.nameEn,
       industry: str(company.industry),
       address: company.address,
+      fax: str(company.fax),
       homepageUrl: str(company.homepageUrl),
     }),
     [company],
@@ -465,6 +467,16 @@ export function EditProfileForm({
             </Field>
 
             <FieldRow>
+              {/* 팩스는 회사 공용 번호입니다. 이메일 서명·vCard 가 이 값(Company.fax)을 씁니다. */}
+              <Field label="팩스 (선택)" htmlFor="co-fax" error={err("company.fax")}>
+                <Input
+                  id="co-fax"
+                  inputMode="tel"
+                  value={co.fax}
+                  invalid={Boolean(err("company.fax"))}
+                  onChange={(e) => setCoField("fax", formatPhone(e.target.value))}
+                />
+              </Field>
               <Field label="홈페이지 (선택)" htmlFor="co-homepageUrl" error={err("company.homepageUrl")}>
                 <Input
                   id="co-homepageUrl"

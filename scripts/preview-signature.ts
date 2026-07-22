@@ -28,9 +28,11 @@ const company = {
   stats: [],
 } as unknown as Company;
 
+// slug 은 실제 DB 에 있는 값이어야 합니다. 이제 서명이 /c/[slug]/card.png 이미지를
+// 가리키고, 그 이미지는 dev 서버가 DB 를 조회해 생성하기 때문입니다. (seed 의 "hong")
 const employee = {
   id: "preview",
-  slug: "yg-ryu",
+  slug: "hong",
   email: "yg.ryu@dvi-ind.com",
   nameKo: "류영균",
   familyName: "류",

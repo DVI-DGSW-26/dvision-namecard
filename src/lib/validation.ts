@@ -99,6 +99,9 @@ export const companyProfileSchema = z.object({
   nameEn: z.string().trim().min(1, "영문 회사명을 입력해 주세요.").max(80, "영문 회사명이 너무 깁니다."),
   industry: optionalText(60, "사업 분야"),
   address: z.string().trim().min(1, "주소를 입력해 주세요.").max(120, "주소가 너무 깁니다."),
+  // 팩스는 회사 공용 번호입니다. 명함 카드·서명·vCard 가 모두 이 값을 씁니다.
+  // (개인 전화는 Employee.telWork/telMobile 로 따로 있습니다.)
+  fax: phone,
   homepageUrl: optionalText(120, "홈페이지"),
 });
 
