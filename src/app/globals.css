@@ -72,6 +72,26 @@
     "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 
+/*
+ * --spacing-block 이 만들어 내는 이름 충돌을 되돌립니다.
+ *
+ * Tailwind v4 는 --spacing-* 토큰마다 논리 크기 유틸도 같이 찍어냅니다.
+ * key 가 `block` 이라 그중 하나가 하필 `.inline-block { inline-size: 40px }` 이고,
+ * 이게 기본 display 유틸인 `.inline-block { display: inline-block }` 보다 뒤에
+ * 나와서 이깁니다. 그래서 `inline-block` 을 붙인 링크는 폭이 40px 로 눌리고
+ * 글자가 한 글자씩 접혀 줄이 겹쳐 보였습니다.
+ *
+ * 주의: 이 규칙 뒤에는 utilities 레이어의 w-* 가 오지 않으므로,
+ * `inline-block` 과 `w-full` 을 같이 쓰면 폭이 먹지 않습니다. 폭을 줘야 하면
+ * `inline-block` 대신 `block` 을 쓰세요.
+ */
+@layer utilities {
+  .inline-block {
+    display: inline-block;
+    inline-size: auto;
+  }
+}
+
 html {
   /* 토큰의 기본 자간·행간. 개별 text-* 토큰이 덮어씁니다. */
   letter-spacing: -0.01em;
