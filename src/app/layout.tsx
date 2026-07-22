@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "(주)디비전 디지털 명함",
+  title: "ding dong 사내 디지털 명함",
   description: "DVISION Co., Ltd. 사내 디지털 명함 · 이메일 서명 서비스",
 };
 
