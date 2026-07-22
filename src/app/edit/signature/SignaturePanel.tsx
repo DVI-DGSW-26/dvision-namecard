@@ -155,12 +155,12 @@ export function SignaturePanel({ html, text }: { html: string; text: string }) {
                         href={guide.settingsUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="mb-section inline-block rounded-card border border-border px-group py-sibling text-caption-bold text-text hover:border-text"
+                        className="inline-1 mb-2 rounded-card border border-black px-group py-sibling text-caption-bold text-primary hover:border-text"
                       >
                         설정 열기 (새 탭) →
                       </a>
                     ) : null}
-                    <ol className="flex list-decimal flex-col gap-sibling pl-group text-body text-sub-text">
+                    <ol className="flex mt-3 list-decimal flex-col gap-sibling pl-group text-body text-sub-text">
                       {guide.steps.map((step) => (
                         <li key={step}>{step}</li>
                       ))}
