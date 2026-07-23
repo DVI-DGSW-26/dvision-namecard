@@ -65,3 +65,41 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
   }
 }
+
+/**
+ * 직원 완전 삭제. (admin 전용)
+ *
+ * 행이 사라지므로 공개 명함 주소(/c/[slug])가 404 가 됩니다 — 이미 메일 서명으로
+ * 나간 링크도 함께 깨집니다. 퇴사 처리라면 상태를 RESIGNED 로 바꾸는 쪽이 맞습니다.
+ * (그쪽은 목록에 남고 주소도 그대로 점유합니다)
+ *
+ * 조회 기록(ProfileView)은 스키마의 Cascade 로 함께 지워집니다.
+ */
+export async function DELETE(_request: NextRequest, { params }: Context) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "인증이 필요합니다." }, { status: 401 });
+  }
+  if (session.role !== "admin") {
+    return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  }
+
+  const { id } = await params;
+
+  // 자기 자신을 지우면 세션의 employeeId 가 없는 사람을 가리키게 되어 /edit 이 열리지
+  // 않습니다. 로그아웃 말고는 빠져나갈 길이 없어지므로 막습니다.
+  if (session.employeeId === id) {
+    return NextResponse.json({ error: "본인 계정은 삭제할 수 없습니다." }, { status: 409 });
+  }
+
+  try {
+    const employee = await prisma.employee.delete({ where: { id }, select: { slug: true } });
+    revalidateTag(cardTag(employee.slug), { expire: 0 });
+    return NextResponse.json({ ok: true });
+  } catch (cause: unknown) {
+    if (typeof cause === "object" && cause !== null && "code" in cause && cause.code === "P2025") {
+      return NextResponse.json({ error: "이미 삭제된 직원입니다." }, { status: 404 });
+    }
+    return NextResponse.json({ error: "삭제하지 못했습니다." }, { status: 500 });
+  }
+}
