@@ -88,6 +88,21 @@ export function toProfileCardData(employee: Employee, company: Company): Profile
   };
 }
 
+/**
+ * 내려받을 때 붙는 파일명.
+ *
+ * slug(hong)가 아니라 이름으로 저장합니다 — "홍길동 명함.png". 명함을 여러 장
+ * 받아 두면 파일명이 그 사람을 가리켜야 나중에 찾을 수 있는데, slug 는 성만
+ * 로마자로 줄인 값이라(홍길동·홍민지 → hong·hong2) 누구 명함인지 알아볼 수 없습니다.
+ *
+ * 이름은 자유 입력이라 파일명에 못 쓰는 글자가 섞일 수 있어 걷어냅니다.
+ * 걷어내고 나면 빈 문자열이 되는 경우(이름이 전부 특수문자)를 대비해 slug 로 떨어집니다.
+ */
+function downloadName(nameKo: string, slug: string): string {
+  const safe = nameKo.replace(/[\\/:*?"<>|]/g, "").trim();
+  return `${safe || slug} 명함.png`;
+}
+
 /** 회사 워드마크. 로고 이미지가 아직 없어 텍스트로 그립니다. D 만 primary. */
 function Wordmark() {
   return (
@@ -217,7 +232,7 @@ export function ProfileCard({
         */
         <a
           href={`/c/${data.slug}/card.png`}
-          download={`${data.slug}.png`}
+          download={downloadName(data.nameKo, data.slug)}
           aria-label="명함 이미지 저장"
           className={`${identityClassName} transition-colors hover:bg-sub-bg`}
         >
