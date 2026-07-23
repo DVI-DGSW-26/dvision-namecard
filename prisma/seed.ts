@@ -95,13 +95,14 @@ const OFFICES = [
     address: "대구시 달성군 구지면 국가산단대로33길 237",
     // 영문 주소는 회사에서 받은 표기 그대로입니다. 국문처럼 우편번호를 앞에
     // 붙이지 않고 이 줄이 영문 명함에 통째로 나갑니다.
-    addressEn: "Gukkasandan-daero 33-gil, Guji-myeon, Dalseong-gun, Daegu, 43011, Republic of Korea",
+    addressEn:
+      "237, Gukgasandan-daero 33-gil, Guji-myeon, Dalseong-gun, Daegu, 43011, Republic of Korea",
   },
   {
     name: "R&D센터",
     postalCode: "41585",
     address: "대구 북구 호암로 51",
-    addressEn: "51, Hoam-ro, Buk-gu, Daegu, Republic of Korea",
+    addressEn: "51, Hoam-ro, Buk-gu, Daegu, 41585, Republic of Korea",
   },
 ];
 
