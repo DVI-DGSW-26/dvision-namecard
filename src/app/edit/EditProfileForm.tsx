@@ -41,8 +41,15 @@ type CompanyForm = {
   nameKo: string;
   nameEn: string;
   industry: string;
+  tagline: string;
+  /** 쉼표로 구분한 한 줄. 저장할 때 스키마가 배열로 바꿉니다. */
+  certifications: string;
+  tel: string;
   fax: string;
   homepageUrl: string;
+  linkedinUrl: string;
+  youtubeUrl: string;
+  instagramUrl: string;
 };
 
 const str = (value: string | null | undefined) => value ?? "";
@@ -83,8 +90,17 @@ export function EditProfileForm({
       nameKo: company.nameKo,
       nameEn: company.nameEn,
       industry: str(company.industry),
+      tagline: str(company.tagline),
+      // Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 골라 한 줄로 붙입니다.
+      certifications: Array.isArray(company.certifications)
+        ? company.certifications.filter((c): c is string => typeof c === "string").join(", ")
+        : "",
+      tel: company.tel,
       fax: str(company.fax),
       homepageUrl: str(company.homepageUrl),
+      linkedinUrl: str(company.linkedinUrl),
+      youtubeUrl: str(company.youtubeUrl),
+      instagramUrl: str(company.instagramUrl),
     }),
     [company],
   );
@@ -245,17 +261,21 @@ export function EditProfileForm({
         nameKo: co.nameKo,
         nameEn: co.nameEn,
         industry: co.industry,
-        tagline: company.tagline,
+        tagline: co.tagline,
         // 홈페이지를 고치면 미리보기 CTA 도 그 자리에서 따라갑니다.
         homepageUrl: co.homepageUrl,
+        linkedinUrl: co.linkedinUrl,
+        youtubeUrl: co.youtubeUrl,
+        instagramUrl: co.instagramUrl,
         // 미리보기 주소는 저장된 사업장 그대로입니다 — 이 폼에서 바꾸는 값이 아닙니다.
         addresses: officeLines(company.offices),
         fax: co.fax,
-        // 대표번호는 폼에 없는 값이라 DB 값을 그대로 씁니다.
-        tel: company.tel,
-        certifications: Array.isArray(company.certifications)
-          ? company.certifications.filter((c): c is string => typeof c === "string")
-          : [],
+        tel: co.tel,
+        // 폼은 쉼표 한 줄이고 카드는 배열입니다. 저장 스키마와 같은 규칙으로 쪼갭니다.
+        certifications: co.certifications
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
       },
     }),
     [
@@ -265,9 +285,6 @@ export function EditProfileForm({
       employee.slug,
       employee.photoUrl,
       employee.mobilePublic,
-      company.tel,
-      company.tagline,
-      company.certifications,
       company.offices,
     ],
   );
@@ -589,7 +606,55 @@ export function EditProfileForm({
               </p>
             ) : null}
 
+            <Field
+              label="태그라인 (선택)"
+              htmlFor="co-tagline"
+              error={err("company.tagline")}
+              hint="명함 하단 회사 블록에 사업 분야와 함께 두 줄로 나옵니다."
+            >
+              <Input
+                id="co-tagline"
+                value={co.tagline}
+                placeholder="예: 자동차 경량 부품 전문"
+                invalid={Boolean(err("company.tagline"))}
+                onChange={(e) => setCoField("tagline", e.target.value)}
+              />
+            </Field>
+
+            <Field
+              label="인증 (선택)"
+              htmlFor="co-certifications"
+              error={err("company.certifications")}
+              hint="쉼표로 구분해 적습니다. 명함에 뱃지로 하나씩 나옵니다."
+            >
+              <Input
+                id="co-certifications"
+                value={co.certifications}
+                placeholder="IATF 16949, ISO 9001"
+                invalid={Boolean(err("company.certifications"))}
+                onChange={(e) => setCoField("certifications", e.target.value)}
+              />
+            </Field>
+
             <FieldRow>
+              {/*
+                대표번호는 개인 사무실 번호가 없는 직원의 명함에 대신 나갑니다.
+                그래서 선택이 아니라 필수입니다 — 비우면 그 직원 카드에서 전화가 사라집니다.
+              */}
+              <Field
+                label="대표번호"
+                htmlFor="co-tel"
+                error={err("company.tel")}
+                hint="사무실 번호를 안 적은 직원의 명함에 이 번호가 나갑니다."
+              >
+                <Input
+                  id="co-tel"
+                  inputMode="tel"
+                  value={co.tel}
+                  invalid={Boolean(err("company.tel"))}
+                  onChange={(e) => setCoField("tel", formatPhone(e.target.value))}
+                />
+              </Field>
               {/* 팩스는 회사 공용 번호입니다. 이메일 서명·vCard 가 이 값(Company.fax)을 씁니다. */}
               <Field label="팩스 (선택)" htmlFor="co-fax" error={err("company.fax")}>
                 <Input
@@ -600,12 +665,56 @@ export function EditProfileForm({
                   onChange={(e) => setCoField("fax", formatPhone(e.target.value))}
                 />
               </Field>
+            </FieldRow>
+
+            {/*
+              공개 카드 아래 아이콘 줄에 걸리는 주소들. 비우면 그 아이콘이 통째로
+              빠집니다 — 아무 데도 안 가는 아이콘이 남는 것보다 없는 편이 낫습니다.
+              스킴(https://)은 없어도 됩니다. 카드가 붙여서 엽니다.
+            */}
+            <FieldRow>
               <Field label="홈페이지 (선택)" htmlFor="co-homepageUrl" error={err("company.homepageUrl")}>
                 <Input
                   id="co-homepageUrl"
                   value={co.homepageUrl}
+                  placeholder="dvi-ind.com"
                   invalid={Boolean(err("company.homepageUrl"))}
                   onChange={(e) => setCoField("homepageUrl", e.target.value)}
+                />
+              </Field>
+              <Field label="링크드인 (선택)" htmlFor="co-linkedinUrl" error={err("company.linkedinUrl")}>
+                <Input
+                  id="co-linkedinUrl"
+                  value={co.linkedinUrl}
+                  placeholder="linkedin.com/company/…"
+                  invalid={Boolean(err("company.linkedinUrl"))}
+                  onChange={(e) => setCoField("linkedinUrl", e.target.value)}
+                />
+              </Field>
+            </FieldRow>
+
+            <FieldRow>
+              <Field label="인스타그램 (선택)" htmlFor="co-instagramUrl" error={err("company.instagramUrl")}>
+                <Input
+                  id="co-instagramUrl"
+                  value={co.instagramUrl}
+                  placeholder="instagram.com/…"
+                  invalid={Boolean(err("company.instagramUrl"))}
+                  onChange={(e) => setCoField("instagramUrl", e.target.value)}
+                />
+              </Field>
+              <Field
+                label="유튜브 (선택)"
+                htmlFor="co-youtubeUrl"
+                error={err("company.youtubeUrl")}
+                hint="채널이 아니라 회사 소개 영상 주소를 넣습니다."
+              >
+                <Input
+                  id="co-youtubeUrl"
+                  value={co.youtubeUrl}
+                  placeholder="youtu.be/…"
+                  invalid={Boolean(err("company.youtubeUrl"))}
+                  onChange={(e) => setCoField("youtubeUrl", e.target.value)}
                 />
               </Field>
             </FieldRow>
