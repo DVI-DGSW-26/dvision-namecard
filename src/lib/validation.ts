@@ -57,6 +57,8 @@ export const employeeProfileSchema = z.object({
   positionId: orgRef,
   // 자격은 선택 입력입니다. 비우면 null 로 저장되고 카드·서명에서 통째로 빠집니다.
   credential: optionalText(40, "자격 · 학위"),
+  // 영문 카드(/c/[slug]/en)가 쓰는 값. 비우면 영문 카드에서만 빠집니다.
+  credentialEn: optionalText(40, "자격 · 학위 영문"),
   telWork: phone,
   telMobile: phone,
   email: z.preprocess(
@@ -95,18 +97,106 @@ export const employeeCreateSchema = z.object({
 });
 
 export type EmployeeCreateInput = z.input<typeof employeeCreateSchema>;
+
+/**
+ * 공개 주소(slug). 직원 추가와 관리자 수정이 같은 규칙을 씁니다.
+ *
+ * 소문자·숫자만 받는 이유: /c/[slug] 에 그대로 들어가는 값이라 대문자나 한글이 섞이면
+ * 메신저·메일 클라이언트가 URL 을 다르게 인코딩해 링크가 갈립니다.
+ */
+const slugRule = z
+  .string()
+  .trim()
+  .min(1, "주소를 입력해 주세요.")
+  .regex(/^[a-z0-9]+$/, "주소는 영문 소문자와 숫자만 쓸 수 있습니다.")
+  .max(30, "주소가 너무 깁니다.");
+
+/**
+ * 관리자만 바꿀 수 있는 값 — 노출 여부(status)와 공개 주소(slug).
+ *
+ * 프로필 스키마(employeeProfileSchema)와 나눠 둔 이유: 저 스키마는 본인도 쓰기 때문에
+ * 거기에 status 를 넣는 순간 직원이 자기 계정을 스스로 활성화할 수 있게 됩니다.
+ */
+export const employeeAdminSchema = z.object({
+  status: z.enum(["PENDING", "ACTIVE", "RESIGNED"], { message: "상태를 선택해 주세요." }),
+  slug: slugRule,
+});
+
+/**
+ * 여러 명 한꺼번에 처리.
+ *
+ * 상한을 두는 이유: 화면의 "이 페이지 전체 선택" 은 페이지 밖 선택을 유지하므로
+ * 넘어오는 id 가 얼마든지 길어질 수 있습니다. 한 요청이 DB 를 오래 잡지 않게 막습니다.
+ */
+export const employeeBulkSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("status"),
+    ids: z.array(z.string().max(40)).min(1, "대상을 선택해 주세요.").max(500, "한 번에 500명까지 처리할 수 있습니다."),
+    status: z.enum(["PENDING", "ACTIVE", "RESIGNED"], { message: "상태를 선택해 주세요." }),
+  }),
+  z.object({
+    action: z.literal("delete"),
+    ids: z.array(z.string().max(40)).min(1, "대상을 선택해 주세요.").max(500, "한 번에 500명까지 처리할 수 있습니다."),
+  }),
+]);
 export type EmployeeCreateValues = z.output<typeof employeeCreateSchema>;
 
 export const companyProfileSchema = z.object({
   nameKo: z.string().trim().min(1, "회사명을 입력해 주세요.").max(60, "회사명이 너무 깁니다."),
   nameEn: z.string().trim().min(1, "영문 회사명을 입력해 주세요.").max(80, "영문 회사명이 너무 깁니다."),
   industry: optionalText(60, "사업 분야"),
+  tagline: optionalText(60, "태그라인"),
+  // 영문 카드가 쓰는 값. 비우면 영문 카드에서 그 줄이 빠집니다 —
+  // 한글을 대신 넣지 않습니다. 영문 명함에 한글이 섞이면 안 만든 것만 못합니다.
+  industryEn: optionalText(60, "사업 분야 영문"),
+  taglineEn: optionalText(60, "태그라인 영문"),
+  /**
+   * 인증 뱃지 — 명함 하단의 "IATF 16949" · "ISO 9001".
+   *
+   * 폼에서는 쉼표로 구분한 한 줄로 받고 여기서 배열로 바꿉니다. 항목마다 칸을
+   * 만들면 추가·삭제 버튼이 붙어 회사 정보 섹션이 목록 편집기가 됩니다 —
+   * 두세 개짜리 값에 그만한 화면을 쓸 이유가 없습니다.
+   *
+   * DB 는 Json 컬럼이라 무엇이든 들어갑니다. 카드는 문자열만 그리므로
+   * 여기서 문자열 배열로 좁혀서 저장합니다.
+   */
+  certifications: z.preprocess(
+    (value) =>
+      typeof value === "string"
+        ? value
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : value,
+    z
+      .array(z.string().max(30, "인증 이름은 30자 이내로 입력해 주세요."))
+      .max(6, "인증은 6개까지 넣을 수 있습니다."),
+  ),
   // 주소는 여기 없습니다 — 사업장이 여러 곳(본사·R&D센터)이라 Office 표로 빠졌고,
   // /admin/org 의 '사업장' 탭에서 관리합니다.
+  /**
+   * 회사 대표번호. 개인 사무실 번호(Employee.telWork)가 없는 직원의 명함·서명에
+   * 대신 나갑니다. 그래서 비울 수 없습니다 — 비면 그 직원 카드에 전화가 사라집니다.
+   */
+  tel: z
+    // emptyToNull 을 태우지 않습니다. 빈 값이 null 이 되면 zod 기본 문구
+    // ("expected string, received null")가 그대로 화면에 나옵니다.
+    .string({ message: "대표번호를 입력해 주세요." })
+    .trim()
+    .min(1, "대표번호를 입력해 주세요.")
+    .regex(/^[0-9-]+$/, "전화번호는 숫자와 하이픈만 입력할 수 있습니다.")
+    .max(20, "전화번호가 너무 깁니다."),
   // 팩스는 회사 공용 번호입니다. 명함 카드·서명·vCard 가 모두 이 값을 씁니다.
   // (개인 전화는 Employee.telWork/telMobile 로 따로 있습니다.)
   fax: phone,
+  // 공개 카드 아래 아이콘 줄. 스킴 없이 넣어도 카드가 https 를 붙여 엽니다.
   homepageUrl: optionalText(120, "홈페이지"),
+  linkedinUrl: optionalText(200, "링크드인"),
+  // 채널이 아니라 회사 소개 영상 주소입니다. 공유 링크(youtu.be/…)가 그대로 들어옵니다.
+  youtubeUrl: optionalText(200, "유튜브"),
+  // 영문 소개 영상. 비우면 영문 카드도 국문 영상을 겁니다.
+  youtubeUrlEn: optionalText(200, "유튜브 영문"),
+  instagramUrl: optionalText(200, "인스타그램"),
 });
 
 export type EmployeeProfileInput = z.input<typeof employeeProfileSchema>;

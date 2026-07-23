@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
+import { EditSlugDialog } from "@/components/EditSlugDialog";
 import { Input, Select } from "@/components/form";
 import { SearchIcon } from "@/components/icons";
 import {
@@ -105,6 +107,15 @@ export function EmployeeTable() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+
+  /* 관리 동작(상태 변경·주소 변경·삭제) ------------------------------------- */
+
+  const [slugTarget, setSlugTarget] = useState<EmployeeListItem | null>(null);
+  // 삭제는 되돌릴 수 없어서 한 번 더 묻습니다. 확인 대상의 id 를 들고 있습니다.
+  const [deleteTarget, setDeleteTarget] = useState<EmployeeListItem | null>(null);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isActing, setIsActing] = useState(false);
 
   // 직원을 추가한 뒤 같은 조회 조건 그대로 목록을 다시 받기 위한 값입니다.
   // URL 파라미터가 아니라 fetch effect 의 의존성으로만 씁니다.
@@ -210,6 +221,83 @@ export function EmployeeTable() {
       return next;
     });
   }, []);
+
+  /** 목록을 다시 받아옵니다. 관리 동작은 전부 성공 후 이걸 부릅니다. */
+  const refresh = useCallback(() => setReloadNonce((n) => n + 1), []);
+
+  /**
+   * 관리 동작 한 번 = 요청 한 번 + 목록 새로고침.
+   *
+   * 낙관적 갱신을 하지 않습니다 — 상태·주소는 서버가 거절할 수 있는 값이고
+   * (중복 주소, 이미 지워진 행), 화면만 먼저 바꾸면 되돌리는 코드가 더 복잡해집니다.
+   */
+  const runAction = useCallback(
+    async (path: string, init: RequestInit): Promise<boolean> => {
+      setIsActing(true);
+      setActionError(null);
+      try {
+        const response = await fetch(path, init);
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          const firstFieldError = body?.errors ? Object.values(body.errors)[0] : null;
+          setActionError(
+            body?.error ?? (typeof firstFieldError === "string" ? firstFieldError : "처리하지 못했습니다."),
+          );
+          return false;
+        }
+        refresh();
+        return true;
+      } catch {
+        setActionError("네트워크 오류로 처리하지 못했습니다.");
+        return false;
+      } finally {
+        setIsActing(false);
+      }
+    },
+    [refresh],
+  );
+
+  const changeRowStatus = useCallback(
+    (row: EmployeeListItem, next: Status) =>
+      runAction(`/api/employees/${row.id}/admin`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        // 주소는 그대로 두고 상태만 바꿉니다. 스키마가 두 값을 함께 받습니다.
+        body: JSON.stringify({ status: next, slug: row.slug }),
+      }),
+    [runAction],
+  );
+
+  const deleteRow = useCallback(
+    async (row: EmployeeListItem) => {
+      const ok = await runAction(`/api/employees/${row.id}`, { method: "DELETE" });
+      if (ok) {
+        setDeleteTarget(null);
+        // 지운 사람이 선택 목록에 남아 있으면 다음 일괄 동작이 404 를 받습니다.
+        setSelected((previous) => {
+          const next = new Set(previous);
+          next.delete(row.id);
+          return next;
+        });
+      }
+    },
+    [runAction],
+  );
+
+  const runBulk = useCallback(
+    async (payload: { action: "status"; status: Status } | { action: "delete" }) => {
+      const ok = await runAction("/api/employees/bulk", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...payload, ids: [...selected] }),
+      });
+      if (ok) {
+        setSelected(new Set());
+        setBulkConfirm(false);
+      }
+    },
+    [runAction, selected],
+  );
 
   const exportCsv = useCallback(async () => {
     setIsExporting(true);
@@ -327,6 +415,86 @@ export function EmployeeTable() {
         </p>
       ) : null}
 
+      {actionError ? (
+        <p role="alert" className="rounded-card bg-sub-bg px-group py-sibling text-caption text-text">
+          {actionError}
+        </p>
+      ) : null}
+
+      {/*
+        선택 도구막대 — 고른 사람이 있을 때만 나타납니다.
+
+        페이지를 넘겨도 선택이 유지되므로(toggleAllOnPage 가 현재 페이지만 건드립니다)
+        여기 숫자는 화면에 보이는 행 수와 다를 수 있습니다. 그래서 "N명" 을 문구로 밝힙니다.
+      */}
+      {selected.size > 0 ? (
+        <div className="flex flex-wrap items-center gap-sibling rounded-card border border-border bg-sub-bg px-group py-sibling">
+          <p className="text-caption-bold text-text">{selected.size}명 선택됨</p>
+
+          {bulkConfirm ? (
+            <>
+              <p className="text-caption text-text">
+                선택한 {selected.size}명을 완전히 지웁니다. 명함 주소와 조회 기록이 함께
+                사라지고 되돌릴 수 없습니다.
+              </p>
+              <div className="ml-auto flex gap-sibling">
+                <button
+                  type="button"
+                  onClick={() => setBulkConfirm(false)}
+                  className="h-10 rounded-card border border-border bg-bg px-group text-caption-bold text-text"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runBulk({ action: "delete" })}
+                  disabled={isActing}
+                  className="h-10 rounded-card bg-primary px-group text-caption-bold text-white disabled:bg-bg disabled:text-sub-text"
+                >
+                  {isActing ? "지우는 중…" : "완전 삭제"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="ml-auto flex flex-wrap items-center gap-sibling">
+              {/* 값을 고르는 즉시 실행되고 선택은 초기화됩니다. 그래서 항상 안내 문구로 되돌립니다. */}
+              <select
+                value=""
+                disabled={isActing}
+                onChange={(event) => {
+                  if (!event.target.value) return;
+                  runBulk({ action: "status", status: event.target.value as Status });
+                }}
+                aria-label="선택한 직원 상태 변경"
+                className="h-10 rounded-card border border-border bg-bg px-sibling text-caption text-text focus:border-text focus:outline-none disabled:text-sub-text"
+              >
+                <option value="">상태 변경…</option>
+                {STATUS_OPTIONS.map((value) => (
+                  <option key={value} value={value}>
+                    {STATUS_LABEL[value]} 으로
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setBulkConfirm(true)}
+                disabled={isActing}
+                className="h-10 rounded-card border border-border bg-bg px-group text-caption-bold text-text disabled:text-sub-text"
+              >
+                완전 삭제
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelected(new Set())}
+                className="h-10 rounded-card px-group text-caption text-sub-text hover:text-text"
+              >
+                선택 해제
+              </button>
+            </div>
+          )}
+        </div>
+      ) : null}
+
       {/*
         md 미만 — 카드 리스트.
         7열 표를 가로 스크롤로 밀어 넣으면 이름 말고는 아무것도 안 보입니다.
@@ -373,7 +541,10 @@ export function EmployeeTable() {
                 {/* min-w-0 이 없으면 긴 이메일이 카드 밖으로 삐져나갑니다. */}
                 <div className="flex min-w-0 flex-1 flex-col gap-tight">
                   <div className="flex items-start justify-between gap-sibling">
-                    <div className="flex min-w-0 items-center gap-sibling">
+                    <Link
+                      href={`/edit?e=${encodeURIComponent(row.slug)}`}
+                      className="flex min-w-0 items-center gap-sibling"
+                    >
                       <span
                         aria-hidden
                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sub-bg text-caption text-sub-text"
@@ -381,12 +552,20 @@ export function EmployeeTable() {
                         {[...row.nameKo][0] ?? "?"}
                       </span>
                       <span className="truncate text-body-bold">{row.nameKo}</span>
-                    </div>
-                    <span
-                      className={`inline-flex shrink-0 rounded-card border border-border px-sibling py-tight whitespace-nowrap ${STATUS_STYLE[row.status]}`}
+                    </Link>
+                    <select
+                      value={row.status}
+                      disabled={isActing}
+                      onChange={(event) => changeRowStatus(row, event.target.value as Status)}
+                      aria-label={`${row.nameKo} 상태`}
+                      className={`h-9 shrink-0 rounded-card border border-border bg-bg px-sibling whitespace-nowrap focus:border-text focus:outline-none disabled:text-sub-text ${STATUS_STYLE[row.status]}`}
                     >
-                      {STATUS_LABEL[row.status]}
-                    </span>
+                      {STATUS_OPTIONS.map((value) => (
+                        <option key={value} value={value}>
+                          {STATUS_LABEL[value]}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <p className="text-caption text-sub-text">
@@ -394,6 +573,23 @@ export function EmployeeTable() {
                   </p>
                   <p className="truncate text-caption text-sub-text">{row.email ?? "—"}</p>
                   <p className="text-caption text-sub-text">{formatDate(row.updatedAt)}</p>
+
+                  <div className="mt-tight flex gap-tight">
+                    <button
+                      type="button"
+                      onClick={() => setSlugTarget(row)}
+                      className="h-9 rounded-card border border-border px-group text-caption text-text"
+                    >
+                      주소
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(row)}
+                      className="h-9 rounded-card border border-border px-group text-caption text-text"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </div>
               </li>
             ))}
@@ -415,7 +611,7 @@ export function EmployeeTable() {
                   className="h-4 w-4 accent-primary"
                 />
               </th>
-              {["이름", "부서", "직위", "이메일", "수정일", "상태"].map((label) => (
+              {["이름", "부서", "직위", "이메일", "수정일", "상태", "관리"].map((label) => (
                 <th
                   key={label}
                   scope="col"
@@ -429,13 +625,13 @@ export function EmployeeTable() {
           <tbody>
             {isLoading && items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-group py-block text-center text-body text-sub-text">
+                <td colSpan={8} className="px-group py-block text-center text-body text-sub-text">
                   불러오는 중…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-group py-block text-center text-body text-sub-text">
+                <td colSpan={8} className="px-group py-block text-center text-body text-sub-text">
                   조건에 맞는 직원이 없습니다.
                 </td>
               </tr>
@@ -456,7 +652,11 @@ export function EmployeeTable() {
                     />
                   </td>
                   <td className={CELL}>
-                    <div className="flex items-center gap-sibling">
+                    {/* 이름을 누르면 관리자가 그 사람 명함을 대신 편집합니다. */}
+                    <Link
+                      href={`/edit?e=${encodeURIComponent(row.slug)}`}
+                      className="flex items-center gap-sibling hover:text-primary"
+                    >
                       <span
                         aria-hidden
                         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sub-bg text-caption text-sub-text"
@@ -464,7 +664,7 @@ export function EmployeeTable() {
                         {[...row.nameKo][0] ?? "?"}
                       </span>
                       <span className="text-body-bold">{row.nameKo}</span>
-                    </div>
+                    </Link>
                   </td>
                   <td className={CELL}>{row.department ?? "—"}</td>
                   <td className={CELL}>{row.rank ?? "—"}</td>
@@ -473,11 +673,38 @@ export function EmployeeTable() {
                     {formatDate(row.updatedAt)}
                   </td>
                   <td className="px-group py-sibling">
-                    <span
-                      className={`inline-flex rounded-card border border-border px-sibling py-tight whitespace-nowrap ${STATUS_STYLE[row.status]}`}
+                    {/* 배지가 아니라 선택 상자입니다 — 여기가 상태를 바꾸는 유일한 자리입니다. */}
+                    <select
+                      value={row.status}
+                      disabled={isActing}
+                      onChange={(event) => changeRowStatus(row, event.target.value as Status)}
+                      aria-label={`${row.nameKo} 상태`}
+                      className={`h-9 rounded-card border border-border bg-bg px-sibling whitespace-nowrap focus:border-text focus:outline-none disabled:text-sub-text ${STATUS_STYLE[row.status]}`}
                     >
-                      {STATUS_LABEL[row.status]}
-                    </span>
+                      {STATUS_OPTIONS.map((value) => (
+                        <option key={value} value={value}>
+                          {STATUS_LABEL[value]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-group py-sibling">
+                    <div className="flex gap-tight whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setSlugTarget(row)}
+                        className="h-9 rounded-card border border-border px-sibling text-caption text-text hover:border-text"
+                      >
+                        주소
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(row)}
+                        className="h-9 rounded-card border border-border px-sibling text-caption text-text hover:border-text"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -485,6 +712,37 @@ export function EmployeeTable() {
           </tbody>
         </table>
       </div>
+
+      {/*
+        한 명 삭제 확인. 별도 모달을 띄우지 않고 표 아래 띠로 보여 줍니다 —
+        모달을 열면 지우려는 행이 가려져서 누구를 지우는지 확인할 수 없습니다.
+      */}
+      {deleteTarget ? (
+        <div className="flex flex-wrap items-center gap-sibling rounded-card border border-border px-group py-sibling">
+          <p className="text-caption text-text">
+            <strong className="text-caption-bold">{deleteTarget.nameKo}</strong> 님을 완전히
+            지웁니다. 명함 주소(/c/{deleteTarget.slug})가 사라지고 이미 보낸 서명의 링크도
+            깨집니다. 퇴사 처리라면 상태를 &lsquo;비활성&rsquo;으로 바꾸세요.
+          </p>
+          <div className="ml-auto flex gap-sibling">
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              className="h-10 rounded-card border border-border px-group text-caption-bold text-text"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={() => deleteRow(deleteTarget)}
+              disabled={isActing}
+              className="h-10 rounded-card bg-primary px-group text-caption-bold text-white disabled:bg-sub-bg disabled:text-sub-text"
+            >
+              {isActing ? "지우는 중…" : "완전 삭제"}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-group">
         <p className="text-caption text-sub-text">
@@ -550,6 +808,12 @@ export function EmployeeTable() {
           setPage(1);
           setReloadNonce((n) => n + 1);
         }}
+      />
+
+      <EditSlugDialog
+        target={slugTarget}
+        onClose={() => setSlugTarget(null)}
+        onSaved={refresh}
       />
     </div>
   );

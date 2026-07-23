@@ -1,44 +1,20 @@
 import { type NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { buildVCard } from "@/lib/vcard";
-import { companyOfficesInclude, employeeOrgInclude } from "@/types";
+import { vcardResponse } from "@/lib/vcard-route";
 
 type Context = {
   params: Promise<{ slug: string }>;
 };
 
 /**
- * .vcf 다운로드. (인증 불필요)
+ * .vcf 다운로드 — 국문. (인증 불필요)
  *
  * 공개 카드의 "연락처 저장" 버튼은 홈페이지 바로가기로 바뀌어 지금은 화면에서
- * 이 주소를 부르는 곳이 없습니다. 주소(/c/[slug]/vcard)로 직접 받는 건 그대로
- * 되고, 나중에 저장 버튼을 다시 붙일 수도 있어 라우트는 남겨 둡니다.
+ * 이 주소를 부르는 곳이 없습니다. 주소로 직접 받는 건 그대로 되고, 나중에 저장
+ * 버튼을 다시 붙일 수도 있어 라우트는 남겨 둡니다.
  *
- * 페이지와 같은 조건으로 막습니다. RESIGNED 는 링크를 알아도 받을 수 없어야 하고,
- * 여기만 열려 있으면 프로필은 404 인데 연락처는 받아지는 구멍이 생깁니다.
+ * 내용 조립은 lib/vcard-route.ts 에 있습니다 — 영문판과 같은 코드를 씁니다.
  */
 export async function GET(_request: NextRequest, { params }: Context) {
   const { slug } = await params;
-
-  const employee = await prisma.employee.findUnique({
-    where: { slug },
-    include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
-  });
-
-  if (!employee || employee.status === "RESIGNED") {
-    return new Response("Not Found", { status: 404 });
-  }
-
-  const vcf = buildVCard(employee, employee.company);
-
-  return new Response(vcf, {
-    headers: {
-      // charset 을 빼면 일부 안드로이드 기종이 한글을 깨뜨립니다.
-      "content-type": "text/vcard; charset=utf-8",
-      // 파일명은 slug 기준입니다. 한글 파일명은 클라이언트마다 인코딩이 갈립니다.
-      "content-disposition": `attachment; filename="${slug}.vcf"`,
-      // 연락처가 바뀌면 즉시 반영돼야 하므로 캐시하지 않습니다.
-      "cache-control": "no-store",
-    },
-  });
+  return (await vcardResponse(slug, "ko")) ?? new Response("Not Found", { status: 404 });
 }

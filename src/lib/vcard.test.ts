@@ -7,11 +7,17 @@ import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 process.env.NEXT_PUBLIC_BASE_URL = "https://dvi-ind.com";
 
 /** 사업장 한 줄. 기본값은 본사 하나뿐이고, 여러 곳을 보는 테스트에서 덮어씁니다. */
-const office = (name: string, postalCode: string, address: string) => ({
+const office = (
+  name: string,
+  postalCode: string,
+  address: string,
+  addressEn: string | null = null,
+) => ({
   id: `office_${name}`,
   name,
   postalCode,
   address,
+  addressEn,
   sortOrder: 0,
   companyId: "dvision",
 });
@@ -25,6 +31,12 @@ const company: CompanyWithOffices = {
   fax: "053-715-2096",
   logoUrl: "/brand/logo.png",
   homepageUrl: null,
+  industryEn: null,
+  taglineEn: null,
+  youtubeUrlEn: null,
+  linkedinUrl: null,
+  youtubeUrl: null,
+  instagramUrl: null,
   brandColor: "#931B82",
   tagline: "자동차 경량 부품 전문",
   certifications: ["IATF 16949"],
@@ -56,6 +68,7 @@ const employee: EmployeeWithOrg = {
   teamId: null,
   partId: null,
   credential: "공학박사",
+  credentialEn: null,
   bio: null,
   telWork: "053-710-1022",
   telMobile: "010-3131-6834",

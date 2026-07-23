@@ -1,84 +1,23 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { ProfileCard, toProfileCardData } from "@/components/ProfileCard";
-import { roleParts } from "@/lib/org";
-import { prisma } from "@/lib/prisma";
-import { companyOfficesInclude, employeeOrgInclude } from "@/types";
+import { ProfileView, profileMetadata } from "./profile";
 
 /**
- * 공개 프로필. (인증 불필요 — middleware matcher 에 없음)
+ * 공개 프로필 — 국문. (인증 불필요 — middleware matcher 에 없음)
  *
- * ProfileCard 를 여기서 복사해 변형하지 마세요. /edit 미리보기와 즉시 어긋납니다.
+ * 알맹이는 ./profile.tsx 에 있습니다. 영문판(/c/[slug]/en)과 같은 코드를 씁니다 —
+ * 여기서 복사해 변형하면 두 언어가 조용히 갈라집니다.
  */
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-/** 페이지와 메타데이터가 같은 요청에서 두 번 조회하지 않도록 결과를 재사용합니다. */
-async function getProfile(slug: string) {
-  const employee = await prisma.employee.findUnique({
-    where: { slug },
-    include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
-  });
-
-  // RESIGNED 는 링크를 알아도 열리지 않아야 합니다.
-  if (!employee || employee.status === "RESIGNED") return null;
-  return employee;
-}
-
-/**
- * 카카오톡·문자로 링크를 보냈을 때 보이는 카드입니다.
- * 이게 없으면 도메인만 덩그러니 뜨고, 명함을 공유하는 서비스에서 그건 치명적입니다.
- */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const employee = await getProfile(slug);
-
-  if (!employee) return { title: "찾을 수 없는 명함" };
-
-  const { company } = employee;
-  const role = roleParts(employee).join(" ");
-  // 직위·직책이 하나도 없으면 이름과 회사명 사이에 공백이 두 칸 남습니다.
-  const title = [employee.nameKo, role].filter(Boolean).join(" ") + ` | ${company.nameKo}`;
-  const description = [company.industry, company.tagline].filter(Boolean).join(" · ");
-
-  return {
-    title,
-    description: description || `${company.nameKo} ${employee.nameKo} 디지털 명함`,
-    openGraph: {
-      title,
-      description: description || undefined,
-      type: "profile",
-      siteName: company.nameKo,
-    },
-    twitter: { card: "summary", title, description: description || undefined },
-    // 공개 프로필이지만 검색에 뜨는 건 다른 문제입니다. 개인 연락처가 색인되지
-    // 않도록 막습니다. 링크를 아는 사람만 보는 것이 이 서비스의 전제입니다.
-    robots: { index: false, follow: false },
-  };
+  return profileMetadata(slug, "ko");
 }
 
 export default async function ProfilePage({ params }: Props) {
   const { slug } = await params;
-  const employee = await getProfile(slug);
-
-  if (!employee) notFound();
-
-  return (
-    /*
-      회사명·직급은 ProfileCard 안에 이미 있습니다. 여기서 또 적으면 중복입니다.
-
-      카드 껍데기(테두리·모서리·그림자)는 이 페이지가 그립니다. ProfileCard 는
-      내용만 담당한다는 규칙이라, 껍데기를 그 안에 넣으면 /edit 미리보기가
-      이미 두르고 있는 테두리와 겹쳐 이중선이 됩니다.
-
-      바닥을 회색으로 깔지 않으면 흰 카드가 흰 화면에 묻혀 형태가 사라집니다.
-    */
-    <main className="flex flex-1 flex-col justify-center bg-sub-bg px-group py-section">
-      <div className="mx-auto w-full max-w-[375px] overflow-hidden rounded-card border border-border bg-bg shadow-sm">
-        <ProfileCard data={toProfileCardData(employee, employee.company)} />
-      </div>
-    </main>
-  );
+  return <ProfileView slug={slug} lang="ko" />;
 }

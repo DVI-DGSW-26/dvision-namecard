@@ -55,15 +55,19 @@ const EXECUTIVE_TITLES = [
   ["재무총괄", "CFO", "Chief Financial Officer"],
 ] as const;
 
-/** 직책 — 고문은 분야별로 나눠 둡니다. 분야가 늘면 관리자가 /admin/org 에서 추가합니다. */
+/**
+ * 직책.
+ *
+ * 고문은 분야를 나누지 않습니다. 원본 표에 "Technical, Strategic, Manufacturing 등"
+ * 이라고 적혀 있지만 명함에는 그냥 "고문" 으로 나갑니다. 분야까지 찍을 일이 생기면
+ * 관리자가 /admin/org 에서 항목을 늘리면 됩니다.
+ */
 const POSITIONS = [
   ["팀원", "Team Member"],
   ["팀장", "Team Leader"],
   ["공장총괄", "Plant Manager"],
   ["연구소장", "Director, Corporate R&D"],
-  ["기술고문", "Technical Advisor"],
-  ["전략고문", "Strategic Advisor"],
-  ["생산고문", "Manufacturing Advisor"],
+  ["고문", "Advisor"],
 ] as const;
 
 /**
@@ -85,9 +89,21 @@ const TEAMS = [
  * 시안에 있던 "경기 화성시 팔탄면 서봉로 1013" 은 실제 주소가 아닙니다 — 되돌리지 마세요.
  */
 const OFFICES = [
-  { name: "본사", postalCode: "43011", address: "대구시 달성군 구지면 국가산단대로33길 237" },
-  { name: "R&D센터", postalCode: "41585", address: "대구 북구 홈암로 51" },
-] as const;
+  {
+    name: "본사",
+    postalCode: "43011",
+    address: "대구시 달성군 구지면 국가산단대로33길 237",
+    // 영문 주소는 아직 회사에서 받지 못했습니다. 비워 두면 영문 명함에서 이 줄이
+    // 빠집니다 — /admin/org 사업장 탭에서 채우면 그때부터 나옵니다.
+    addressEn: null as string | null,
+  },
+  {
+    name: "R&D센터",
+    postalCode: "41585",
+    address: "대구 북구 홈암로 51",
+    addressEn: null as string | null,
+  },
+];
 
 async function seedOffices(companyId: string) {
   for (const [index, office] of OFFICES.entries()) {
@@ -174,7 +190,13 @@ async function main() {
       fax: "053-715-2096",
       logoUrl: "/brand/logo.png",
       brandColor: "#931B82",
+      // 공개 카드 아래 아이콘 줄. 전부 회사가 실제로 쓰는 주소입니다.
       homepageUrl: "dvi-ind.com",
+      linkedinUrl: "https://www.linkedin.com/company/dvi-ind/",
+      // 채널이 아니라 회사 소개 영상입니다. 국문 카드와 영문 카드가 각자 겁니다.
+      youtubeUrl: "https://youtu.be/9NsSwkFx0PM?si=0HVz7H5LVhw5rJgG",
+      youtubeUrlEn: "https://youtu.be/Wef9PO2yX4I?si=E8Xzm55e_hxarWqW",
+      instagramUrl: "instagram.com/dvi_ind",
       // 시안에서는 industry 와 tagline 이 두 줄로 나뉘어 표시됩니다.
       industry: "알루미늄 압출 · 정밀가공",
       tagline: "자동차 경량 부품 전문",
