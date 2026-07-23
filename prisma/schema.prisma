@@ -132,7 +132,22 @@ model Company {
   tel            String
   fax            String?
   logoUrl        String
-  homepageUrl    String?
+
+  /**
+   * 공개 카드 아래 아이콘 줄에 걸리는 주소들.
+   *
+   * 값이 빈 항목은 아이콘째 숨깁니다 — 회사가 SNS 하나를 접어도 깨진 링크가
+   * 남지 않습니다. 홈페이지만 예외로, 비어 있으면 config/brand.ts 의 기본 주소로
+   * 떨어져 아이콘이 사라지지 않습니다.
+   *
+   * 스킴 없이 "dvi-ind.com" 처럼 저장돼도 됩니다. 카드가 붙여서 엽니다.
+   */
+  homepageUrl  String?
+  linkedinUrl  String?
+  /// 채널이 아니라 회사 소개 영상입니다. 영문 카드를 만들면 영문 영상이 따로 붙습니다.
+  youtubeUrl   String?
+  instagramUrl String?
+
   brandColor     String   @default("#931B82")
   tagline        String?
   certifications Json

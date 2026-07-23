@@ -178,7 +178,13 @@ async function main() {
       fax: "053-715-2096",
       logoUrl: "/brand/logo.png",
       brandColor: "#931B82",
+      // 공개 카드 아래 아이콘 줄. 전부 회사가 실제로 쓰는 주소입니다.
       homepageUrl: "dvi-ind.com",
+      linkedinUrl: "https://www.linkedin.com/company/dvi-ind/",
+      // 채널이 아니라 회사 소개 영상입니다. 지금 카드는 국문판이라 국문 영상을 겁니다.
+      // 영문 카드를 만들 때 쓸 영문 영상: https://youtu.be/Wef9PO2yX4I?si=E8Xzm55e_hxarWqW
+      youtubeUrl: "https://youtu.be/9NsSwkFx0PM?si=0HVz7H5LVhw5rJgG",
+      instagramUrl: "instagram.com/dvi_ind",
       // 시안에서는 industry 와 tagline 이 두 줄로 나뉘어 표시됩니다.
       industry: "알루미늄 압출 · 정밀가공",
       tagline: "자동차 경량 부품 전문",

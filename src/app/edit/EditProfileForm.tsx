@@ -43,6 +43,9 @@ type CompanyForm = {
   industry: string;
   fax: string;
   homepageUrl: string;
+  linkedinUrl: string;
+  youtubeUrl: string;
+  instagramUrl: string;
 };
 
 const str = (value: string | null | undefined) => value ?? "";
@@ -85,6 +88,9 @@ export function EditProfileForm({
       industry: str(company.industry),
       fax: str(company.fax),
       homepageUrl: str(company.homepageUrl),
+      linkedinUrl: str(company.linkedinUrl),
+      youtubeUrl: str(company.youtubeUrl),
+      instagramUrl: str(company.instagramUrl),
     }),
     [company],
   );
@@ -248,6 +254,9 @@ export function EditProfileForm({
         tagline: company.tagline,
         // 홈페이지를 고치면 미리보기 CTA 도 그 자리에서 따라갑니다.
         homepageUrl: co.homepageUrl,
+        linkedinUrl: co.linkedinUrl,
+        youtubeUrl: co.youtubeUrl,
+        instagramUrl: co.instagramUrl,
         // 미리보기 주소는 저장된 사업장 그대로입니다 — 이 폼에서 바꾸는 값이 아닙니다.
         addresses: officeLines(company.offices),
         fax: co.fax,
@@ -609,6 +618,47 @@ export function EditProfileForm({
                 />
               </Field>
             </FieldRow>
+
+            {/*
+              공개 카드 아래 아이콘 줄에 걸리는 주소들. 비우면 그 아이콘이 통째로
+              빠집니다 — 아무 데도 안 가는 아이콘이 남는 것보다 없는 편이 낫습니다.
+              스킴(https://)은 없어도 됩니다. 카드가 붙여서 엽니다.
+            */}
+            <FieldRow>
+              <Field label="링크드인 (선택)" htmlFor="co-linkedinUrl" error={err("company.linkedinUrl")}>
+                <Input
+                  id="co-linkedinUrl"
+                  value={co.linkedinUrl}
+                  placeholder="linkedin.com/company/…"
+                  invalid={Boolean(err("company.linkedinUrl"))}
+                  onChange={(e) => setCoField("linkedinUrl", e.target.value)}
+                />
+              </Field>
+              <Field label="인스타그램 (선택)" htmlFor="co-instagramUrl" error={err("company.instagramUrl")}>
+                <Input
+                  id="co-instagramUrl"
+                  value={co.instagramUrl}
+                  placeholder="instagram.com/…"
+                  invalid={Boolean(err("company.instagramUrl"))}
+                  onChange={(e) => setCoField("instagramUrl", e.target.value)}
+                />
+              </Field>
+            </FieldRow>
+
+            <Field
+              label="유튜브 (선택)"
+              htmlFor="co-youtubeUrl"
+              error={err("company.youtubeUrl")}
+              hint="채널이 아니라 회사 소개 영상 주소를 넣습니다."
+            >
+              <Input
+                id="co-youtubeUrl"
+                value={co.youtubeUrl}
+                placeholder="youtu.be/…"
+                invalid={Boolean(err("company.youtubeUrl"))}
+                onChange={(e) => setCoField("youtubeUrl", e.target.value)}
+              />
+            </Field>
           </fieldset>
         </section>
 
