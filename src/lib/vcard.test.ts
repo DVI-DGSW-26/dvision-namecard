@@ -31,6 +31,7 @@ const company: CompanyWithOffices = {
   fax: "053-715-2096",
   logoUrl: "/brand/logo.png",
   homepageUrl: null,
+  homepageUrlEn: null,
   industryEn: null,
   taglineEn: null,
   youtubeUrlEn: null,

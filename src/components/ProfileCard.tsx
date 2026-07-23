@@ -140,7 +140,9 @@ export function toProfileCardData(
       nameEn: company.nameEn,
       industry: en ? pick(company.industryEn) : company.industry,
       tagline: en ? pick(company.taglineEn) : company.tagline,
-      homepageUrl: company.homepageUrl,
+      // 영문 홈페이지가 따로 있으면 그쪽으로 보냅니다. 없으면 국문이라도 겁니다 —
+      // 회사 사이트로 가는 길이 아예 사라지는 것보다 낫습니다.
+      homepageUrl: en ? company.homepageUrlEn?.trim() || company.homepageUrl : company.homepageUrl,
       linkedinUrl: company.linkedinUrl,
       // 영문 소개 영상이 따로 있으면 그걸 걸고, 없으면 국문 영상이라도 겁니다 —
       // 영상은 말이 안 통해도 볼 거리가 되므로 링크를 없애는 것보다 낫습니다.

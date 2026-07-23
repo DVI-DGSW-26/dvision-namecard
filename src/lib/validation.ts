@@ -191,6 +191,8 @@ export const companyProfileSchema = z.object({
   fax: phone,
   // 공개 카드 아래 아이콘 줄. 스킴 없이 넣어도 카드가 https 를 붙여 엽니다.
   homepageUrl: optionalText(120, "홈페이지"),
+  // 영문 홈페이지. 비우면 영문 카드도 국문 홈페이지를 겁니다.
+  homepageUrlEn: optionalText(120, "홈페이지 영문"),
   linkedinUrl: optionalText(200, "링크드인"),
   // 채널이 아니라 회사 소개 영상 주소입니다. 공유 링크(youtu.be/…)가 그대로 들어옵니다.
   youtubeUrl: optionalText(200, "유튜브"),

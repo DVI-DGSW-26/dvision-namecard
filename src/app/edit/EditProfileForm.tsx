@@ -50,6 +50,7 @@ type CompanyForm = {
   tel: string;
   fax: string;
   homepageUrl: string;
+  homepageUrlEn: string;
   linkedinUrl: string;
   youtubeUrl: string;
   youtubeUrlEn: string;
@@ -105,6 +106,7 @@ export function EditProfileForm({
       tel: company.tel,
       fax: str(company.fax),
       homepageUrl: str(company.homepageUrl),
+      homepageUrlEn: str(company.homepageUrlEn),
       linkedinUrl: str(company.linkedinUrl),
       youtubeUrl: str(company.youtubeUrl),
       youtubeUrlEn: str(company.youtubeUrlEn),
@@ -744,6 +746,20 @@ export function EditProfileForm({
                   placeholder="dvi-ind.com"
                   invalid={Boolean(err("company.homepageUrl"))}
                   onChange={(e) => setCoField("homepageUrl", e.target.value)}
+                />
+              </Field>
+              <Field
+                label="홈페이지 영문 (선택)"
+                htmlFor="co-homepageUrlEn"
+                error={err("company.homepageUrlEn")}
+                hint="비우면 영문 명함도 국문 홈페이지를 겁니다."
+              >
+                <Input
+                  id="co-homepageUrlEn"
+                  value={co.homepageUrlEn}
+                  placeholder="dvi-ind.com/en/"
+                  invalid={Boolean(err("company.homepageUrlEn"))}
+                  onChange={(e) => setCoField("homepageUrlEn", e.target.value)}
                 />
               </Field>
               <Field label="링크드인 (선택)" htmlFor="co-linkedinUrl" error={err("company.linkedinUrl")}>
