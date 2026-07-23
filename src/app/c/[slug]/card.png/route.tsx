@@ -81,6 +81,8 @@ async function renderCard(slug: string): Promise<string | null> {
   const SUB = "#6B6B6B";
   const LINE = "#E5E7EB";
 
+  const nameEn = present(employee.nameEn);
+
   const role = [...roleParts(employee), present(employee.credential)]
     .filter(Boolean)
     .join("  •  ");
@@ -131,6 +133,16 @@ async function renderCard(slug: string): Promise<string | null> {
               <div style={{ fontSize: 34, fontWeight: 600, color: brand, letterSpacing: 6 }}>
                 {employee.nameKo}
               </div>
+              {/*
+                영문명은 한글 이름 바로 아래, 역할 줄 위입니다. 공개 카드(ProfileCard)와
+                순서가 같아야 합니다 — 같은 명함이 두 모양으로 보이면 안 됩니다.
+
+                600x340 고정 캔버스라 줄이 하나 늘면 아래가 밀립니다. 영문명이 있는
+                사람만 6px 을 더 쓰고, 없으면 지금 레이아웃 그대로입니다.
+              */}
+              {nameEn ? (
+                <div style={{ fontSize: 15, color: SUB, marginTop: 6 }}>{nameEn}</div>
+              ) : null}
               {role ? <div style={{ fontSize: 16, color: SUB, marginTop: 6 }}>{role}</div> : null}
             </div>
             {/*
