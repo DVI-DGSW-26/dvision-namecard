@@ -42,10 +42,10 @@ export const brand = {
 
   /**
    * dingdong 서비스 로고. 심볼 + 워드마크 가로형 잠금입니다.
-   * 968x256 (3.78:1) — 높이만 지정하고 폭은 w-auto 로 두세요.
+   * 1064x256 (4.16:1) — 높이만 지정하고 폭은 w-auto 로 두세요.
    */
   serviceLogo: "/brand/dingdong.png",
-  serviceLogoWidth: 968,
+  serviceLogoWidth: 1064,
   serviceLogoHeight: 256,
 
   /**
