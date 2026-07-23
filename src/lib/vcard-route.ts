@@ -1,4 +1,4 @@
-import type { Lang } from "@/lib/lang";
+import { cardName, type Lang } from "@/lib/lang";
 import { prisma } from "@/lib/prisma";
 import { buildVCard } from "@/lib/vcard";
 import { companyOfficesInclude, employeeOrgInclude } from "@/types";
@@ -16,6 +16,10 @@ export async function vcardResponse(slug: string, lang: Lang): Promise<Response 
   });
 
   if (!employee || employee.status === "RESIGNED") return null;
+
+  // 영문명이 없으면 영문 카드 자체가 없습니다. 페이지가 404 인데 vCard 만
+  // 받아지면, 한글 이름이 상대 주소록에 그대로 들어갑니다.
+  if (!cardName(employee, lang)) return null;
 
   const vcf = buildVCard(employee, employee.company, lang);
 

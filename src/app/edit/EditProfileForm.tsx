@@ -412,10 +412,16 @@ export function EditProfileForm({
                     onChange={(e) => setEmpField("nameKo", e.target.value)}
                   />
                 </Field>
-                <Field label="영문명 (선택)" htmlFor="nameEn" error={err("nameEn")}>
+                {/*
+                  선택 입력이 아닙니다. 안 적으면 영문 명함(/c/[slug]/en)이 만들어지지
+                  않습니다 — 예전처럼 한글 이름으로 채우지 않기 때문입니다.
+                */}
+                <Field label="영문명" htmlFor="nameEn" error={err("nameEn")}>
                   <Input
                     id="nameEn"
                     value={emp.nameEn}
+                    maxLength={60}
+                    placeholder="Gil-dong Hong"
                     invalid={Boolean(err("nameEn"))}
                     onChange={(e) => setEmpField("nameEn", e.target.value)}
                   />

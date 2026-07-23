@@ -216,4 +216,16 @@ describe("buildVCard", () => {
 
     assert.match(vcf, /^URL:https:\/\/dvi-ind\.com\/c\/ryu$/m);
   });
+
+  it("영문 vCard 는 FN 에 영문명을 넣는다", () => {
+    const vcf = unfold(buildVCard(emp({ nameEn: "Young-gyun Ryu" }), co(), "en"));
+
+    assert.match(vcf, /^FN:Young-gyun Ryu$/m);
+  });
+
+  it("영문명이 없으면 영문 vCard 를 만들지 않는다", () => {
+    // 예전에는 한글 이름으로 떨어져서, 외국 거래처 주소록에 "류영균" 이 저장됐습니다.
+    // (라우트가 그 전에 404 로 막지만, 여기서도 막혀야 다른 호출자가 생겨도 안전합니다)
+    assert.throws(() => buildVCard(emp({ nameEn: null }), co(), "en"), /영문명이 없어/);
+  });
 });

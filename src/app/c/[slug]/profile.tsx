@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProfileCard, toProfileCardData } from "@/components/ProfileCard";
-import { LANG_LABEL, LANGS, cardPath, type Lang } from "@/lib/lang";
+import { LANG_LABEL, LANGS, cardName, cardPath, type Lang } from "@/lib/lang";
 import { roleParts } from "@/lib/org";
 import { prisma } from "@/lib/prisma";
 import { companyOfficesInclude, employeeOrgInclude } from "@/types";
@@ -33,11 +33,17 @@ export async function getProfile(slug: string) {
 export async function profileMetadata(slug: string, lang: Lang): Promise<Metadata> {
   const employee = await getProfile(slug);
 
-  if (!employee) return { title: lang === "en" ? "Card not found" : "찾을 수 없는 명함" };
+  const notFoundTitle = lang === "en" ? "Card not found" : "찾을 수 없는 명함";
+  if (!employee) return { title: notFoundTitle };
+
+  // 영문명이 없으면 영문 카드는 아직 없는 것입니다. 페이지가 404 를 그리므로
+  // 제목도 404 여야 합니다 — 여기만 이름을 채우면 공유 미리보기에는 카드가
+  // 있는 것처럼 뜨고, 눌러 들어가면 404 인 링크가 돌아다닙니다.
+  const name = cardName(employee, lang);
+  if (!name) return { title: notFoundTitle };
 
   const { company } = employee;
   const en = lang === "en";
-  const name = en ? employee.nameEn?.trim() || employee.nameKo : employee.nameKo;
   const companyName = en ? company.nameEn : company.nameKo;
   const role = roleParts(employee, lang).join(" ");
 
@@ -74,19 +80,28 @@ export async function profileMetadata(slug: string, lang: Lang): Promise<Metadat
  *
  * 각 언어 이름을 자기 언어로 적습니다. "영어/한국어" 로 적으면 한국어를 못 읽는
  * 사람이 자기가 갈 곳을 못 찾습니다.
+ *
+ * 갈 수 있는 언어만 내밉니다. 영문명을 안 채운 사람은 영문 카드가 404 라,
+ * English 를 걸어 두면 눌렀을 때 카드가 사라집니다. 고를 게 하나뿐이면 토글
+ * 자체가 사라집니다 — 안 눌리는 버튼 하나만 남는 것보다 없는 편이 낫습니다.
  */
-function LangToggle({ slug, current }: { slug: string; current: Lang }) {
+function LangToggle({ slug, current, langs }: { slug: string; current: Lang; langs: Lang[] }) {
+  if (langs.length < 2) return null;
+
   return (
     <nav
       aria-label={current === "en" ? "Language" : "언어"}
       className="mx-auto mb-group flex w-full max-w-[375px] justify-end gap-tight"
     >
-      {LANGS.map((lang) => {
+      {langs.map((lang) => {
         const active = lang === current;
         return (
           <Link
             key={lang}
             href={cardPath(slug, lang)}
+            // 각 이름이 자기 언어로 적혀 있으므로 글자마다 언어를 밝힙니다. 영문
+            // 카드 안에서 "한국어" 가 영어로 읽히면 스크린리더가 뭉갭니다.
+            lang={lang}
             aria-current={active ? "true" : undefined}
             // 활성 표시는 색이 아니라 굵기와 테두리로 합니다. primary 예산은 CTA 몫입니다.
             className={[
@@ -109,6 +124,13 @@ export async function ProfileView({ slug, lang }: { slug: string; lang: Lang }) 
 
   if (!employee) notFound();
 
+  // 영문명을 안 채운 사람의 영문 카드는 없습니다. 한글 이름을 얹어 그리면
+  // 영문 명함 한가운데 한글이 박힌 채로 거래처에 전달됩니다.
+  if (!cardName(employee, lang)) notFound();
+
+  // 실제로 열리는 언어만 토글에 올립니다.
+  const langs = LANGS.filter((value) => cardName(employee, value));
+
   return (
     /*
       회사명·직위는 ProfileCard 안에 이미 있습니다. 여기서 또 적으면 중복입니다.
@@ -119,8 +141,21 @@ export async function ProfileView({ slug, lang }: { slug: string; lang: Lang }) 
 
       바닥을 회색으로 깔지 않으면 흰 카드가 흰 화면에 묻혀 형태가 사라집니다.
     */
-    <main className="flex flex-1 flex-col justify-center bg-sub-bg px-group py-section">
-      <LangToggle slug={slug} current={lang} />
+    <main
+      /*
+        문서의 lang 은 app/layout.tsx 에 "ko" 로 박혀 있습니다. 루트 레이아웃은
+        어느 언어의 카드가 열렸는지 알 수 없어서(App Router 는 자식이 <html> 을
+        다시 열 수 없습니다) 여기서 카드 범위에만 언어를 다시 선언합니다.
+        lang 은 아무 요소에나 붙일 수 있고, 읽는 쪽은 가장 가까운 선언을 따릅니다.
+
+        눈에 보이는 한글은 아니지만 영문 카드에서는 이것도 한국어입니다 —
+        선언이 틀리면 스크린리더가 영문 이름을 한국어 음성으로 읽고,
+        브라우저 번역이 "이미 한국어" 로 보고 그냥 지나갑니다.
+      */
+      lang={lang}
+      className="flex flex-1 flex-col justify-center bg-sub-bg px-group py-section"
+    >
+      <LangToggle slug={slug} current={lang} langs={langs} />
       <div className="mx-auto w-full max-w-[375px] overflow-hidden rounded-card border border-border bg-bg shadow-sm">
         <ProfileCard data={toProfileCardData(employee, employee.company, lang)} />
       </div>

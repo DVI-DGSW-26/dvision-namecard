@@ -1,4 +1,4 @@
-import { cardPath, type Lang } from "@/lib/lang";
+import { cardPath, requireCardName, type Lang } from "@/lib/lang";
 import { roleParts } from "@/lib/org";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
@@ -89,7 +89,9 @@ export function buildVCard(
     `N:${escapeValue(employee.familyName)};${escapeValue(employee.givenName)};;;`,
     // 영문 vCard 는 표시 이름(FN)만 영문으로 바꿉니다. N 의 성·이름은 정렬·검색용
     // 구조 필드라, 영문명 한 줄을 쪼개 넣으면 두 글자 성처럼 틀릴 여지가 생깁니다.
-    `FN:${escapeValue(en ? present(employee.nameEn) ?? employee.nameKo : employee.nameKo)}`,
+    // 영문 vCard 는 영문명이 있어야 만들어집니다. 없으면 던지고, 라우트가 그
+    // 전에 404 로 막습니다 — FN 에 한글 이름이 들어가면 상대 주소록에 한글로 저장됩니다.
+    `FN:${escapeValue(requireCardName(employee, lang))}`,
 
     `ORG:${escapeValue(en ? company.nameEn : company.nameKo)}`,
     title ? `TITLE:${escapeValue(title)}` : null,
