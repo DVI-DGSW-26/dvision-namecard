@@ -151,8 +151,10 @@ model Company {
    *
    * 스킴 없이 "dvi-ind.com" 처럼 저장돼도 됩니다. 카드가 붙여서 엽니다.
    */
-  homepageUrl  String?
-  linkedinUrl  String?
+  homepageUrl String?
+  /// 영문 홈페이지. 비어 있으면 영문 카드도 국문 홈페이지를 겁니다.
+  homepageUrlEn String?
+  linkedinUrl   String?
   /// 채널이 아니라 회사 소개 영상입니다. 국문 카드가 씁니다.
   youtubeUrl   String?
   /// 영문 소개 영상. 비어 있으면 영문 카드도 국문 영상을 겁니다.
