@@ -37,6 +37,12 @@ pnpm db:migrate --name add-office   # prisma/migrations/<timestamp>_add-office/ 
 
 만들어진 마이그레이션 파일은 **코드와 같은 커밋에 넣습니다.** 배포 빌드가 `prisma migrate deploy` 로 이 파일들을 적용하므로, 그 커밋의 코드와 DB 스키마가 어긋날 수 없습니다.
 
+### 운영 DB 로 향하는 push 는 막혀 있습니다
+
+`.env` 의 `PROTECTED_DB_HOSTS` 에 적힌 호스트를 `DATABASE_URL` 이 가리키면 `db:push` 와 `db:seed` 가 실행 전에 멈춥니다. 운영 연결 문자열을 실수로 붙여넣어도 배포가 깨지지 않게 하는 안전망입니다.
+
+정말 실행해야 하면 `ALLOW_PROD_DB_WRITE=1` 을 붙입니다. 다만 이건 마지막 안전망일 뿐입니다 — **운영 연결 문자열을 각자 `.env` 에서 아예 없애고 배포 환경변수에만 두는 것**이 진짜 차단입니다.
+
 ### 이미 테이블이 있는 DB 는 최초 1회만
 
 마이그레이션 이력이 없던 시절에 만들어진 DB(운영 DB, 그 시절에 뜬 Neon 브랜치)는 `0_init` 을 이미 적용한 것으로 표시해 줘야 합니다. 안 그러면 `migrate deploy` 가 있는 테이블을 또 만들려다 실패합니다.

@@ -12,8 +12,8 @@
     "test": "tsx --test \"src/**/*.test.ts\"",
     "db:migrate": "prisma migrate dev",
     "db:baseline": "prisma migrate resolve --applied 0_init",
-    "db:push": "prisma db push",
-    "db:seed": "prisma db seed",
+    "db:push": "node scripts/guard-prod-db.mjs && prisma db push",
+    "db:seed": "node scripts/guard-prod-db.mjs && prisma db seed",
     "db:studio": "prisma studio",
     "sig:preview": "tsx scripts/preview-signature.ts"
   },
