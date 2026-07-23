@@ -28,6 +28,8 @@ export type ProfileCardData = {
   /** 명함 이미지(/c/[slug]/card.png) 주소를 만드는 데 씁니다. */
   slug: string;
   nameKo: string;
+  /** 영문명. 비어 있으면 줄째로 빠집니다 — 선택 입력이라 안 적은 사람이 많습니다. */
+  nameEn?: string | null;
   /**
    * 명함에 한 줄로 찍히는 역할 조각들 — 직위 · 임원 직책 · 직책 순서입니다.
    *
@@ -99,6 +101,7 @@ export function toProfileCardData(
   return {
     slug: employee.slug,
     nameKo: employee.nameKo,
+    nameEn: employee.nameEn,
     roles: roleParts(employee),
     credential: employee.credential,
     photoUrl: employee.photoUrl,
@@ -257,6 +260,16 @@ export function ProfileCard({
       </div>
 
       <h1 className="mt-group text-display">{data.nameKo}</h1>
+      {/*
+        영문명은 한글 이름 바로 아래입니다. 역할 줄 밑에 두면 "홍길동 / 수석매니저 /
+        Gil-dong Hong" 이 되어 이름과 영문명이 갈라집니다. 둘은 같은 값이라 붙여 둡니다.
+
+        h1 에 넣지 않는 이유: 스크린리더가 제목을 "홍길동 Gil-dong Hong" 한 덩어리로
+        읽고, 검색·공유 미리보기에도 두 이름이 붙어 나갑니다.
+      */}
+      {data.nameEn?.trim() ? (
+        <p className="mt-tight text-body text-sub-text">{data.nameEn.trim()}</p>
+      ) : null}
       {roleText ? <p className="mt-tight text-body text-sub-text">{roleText}</p> : null}
       <p className="mt-sibling flex items-center justify-center gap-tight">
         <Wordmark />
