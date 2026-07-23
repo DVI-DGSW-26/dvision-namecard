@@ -40,9 +40,16 @@ export function GateForm({ next }: { next: string }) {
       // 직원이 아직 없는 상태로 들어온 관리자는 "내 명함" 이 없습니다.
       const destination = payload?.bootstrap ? "/admin/employees" : next;
 
-      // 세션 쿠키가 생겼으니 서버 컴포넌트를 다시 그려야 합니다.
+      /*
+       * 세션 쿠키가 생겼으니 서버 컴포넌트를 다시 그려야 합니다.
+       *
+       * replace() 하나로 끝납니다. 예전에는 뒤에 refresh() 를 한 번 더 불렀는데,
+       * 그러면 방금 받아 온 목적지를 서버에서 한 번 더 그립니다 — /edit 은 DB 를
+       * 여러 번 왕복하는 화면이라 로그인 체감 시간이 그대로 두 배가 됐습니다.
+       * 목적지(/edit·/admin)는 전부 동적 라우트라 클라이언트 캐시에 재사용될
+       * 항목이 남지 않습니다. 정적 페이지를 목적지로 추가하게 되면 그때 다시 보세요.
+       */
       router.replace(destination);
-      router.refresh();
     } catch {
       setError("네트워크 오류로 로그인하지 못했습니다.");
     } finally {

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,17 +15,29 @@ import { companyOfficesInclude, employeeOrgInclude } from "@/types";
  * 언어만 정해서 넘기고, 조회·메타데이터·렌더는 전부 여기 한 벌만 둡니다.
  */
 
-/** 페이지와 메타데이터가 같은 요청에서 두 번 조회하지 않도록 결과를 재사용합니다. */
-export async function getProfile(slug: string) {
+/**
+ * 페이지와 메타데이터가 같은 요청에서 두 번 조회하지 않도록 결과를 재사용합니다.
+ *
+ * 재사용은 react 의 cache() 가 해 줍니다 — 같은 인자로 부르면 그 요청 안에서는
+ * 처음 것을 그대로 돌려줍니다. 이게 없으면 generateMetadata 와 ProfileView 가
+ * 각각 한 번씩, 카드 한 장을 여는 데 똑같은 조회를 두 번 합니다.
+ *
+ * unstable_cache 가 아니라 cache() 인 이유: 여기서 필요한 건 요청 하나 안에서의
+ * 중복 제거지 요청 사이의 보관이 아닙니다. 프로필은 본인이 저장하면 바로 반영돼야
+ * 합니다. (이미지는 성격이 달라 lib/card-image.tsx 에서 따로 캐시합니다)
+ */
+export const getProfile = cache(async (slug: string) => {
   const employee = await prisma.employee.findUnique({
     where: { slug },
     include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
+    // 관계마다 SELECT 를 따로 보내지 않고 한 번에 조인합니다. (schema.prisma 의 relationJoins)
+    relationLoadStrategy: "join",
   });
 
   // RESIGNED 는 링크를 알아도 열리지 않아야 합니다.
   if (!employee || employee.status === "RESIGNED") return null;
   return employee;
-}
+});
 
 /**
  * 카카오톡·문자로 링크를 보냈을 때 보이는 카드입니다.

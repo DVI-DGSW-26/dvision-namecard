@@ -1,6 +1,18 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+
+  /**
+   * relationJoins — include 를 LATERAL JOIN 한 방에 처리하게 해 줍니다.
+   *
+   * 기본값은 관계마다 SELECT 를 따로 보내는 방식이라, 명함 한 장을 읽는 데
+   * (직원·회사·사업장·직위·임원직책·직책) 여섯 번을 왕복합니다. DB 가 싱가포르에
+   * 있어 왕복 한 번이 약 80ms 이므로 그것만으로 반 초에 가깝습니다.
+   *
+   * 쓰는 곳은 relationLoadStrategy: "join" 을 붙인 조회뿐입니다. 안 붙인 조회는
+   * 지금까지와 똑같이 동작하므로, 이 기능이 문제를 일으키면 그 줄만 지우면 됩니다.
+   */
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {

@@ -44,6 +44,18 @@ function Notice({
 
 export default async function EditPage({ searchParams }: Props) {
   const { e } = await searchParams;
+
+  /*
+   * 조직 목록은 누구를 여는지와 무관하므로 직원 조회를 기다리지 않고 같이 출발시킵니다.
+   * 순서대로 기다리면 두 번의 DB 왕복이 그대로 더해집니다.
+   *
+   * 아래 이른 반환 경로에서는 이 약속을 쓰지 않고 버리게 되는데, 그때 조회가
+   * 실패하면 아무도 받지 않은 거부가 되어 프로세스 경고가 뜹니다. 미리 하나
+   * 달아 둡니다 — await 하는 쪽은 그대로 예외를 받습니다.
+   */
+  const orgPromise = readOrgLists();
+  orgPromise.catch(() => {});
+
   const result = await resolveEditTarget(e);
 
   if (result.kind === "no-session") redirect("/gate?next=%2Fedit");
@@ -79,7 +91,7 @@ export default async function EditPage({ searchParams }: Props) {
 
   const { role, employee, company, viewingOther } = result;
   // 선택 상자에 넣을 조직 목록. 관리자가 /admin/org 에서 바꾼 값이 그대로 옵니다.
-  const org = await readOrgLists();
+  const org = await orgPromise;
 
   return (
     <>

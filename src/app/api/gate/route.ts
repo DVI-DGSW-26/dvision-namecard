@@ -131,14 +131,12 @@ export async function POST(request: NextRequest) {
   }
 
   let employee: { id: string } | null = null;
-  let employeeCount = 0;
   try {
     employee = await prisma.employee.findFirst({
       // 퇴사자는 링크를 알아도 들어올 수 없어야 합니다.
       where: { email: parsed.data.email, status: { not: "RESIGNED" } },
       select: { id: true },
     });
-    employeeCount = await prisma.employee.count();
   } catch {
     return NextResponse.json({ error: "로그인 처리 중 오류가 발생했습니다." }, { status: 500 });
   }
@@ -164,11 +162,15 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "로그인 처리 중 오류가 발생했습니다." }, { status: 500 });
         }
       }
-    } else if (role === "admin" && employeeCount === 0) {
+    } else if (role === "admin" && (await prisma.employee.count()) === 0) {
       /*
        * 부트스트랩: 회사·직원이 아직 없는 새 환경의 관리자는 이메일 확인 없이 들여보냅니다.
        * 그러지 않으면 아무도 못 들어가고, 못 들어가니 첫 직원을 등록할 수도 없습니다.
        * 이 세션은 employeeId 가 null 이라 "내 명함" 이 없고 임직원 관리만 쓸 수 있습니다.
+       *
+       * 직원 수를 여기서 세는 이유: 이 분기는 회사가 아직 없는 새 환경에서만 닿습니다.
+       * 예전처럼 위에서 미리 세어 두면 평소 로그인이 쓰지도 않는 count 때문에 DB 를
+       * 한 번 더 왕복합니다.
        */
       await createSession({ role, employeeId: null });
       attempts.delete(ip);

@@ -13,6 +13,8 @@ export async function vcardResponse(slug: string, lang: Lang): Promise<Response 
   const employee = await prisma.employee.findUnique({
     where: { slug },
     include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
+    // 관계마다 SELECT 를 따로 보내지 않고 한 번에 조인합니다. (schema.prisma 의 relationJoins)
+    relationLoadStrategy: "join",
   });
 
   if (!employee || employee.status === "RESIGNED") return null;

@@ -41,24 +41,28 @@ export async function resolveEditTarget(slugParam?: string): Promise<ResolveResu
   if (!otherSlug && !session.employeeId) return { kind: "no-self" };
 
   try {
-    const employee = otherSlug
-      ? await prisma.employee.findUnique({
-          where: { slug: otherSlug },
-          include: employeeOrgInclude,
-        })
-      : await prisma.employee.findUnique({
-          where: { id: session.employeeId! },
-          include: employeeOrgInclude,
-        });
-    const company = await prisma.company.findFirst({ include: companyOfficesInclude });
+    /*
+     * 회사를 따로 조회하지 않고 직원에 붙여서 한 번에 읽습니다.
+     *
+     * 예전에는 employee 를 읽고 나서 company 를 또 읽었는데, DB 가 싱가포르에
+     * 있어 그 한 줄이 그대로 80ms 였습니다. Employee.companyId 는 not null 이라
+     * 직원이 있으면 회사는 반드시 딸려 옵니다. (공개 카드도 같은 방식입니다 —
+     * app/c/[slug]/profile.tsx 의 getProfile)
+     */
+    const employee = await prisma.employee.findUnique({
+      where: otherSlug ? { slug: otherSlug } : { id: session.employeeId! },
+      include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
+      // 관계마다 SELECT 를 따로 보내지 않고 한 번에 조인합니다. (schema.prisma 의 relationJoins)
+      relationLoadStrategy: "join",
+    });
 
-    if (!employee || !company) return { kind: "not-found" };
+    if (!employee) return { kind: "not-found" };
 
     return {
       kind: "ok",
       role: session.role,
       employee,
-      company,
+      company: employee.company,
       viewingOther: Boolean(otherSlug) && employee.id !== session.employeeId,
     };
   } catch {
