@@ -95,6 +95,48 @@ export const employeeCreateSchema = z.object({
 });
 
 export type EmployeeCreateInput = z.input<typeof employeeCreateSchema>;
+
+/**
+ * 공개 주소(slug). 직원 추가와 관리자 수정이 같은 규칙을 씁니다.
+ *
+ * 소문자·숫자만 받는 이유: /c/[slug] 에 그대로 들어가는 값이라 대문자나 한글이 섞이면
+ * 메신저·메일 클라이언트가 URL 을 다르게 인코딩해 링크가 갈립니다.
+ */
+const slugRule = z
+  .string()
+  .trim()
+  .min(1, "주소를 입력해 주세요.")
+  .regex(/^[a-z0-9]+$/, "주소는 영문 소문자와 숫자만 쓸 수 있습니다.")
+  .max(30, "주소가 너무 깁니다.");
+
+/**
+ * 관리자만 바꿀 수 있는 값 — 노출 여부(status)와 공개 주소(slug).
+ *
+ * 프로필 스키마(employeeProfileSchema)와 나눠 둔 이유: 저 스키마는 본인도 쓰기 때문에
+ * 거기에 status 를 넣는 순간 직원이 자기 계정을 스스로 활성화할 수 있게 됩니다.
+ */
+export const employeeAdminSchema = z.object({
+  status: z.enum(["PENDING", "ACTIVE", "RESIGNED"], { message: "상태를 선택해 주세요." }),
+  slug: slugRule,
+});
+
+/**
+ * 여러 명 한꺼번에 처리.
+ *
+ * 상한을 두는 이유: 화면의 "이 페이지 전체 선택" 은 페이지 밖 선택을 유지하므로
+ * 넘어오는 id 가 얼마든지 길어질 수 있습니다. 한 요청이 DB 를 오래 잡지 않게 막습니다.
+ */
+export const employeeBulkSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("status"),
+    ids: z.array(z.string().max(40)).min(1, "대상을 선택해 주세요.").max(500, "한 번에 500명까지 처리할 수 있습니다."),
+    status: z.enum(["PENDING", "ACTIVE", "RESIGNED"], { message: "상태를 선택해 주세요." }),
+  }),
+  z.object({
+    action: z.literal("delete"),
+    ids: z.array(z.string().max(40)).min(1, "대상을 선택해 주세요.").max(500, "한 번에 500명까지 처리할 수 있습니다."),
+  }),
+]);
 export type EmployeeCreateValues = z.output<typeof employeeCreateSchema>;
 
 export const companyProfileSchema = z.object({
