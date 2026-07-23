@@ -30,6 +30,17 @@ export const brand = {
   symbol: "/brand/symbol.png",
 
   /**
+   * DVISION 가로형 로고(심볼 + 워드마크 잠금). 203x45 (4.51:1).
+   * 명함 이미지(card.png) 우상단이 씁니다. 세로형 logo 는 이 자리에 안 맞습니다.
+   *
+   * 예전엔 symbol.png 옆에 "D"+"VISION" 을 텍스트로 조판해 흉내 냈는데,
+   * 자간·굵기가 공식 로고와 미묘하게 달라 이 파일로 대체했습니다.
+   */
+  logoWordmark: "/brand/logo-wordmark.png",
+  logoWordmarkWidth: 203,
+  logoWordmarkHeight: 45,
+
+  /**
    * dingdong 서비스 로고. 심볼 + 워드마크 가로형 잠금입니다.
    * 968x256 (3.78:1) — 높이만 지정하고 폭은 w-auto 로 두세요.
    */

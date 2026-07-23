@@ -128,13 +128,14 @@ async function renderCard(slug: string): Promise<string | null> {
               </div>
               {role ? <div style={{ fontSize: 16, color: SUB, marginTop: 6 }}>{role}</div> : null}
             </div>
+            {/*
+              공식 가로형 로고 한 장입니다. 예전엔 symbol.png 옆에 "D"+"VISION" 을
+              텍스트로 조판했는데, 자간·굵기가 공식 로고와 미묘하게 어긋났습니다.
+              203x45 원본을 높이 38 에 맞춰 171x38 으로 줄입니다(4.51:1 유지).
+            */}
             <div style={{ display: "flex", alignItems: "center" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`${base}/brand/symbol.png`} width={30} height={30} alt="" />
-              <div style={{ display: "flex", marginLeft: 7 }}>
-                <div style={{ fontSize: 23, fontWeight: 600, color: brand }}>D</div>
-                <div style={{ fontSize: 23, fontWeight: 600, color: INK }}>VISION</div>
-              </div>
+              <img src={`${base}/brand/logo-wordmark.png`} width={171} height={38} alt="" />
             </div>
           </div>
 
