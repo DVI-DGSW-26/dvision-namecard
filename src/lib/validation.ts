@@ -143,8 +143,43 @@ export const companyProfileSchema = z.object({
   nameKo: z.string().trim().min(1, "회사명을 입력해 주세요.").max(60, "회사명이 너무 깁니다."),
   nameEn: z.string().trim().min(1, "영문 회사명을 입력해 주세요.").max(80, "영문 회사명이 너무 깁니다."),
   industry: optionalText(60, "사업 분야"),
+  tagline: optionalText(60, "태그라인"),
+  /**
+   * 인증 뱃지 — 명함 하단의 "IATF 16949" · "ISO 9001".
+   *
+   * 폼에서는 쉼표로 구분한 한 줄로 받고 여기서 배열로 바꿉니다. 항목마다 칸을
+   * 만들면 추가·삭제 버튼이 붙어 회사 정보 섹션이 목록 편집기가 됩니다 —
+   * 두세 개짜리 값에 그만한 화면을 쓸 이유가 없습니다.
+   *
+   * DB 는 Json 컬럼이라 무엇이든 들어갑니다. 카드는 문자열만 그리므로
+   * 여기서 문자열 배열로 좁혀서 저장합니다.
+   */
+  certifications: z.preprocess(
+    (value) =>
+      typeof value === "string"
+        ? value
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : value,
+    z
+      .array(z.string().max(30, "인증 이름은 30자 이내로 입력해 주세요."))
+      .max(6, "인증은 6개까지 넣을 수 있습니다."),
+  ),
   // 주소는 여기 없습니다 — 사업장이 여러 곳(본사·R&D센터)이라 Office 표로 빠졌고,
   // /admin/org 의 '사업장' 탭에서 관리합니다.
+  /**
+   * 회사 대표번호. 개인 사무실 번호(Employee.telWork)가 없는 직원의 명함·서명에
+   * 대신 나갑니다. 그래서 비울 수 없습니다 — 비면 그 직원 카드에 전화가 사라집니다.
+   */
+  tel: z
+    // emptyToNull 을 태우지 않습니다. 빈 값이 null 이 되면 zod 기본 문구
+    // ("expected string, received null")가 그대로 화면에 나옵니다.
+    .string({ message: "대표번호를 입력해 주세요." })
+    .trim()
+    .min(1, "대표번호를 입력해 주세요.")
+    .regex(/^[0-9-]+$/, "전화번호는 숫자와 하이픈만 입력할 수 있습니다.")
+    .max(20, "전화번호가 너무 깁니다."),
   // 팩스는 회사 공용 번호입니다. 명함 카드·서명·vCard 가 모두 이 값을 씁니다.
   // (개인 전화는 Employee.telWork/telMobile 로 따로 있습니다.)
   fax: phone,
