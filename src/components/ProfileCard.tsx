@@ -166,12 +166,16 @@ export function toProfileCardData(
  * 받아 두면 파일명이 그 사람을 가리켜야 나중에 찾을 수 있는데, slug 는 성만
  * 로마자로 줄인 값이라(홍길동·홍민지 → hong·hong2) 누구 명함인지 알아볼 수 없습니다.
  *
+ * "명함" 이라는 말도 카드 언어를 따릅니다 — 영문 카드를 받은 외국 거래처의
+ * 내려받기 폴더에 한글 파일명이 떨어지면 읽지도, 검색하지도 못합니다.
+ * 문구는 서명 이미지의 alt 와 같은 CARD_TEXT.cardOf 한 곳에서 옵니다.
+ *
  * 이름은 자유 입력이라 파일명에 못 쓰는 글자가 섞일 수 있어 걷어냅니다.
  * 걷어내고 나면 빈 문자열이 되는 경우(이름이 전부 특수문자)를 대비해 slug 로 떨어집니다.
  */
-function downloadName(nameKo: string, slug: string): string {
-  const safe = nameKo.replace(/[\\/:*?"<>|]/g, "").trim();
-  return `${safe || slug} 명함.png`;
+function downloadName(name: string, slug: string, lang: Lang): string {
+  const safe = name.replace(/[\\/:*?"<>|]/g, "").trim();
+  return `${CARD_TEXT[lang].cardOf(safe || slug)}.png`;
 }
 
 /** 회사 워드마크. 로고 이미지가 아직 없어 텍스트로 그립니다. D 만 primary. */
@@ -338,6 +342,7 @@ export function ProfileCard({
           download={downloadName(
             data.lang === "en" ? data.nameEn?.trim() || data.nameKo : data.nameKo,
             data.slug,
+            data.lang,
           )}
           aria-label={t.saveCard}
           className={`${identityClassName} transition-colors hover:bg-sub-bg`}
