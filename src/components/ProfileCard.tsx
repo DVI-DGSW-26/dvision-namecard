@@ -131,7 +131,20 @@ function InfoRow({ label, value, href }: { label: string; value: string | null; 
   );
 }
 
-export function ProfileCard({ data }: { data: ProfileCardData }) {
+export function ProfileCard({
+  data,
+  downloadable = true,
+}: {
+  data: ProfileCardData;
+  /**
+   * 신원 블록을 명함 이미지 다운로드 링크로 쓸지.
+   *
+   * /edit 미리보기는 끕니다. card.png 는 **저장된** 값으로 서버에서 굽는 이미지라,
+   * 편집 중에 눌러 받으면 눈앞의 미리보기와 다른 명함이 내려옵니다. 미리보기의
+   * 약속은 "공개 카드와 똑같이 보인다" 이므로 모양은 그대로 두고 동작만 뗍니다.
+   */
+  downloadable?: boolean;
+}) {
   const { company } = data;
 
   // 직급 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고 구분자가 혼자 남지 않도록
@@ -152,48 +165,67 @@ export function ProfileCard({ data }: { data: ProfileCardData }) {
   const hasCompanyBlock =
     company.industry || company.tagline || address || company.certifications.length > 0;
 
+  /*
+    신원 블록은 가운데 정렬입니다. 명함은 훑어보는 화면이라 사진 → 이름 → 소속이
+    한 축에 놓여야 눈이 한 번에 내려갑니다. 왼쪽 정렬이면 원형 사진만 축에서
+    벗어나 보입니다.
+
+    블록 전체가 명함 이미지(card.png) 다운로드 링크입니다. 같은 이미지가
+    이메일 서명에 붙어 나가므로, 카드를 받은 사람도 그 한 장을 그대로
+    저장할 수 있습니다. (downloadable=false 면 모양만 같고 링크는 빠집니다)
+  */
+  const identity = (
+    <>
+      {/* 사진 — 업로드는 아직 구현 전이라 placeholder 를 그립니다. */}
+      <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-border bg-sub-bg">
+        {data.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- 업로드 도메인이 정해지기 전이라 next/image 설정을 미룹니다.
+          <img src={data.photoUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <UserIcon className="h-10 w-10 text-sub-text" />
+        )}
+      </div>
+
+      <h1 className="mt-group text-display">{data.nameKo}</h1>
+      {roleText ? <p className="mt-tight text-body text-sub-text">{roleText}</p> : null}
+      <p className="mt-sibling flex items-center justify-center gap-tight">
+        <Wordmark />
+        <span className="text-caption-bold text-text">{company.nameKo}</span>
+      </p>
+
+      {/* 누르는 자리라는 표시가 없으면 아무도 안 누릅니다. */}
+      <span className="mt-group inline-flex items-center gap-tight text-caption text-sub-text">
+        <DownloadIcon className="h-4 w-4" />
+        눌러서 명함 이미지 저장
+      </span>
+    </>
+  );
+
+  const identityClassName =
+    "flex flex-col items-center px-section pt-section pb-group text-center";
+
   return (
     <article className="bg-bg text-text">
-      {/*
-        신원 블록은 가운데 정렬입니다. 명함은 훑어보는 화면이라 사진 → 이름 → 소속이
-        한 축에 놓여야 눈이 한 번에 내려갑니다. 왼쪽 정렬이면 원형 사진만 축에서
-        벗어나 보입니다.
+      {downloadable ? (
+        /*
+          download 속성이 필요합니다. card.png 라우트는 이미지를 inline 으로
+          내려주기 때문에, 이게 없으면 다운로드가 아니라 이미지 페이지로 이동합니다.
 
-        블록 전체가 명함 이미지(card.png) 다운로드 링크입니다. 같은 이미지가
-        이메일 서명에 붙어 나가므로, 카드를 받은 사람도 그 한 장을 그대로
-        저장할 수 있습니다.
-
-        download 속성이 필요합니다. card.png 라우트는 이미지를 inline 으로
-        내려주기 때문에, 이게 없으면 다운로드가 아니라 이미지 페이지로 이동합니다.
-      */}
-      <a
-        href={`/c/${data.slug}/card.png`}
-        download={`${data.slug}.png`}
-        className="flex flex-col items-center px-section pt-section pb-group text-center transition-colors hover:bg-sub-bg"
-      >
-        {/* 사진 — 업로드는 아직 구현 전이라 placeholder 를 그립니다. */}
-        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-border bg-sub-bg">
-          {data.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- 업로드 도메인이 정해지기 전이라 next/image 설정을 미룹니다.
-            <img src={data.photoUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <UserIcon className="h-10 w-10 text-sub-text" />
-          )}
-        </div>
-
-        <h1 className="mt-group text-display">{data.nameKo}</h1>
-        {roleText ? <p className="mt-tight text-body text-sub-text">{roleText}</p> : null}
-        <p className="mt-sibling flex items-center justify-center gap-tight">
-          <Wordmark />
-          <span className="text-caption-bold text-text">{company.nameKo}</span>
-        </p>
-
-        {/* 누르는 자리라는 표시가 없으면 아무도 안 누릅니다. */}
-        <span className="mt-group inline-flex items-center gap-tight text-caption text-sub-text">
-          <DownloadIcon className="h-4 w-4" />
-          눌러서 명함 이미지 저장
-        </span>
-      </a>
+          aria-label 이 없으면 링크 이름이 블록 안 글자를 전부 이어 붙인
+          "홍길동 부장 · DVISION … 눌러서 명함 이미지 저장" 이 됩니다. 이름은 h1 로
+          따로 읽히니 여기서는 행동만 말합니다. (안쪽 h1 은 그대로 제목으로 남습니다)
+        */
+        <a
+          href={`/c/${data.slug}/card.png`}
+          download={`${data.slug}.png`}
+          aria-label="명함 이미지 저장"
+          className={`${identityClassName} transition-colors hover:bg-sub-bg`}
+        >
+          {identity}
+        </a>
+      ) : (
+        <div className={identityClassName}>{identity}</div>
+      )}
 
       <div className="px-section pb-section">
         {/*
@@ -219,7 +251,7 @@ export function ProfileCard({ data }: { data: ProfileCardData }) {
           rel="noreferrer"
           className="mt-group flex h-12 w-full items-center justify-center rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover"
         >
-          홈페이지 바로가기
+          회사 홈페이지 바로가기
         </a>
       </div>
 

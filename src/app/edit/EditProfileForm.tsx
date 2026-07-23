@@ -269,7 +269,11 @@ export function EditProfileForm({
           PREVIEW · {previewHost}
           {previewUrl}
         </p>
-        <ProfileCard data={previewData} />
+        {/*
+          다운로드는 끕니다. card.png 는 저장된 값으로 굽는 이미지라, 편집 중에
+          누르면 지금 보고 있는 미리보기가 아니라 저장 전 명함이 내려옵니다.
+        */}
+        <ProfileCard data={previewData} downloadable={false} />
       </div>
     </div>
   );
