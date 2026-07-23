@@ -1,4 +1,5 @@
-import type { Company, Employee } from "@/types";
+import { roleParts } from "@/lib/org";
+import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 /**
  * vCard 3.0 생성.
@@ -64,14 +65,13 @@ function baseUrl(): string {
   return url.replace(/\/+$/, "");
 }
 
-export function buildVCard(employee: Employee, company: Company): string {
+export function buildVCard(employee: EmployeeWithOrg, company: CompanyWithOffices): string {
   // mobilePublic 이 false 면 번호가 있어도 내보내지 않습니다.
   const mobile = employee.mobilePublic ? present(employee.telMobile) : null;
 
-  // 직급(대리·과장)과 직책(팀장·본부장)은 다른 값입니다. 둘 다 있으면 이어 붙입니다.
-  const title = [present(employee.rank as string), present(employee.position)]
-    .filter(Boolean)
-    .join(" ");
+  // 직위(수석매니저) · 임원 직책(대표이사) · 직책(연구소장)은 각각 다른 값입니다.
+  // 가진 것만 순서대로 이어 붙입니다.
+  const title = roleParts(employee).join(" ");
 
   const lines: (string | null)[] = [
     "BEGIN:VCARD",
@@ -91,8 +91,21 @@ export function buildVCard(employee: Employee, company: Company): string {
 
     `EMAIL;TYPE=INTERNET,WORK:${escapeValue(employee.email)}`,
 
-    // ADR 은 7칸이 세미콜론으로 고정입니다. 한국 주소는 통째로 street 칸에 넣습니다.
-    present(company.address) ? `ADR;TYPE=WORK:;;${escapeValue(company.address)};;;;` : null,
+    /*
+      사업장마다 ADR 을 한 줄씩 냅니다. vCard 3.0 은 같은 속성을 여러 번 쓸 수 있고,
+      연락처 앱은 이를 "직장 주소 여러 개" 로 받습니다.
+
+      ADR 은 7칸이 세미콜론으로 고정입니다:
+      사서함;추가;거리;도시;지역;우편번호;국가
+      한국 주소는 통째로 거리 칸에 넣고, 우편번호만 제 칸(6번째)에 넣습니다 —
+      명함처럼 `(43011) 주소` 로 합쳐 버리면 연락처 앱이 우편번호를 인식하지 못합니다.
+    */
+    ...company.offices
+      .filter((office) => present(office.address))
+      .map(
+        (office) =>
+          `ADR;TYPE=WORK:;;${escapeValue(office.address)};;;${escapeValue(office.postalCode)};`,
+      ),
 
     `URL:${escapeValue(`${baseUrl()}/c/${employee.slug}`)}`,
 

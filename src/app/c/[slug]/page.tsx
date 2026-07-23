@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProfileCard, toProfileCardData } from "@/components/ProfileCard";
+import { roleParts } from "@/lib/org";
 import { prisma } from "@/lib/prisma";
+import { companyOfficesInclude, employeeOrgInclude } from "@/types";
 
 /**
  * 공개 프로필. (인증 불필요 — middleware matcher 에 없음)
@@ -17,7 +19,7 @@ type Props = {
 async function getProfile(slug: string) {
   const employee = await prisma.employee.findUnique({
     where: { slug },
-    include: { company: true },
+    include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
   });
 
   // RESIGNED 는 링크를 알아도 열리지 않아야 합니다.
@@ -36,8 +38,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!employee) return { title: "찾을 수 없는 명함" };
 
   const { company } = employee;
-  const role = [employee.rank as string, employee.position].filter(Boolean).join(" ");
-  const title = `${employee.nameKo} ${role} | ${company.nameKo}`;
+  const role = roleParts(employee).join(" ");
+  // 직위·직책이 하나도 없으면 이름과 회사명 사이에 공백이 두 칸 남습니다.
+  const title = [employee.nameKo, role].filter(Boolean).join(" ") + ` | ${company.nameKo}`;
   const description = [company.industry, company.tagline].filter(Boolean).join(" · ");
 
   return {

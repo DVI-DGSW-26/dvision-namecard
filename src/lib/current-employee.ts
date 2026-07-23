@@ -1,7 +1,12 @@
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@/lib/session-token";
-import type { Company, Employee } from "@/types";
+import {
+  companyOfficesInclude,
+  employeeOrgInclude,
+  type CompanyWithOffices,
+  type EmployeeWithOrg,
+} from "@/types";
 
 /**
  * "지금 편집할 대상" 을 정합니다. /edit 과 /edit/signature 가 같이 씁니다.
@@ -12,7 +17,13 @@ import type { Company, Employee } from "@/types";
  */
 
 export type ResolveResult =
-  | { kind: "ok"; role: Role; employee: Employee; company: Company; viewingOther: boolean }
+  | {
+      kind: "ok";
+      role: Role;
+      employee: EmployeeWithOrg;
+      company: CompanyWithOffices;
+      viewingOther: boolean;
+    }
   | { kind: "no-session" }
   | { kind: "no-self" }
   | { kind: "not-found" }
@@ -31,9 +42,15 @@ export async function resolveEditTarget(slugParam?: string): Promise<ResolveResu
 
   try {
     const employee = otherSlug
-      ? await prisma.employee.findUnique({ where: { slug: otherSlug } })
-      : await prisma.employee.findUnique({ where: { id: session.employeeId! } });
-    const company = await prisma.company.findFirst();
+      ? await prisma.employee.findUnique({
+          where: { slug: otherSlug },
+          include: employeeOrgInclude,
+        })
+      : await prisma.employee.findUnique({
+          where: { id: session.employeeId! },
+          include: employeeOrgInclude,
+        });
+    const company = await prisma.company.findFirst({ include: companyOfficesInclude });
 
     if (!employee || !company) return { kind: "not-found" };
 

@@ -28,8 +28,6 @@ const GIVEN = [
   "도현", "서준", "지원", "한별", "유진", "민서", "예린", "수아", "지호", "하윤",
   "건우", "서연", "나연", "채원", "은우", "다은", "시우", "지안", "주호", "가율",
 ];
-const DEPARTMENTS = ["경영지원", "영업", "생산기술", "품질보증", "구매", "R&D", "생산관리"];
-const RANKS = ["사원", "주임", "대리", "과장", "차장", "부장", "이사"] as const;
 const STATUSES = ["ACTIVE", "ACTIVE", "ACTIVE", "PENDING", "RESIGNED"] as const;
 
 /**
@@ -61,6 +59,23 @@ async function main() {
   // slug 는 unique 라 이미 쓰이는 값을 피해야 합니다. buildSlug 에 넘길 목록을 모아 둡니다.
   const taken = new Set((await prisma.employee.findMany({ select: { slug: true } })).map((r) => r.slug));
 
+  /*
+   * 직위·직책·부서는 DB 목록에서 골라 씁니다. 목록이 테이블이 된 뒤로는 여기에
+   * 값을 적어 둘 수 없습니다 — 관리자가 바꾼 이름과 어긋나면 연결 자체가 실패합니다.
+   * 시드(`pnpm db:seed`)를 먼저 돌려 목록이 채워져 있어야 합니다.
+   */
+  const [ranks, positions, teams] = await Promise.all([
+    prisma.rank.findMany({ select: { id: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.position.findMany({ select: { id: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.team.findMany({
+      select: { id: true, parts: { select: { id: true }, orderBy: { sortOrder: "asc" } } },
+      orderBy: { sortOrder: "asc" },
+    }),
+  ]);
+  if (ranks.length === 0 || teams.length === 0) {
+    throw new Error("조직 목록이 비어 있습니다. 먼저 `pnpm db:seed` 를 실행하세요.");
+  }
+
   let created = 0;
   for (let i = 0; i < 40; i++) {
     const familyName = pick(FAMILY, i + 1);
@@ -72,6 +87,10 @@ async function main() {
     // 수정일을 하루씩 벌려 목록 정렬(updatedAt desc)과 페이지네이션을 눈으로 확인합니다.
     const updatedAt = new Date(Date.UTC(2026, 6, 20) - i * 86_400_000);
 
+    const team = pick(teams, i + 5);
+    // 파트가 없는 팀이 있을 수 있어(관리자가 지웠을 때) 비어 있으면 파트는 건너뜁니다.
+    const part = team.parts.length ? pick(team.parts, i + 13) : null;
+
     await prisma.employee.create({
       data: {
         slug,
@@ -79,8 +98,10 @@ async function main() {
         nameKo: `${familyName}${givenName}`,
         familyName,
         givenName,
-        rank: pick(RANKS, i + 3),
-        department: pick(DEPARTMENTS, i + 5),
+        rankId: pick(ranks, i + 3).id,
+        positionId: positions.length ? pick(positions, i + 17).id : null,
+        teamId: team.id,
+        partId: part?.id ?? null,
         status: pick(STATUSES, i + 11),
         companyId: company.id,
         createdAt: updatedAt,

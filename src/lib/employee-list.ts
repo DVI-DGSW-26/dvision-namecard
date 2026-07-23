@@ -14,7 +14,8 @@ export const MAX_PAGE_SIZE = 1000;
 
 export const listQuerySchema = z.object({
   q: z.string().trim().max(100).default(""),
-  department: z.string().trim().max(50).default(""),
+  /** 부서 필터는 팀 단위입니다. 값은 팀 id 입니다. */
+  teamId: z.string().trim().max(40).default(""),
   status: z.enum(["PENDING", "ACTIVE", "RESIGNED"]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(PAGE_SIZE),
@@ -30,8 +31,10 @@ export type EmployeeListItem = {
   id: string;
   slug: string;
   nameKo: string;
+  /** "경영관리 · 회계/재무" 처럼 팀과 파트를 이어 붙인 표시용 문자열입니다. */
   department: string | null;
-  rank: string;
+  /** 직위 이름. 관리자가 목록에서 지웠으면 비어 있습니다. */
+  rank: string | null;
   email: string | null;
   status: Status;
   updatedAt: string;
@@ -42,15 +45,15 @@ export type EmployeeListResponse = {
   total: number;
   page: number;
   pageSize: number;
-  /** 필터 드롭다운용. 현재 DB 에 실제로 존재하는 부서만 내려줍니다. */
-  departments: string[];
+  /** 필터 드롭다운용 팀 목록. 조직 관리에 등록된 팀 전부입니다. */
+  teams: { id: string; name: string }[];
 };
 
 /** URLSearchParams 로 직렬화. 빈 값은 넣지 않아 URL 을 짧게 유지합니다. */
 export function toListSearchParams(query: Partial<ListQuery>): URLSearchParams {
   const params = new URLSearchParams();
   if (query.q) params.set("q", query.q);
-  if (query.department) params.set("department", query.department);
+  if (query.teamId) params.set("teamId", query.teamId);
   if (query.status) params.set("status", query.status);
   if (query.page && query.page > 1) params.set("page", String(query.page));
   if (query.pageSize) params.set("pageSize", String(query.pageSize));

@@ -39,6 +39,18 @@ export function UsersIcon({ className }: IconProps) {
   );
 }
 
+/** 조직도 — 조직 관리 탭. 위 상자 하나에서 아래 상자 둘로 갈라지는 계통도입니다. */
+export function OrgIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="9" y="3" width="6" height="4.5" rx="1" />
+      <rect x="3" y="16.5" width="6" height="4.5" rx="1" />
+      <rect x="15" y="16.5" width="6" height="4.5" rx="1" />
+      <path d="M12 7.5v4.5M6 16.5V12h12v4.5" />
+    </svg>
+  );
+}
+
 export function PhoneIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

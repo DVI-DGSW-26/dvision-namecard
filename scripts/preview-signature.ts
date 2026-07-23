@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { renderSignature, renderSignatureText } from "../src/lib/signature";
-import type { Company, Employee } from "../src/types";
+import type { CompanyWithOffices, EmployeeWithOrg } from "../src/types";
 
 /**
  * 서명 HTML 을 파일로 뽑아내는 스크립트. `pnpm sig:preview` 로 실행합니다.
@@ -15,7 +15,11 @@ const company = {
   id: "dvision",
   nameKo: "(주)디비전",
   nameEn: "DVISION Inc.",
-  address: "대구광역시 달성군 구지면 국가산단대로33길 237",
+  // 사업장이 둘일 때 서명이 어떻게 보이는지 확인하려고 둘 다 넣어 둡니다.
+  offices: [
+    { id: "o1", name: "본사", postalCode: "43011", address: "대구광역시 달성군 구지면 국가산단대로33길 237", sortOrder: 10, companyId: "dvision" },
+    { id: "o2", name: "R&D센터", postalCode: "41585", address: "대구 북구 홈암로 51", sortOrder: 20, companyId: "dvision" },
+  ],
   tel: "053-710-1022",
   fax: "053-715-2096",
   logoUrl: "/brand/logo.png",
@@ -26,7 +30,7 @@ const company = {
   tagline: "알루미늄 압출 · 정밀가공 | 자동차 경량 부품 전문",
   certifications: ["IATF 16949", "ISO 9001"],
   stats: [],
-} as unknown as Company;
+} as unknown as CompanyWithOffices;
 
 // slug 은 실제 DB 에 있는 값이어야 합니다. 이제 서명이 /c/[slug]/card.png 이미지를
 // 가리키고, 그 이미지는 dev 서버가 DB 를 조회해 생성하기 때문입니다. (seed 의 "hong")
@@ -38,8 +42,9 @@ const employee = {
   familyName: "류",
   givenName: "영균",
   nameEn: "Youngkyun Ryu",
-  rank: "대표이사",
-  department: null,
+  rank: { id: "r1", name: "수석매니저", nameEn: "Chief Manager", sortOrder: 0 },
+  executiveTitle: null,
+  position: null,
   credential: "공학박사",
   bio: "더 가볍고 강한 부품과 스마트한 제조로 미래를 만듭니다",
   telWork: "053-710-1022",
@@ -48,7 +53,7 @@ const employee = {
   photoUrl: null,
   status: "ACTIVE",
   companyId: "dvision",
-} as unknown as Employee;
+} as unknown as EmployeeWithOrg;
 
 const signature = renderSignature(employee, company);
 

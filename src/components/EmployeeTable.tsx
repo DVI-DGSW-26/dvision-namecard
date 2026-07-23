@@ -71,13 +71,13 @@ function pageTokens(current: number, last: number): Array<number | "gap"> {
 }
 
 function toCsv(rows: EmployeeListItem[]): string {
-  const header = ["이름", "부서", "직급", "이메일", "수정일", "상태"];
+  const header = ["이름", "부서", "직위", "이메일", "수정일", "상태"];
   const escape = (value: string) => `"${value.replaceAll('"', '""')}"`;
   const lines = rows.map((row) =>
     [
       row.nameKo,
       row.department ?? "",
-      row.rank,
+      row.rank ?? "",
       row.email ?? "",
       formatDate(row.updatedAt),
       STATUS_LABEL[row.status],
@@ -93,7 +93,7 @@ const CELL = "px-group py-sibling text-body text-text whitespace-nowrap";
 export function EmployeeTable() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [department, setDepartment] = useState("");
+  const [teamId, setTeamId] = useState("");
   const [status, setStatus] = useState<Status | "">("");
   const [page, setPage] = useState(1);
 
@@ -123,8 +123,8 @@ export function EmployeeTable() {
     setPage(1);
   }, []);
 
-  const changeDepartment = useCallback((value: string) => {
-    setDepartment(value);
+  const changeTeam = useCallback((value: string) => {
+    setTeamId(value);
     setPage(1);
   }, []);
 
@@ -136,11 +136,11 @@ export function EmployeeTable() {
   const query = useMemo(
     () => ({
       q: debouncedSearch,
-      department,
+      teamId,
       status: status || undefined,
       page,
     }),
-    [debouncedSearch, department, status, page],
+    [debouncedSearch, teamId, status, page],
   );
 
   const queryKey = useMemo(() => toListSearchParams(query).toString(), [query]);
@@ -290,14 +290,15 @@ export function EmployeeTable() {
         */}
         <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
           <Select
-            value={department}
-            onChange={(event) => changeDepartment(event.target.value)}
+            value={teamId}
+            onChange={(event) => changeTeam(event.target.value)}
             aria-label="부서 필터"
           >
+            {/* 부서 필터는 팀 단위입니다. 파트까지 나누면 선택지가 20개를 넘습니다. */}
             <option value="">전체 부서</option>
-            {(data?.departments ?? []).map((name) => (
-              <option key={name} value={name}>
-                {name}
+            {(data?.teams ?? []).map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
               </option>
             ))}
           </Select>
@@ -414,7 +415,7 @@ export function EmployeeTable() {
                   className="h-4 w-4 accent-primary"
                 />
               </th>
-              {["이름", "부서", "직급", "이메일", "수정일", "상태"].map((label) => (
+              {["이름", "부서", "직위", "이메일", "수정일", "상태"].map((label) => (
                 <th
                   key={label}
                   scope="col"
@@ -466,7 +467,7 @@ export function EmployeeTable() {
                     </div>
                   </td>
                   <td className={CELL}>{row.department ?? "—"}</td>
-                  <td className={CELL}>{row.rank}</td>
+                  <td className={CELL}>{row.rank ?? "—"}</td>
                   <td className={CELL}>{row.email ?? "—"}</td>
                   <td className="px-group py-sibling text-body text-sub-text whitespace-nowrap">
                     {formatDate(row.updatedAt)}
@@ -549,7 +550,6 @@ export function EmployeeTable() {
           setPage(1);
           setReloadNonce((n) => n + 1);
         }}
-        departments={data?.departments ?? []}
       />
     </div>
   );

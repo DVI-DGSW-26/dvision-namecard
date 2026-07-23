@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { listQuerySchema, type EmployeeListResponse } from "@/lib/employee-list";
+import { departmentText } from "@/lib/org";
+import { defaultPositionId } from "@/lib/org-store";
 import { prisma } from "@/lib/prisma";
 import { buildSlug } from "@/lib/slug";
 import { employeeCreateSchema, fieldErrors } from "@/lib/validation";
@@ -30,26 +32,28 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { q, department, status, page, pageSize } = parsed.data;
+  const { q, teamId, status, page, pageSize } = parsed.data;
   const isAdmin = session.role === "admin";
 
   const where: Prisma.EmployeeWhereInput = {
     // 퇴사자는 관리자에게만 보입니다.
     ...(isAdmin ? {} : { status: { not: "RESIGNED" } }),
     ...(status && isAdmin ? { status } : {}),
-    ...(department ? { department } : {}),
+    ...(teamId ? { teamId } : {}),
     ...(q
       ? {
           OR: [
             { nameKo: { contains: q, mode: "insensitive" } },
             { email: { contains: q, mode: "insensitive" } },
-            { department: { contains: q, mode: "insensitive" } },
+            // 부서가 관계로 바뀌어서 팀·파트 이름까지 훑습니다.
+            { team: { name: { contains: q, mode: "insensitive" } } },
+            { part: { name: { contains: q, mode: "insensitive" } } },
           ],
         }
       : {}),
   };
 
-  const [total, rows, departmentRows] = await Promise.all([
+  const [total, rows, teams] = await Promise.all([
     prisma.employee.count({ where }),
     prisma.employee.findMany({
       where,
@@ -62,20 +66,20 @@ export async function GET(request: NextRequest) {
         id: true,
         slug: true,
         nameKo: true,
-        department: true,
-        rank: true,
         status: true,
         updatedAt: true,
+        rank: { select: { name: true } },
+        team: { select: { name: true } },
+        part: { select: { name: true } },
         // 항상 조회한 뒤 아래 매핑에서 member 응답에는 넣지 않습니다.
         // select 에 boolean 변수를 넣으면 반환 타입이 union 으로 갈라져 다루기 번거롭습니다.
         email: true,
       },
     }),
-    prisma.employee.findMany({
-      where: { department: { not: null } },
-      distinct: ["department"],
-      orderBy: { department: "asc" },
-      select: { department: true },
+    // 필터용 팀 목록. 직원이 아직 없는 팀도 골라 볼 수 있어야 하므로 조직 목록에서 그대로 가져옵니다.
+    prisma.team.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -84,8 +88,8 @@ export async function GET(request: NextRequest) {
       id: row.id,
       slug: row.slug,
       nameKo: row.nameKo,
-      department: row.department,
-      rank: row.rank,
+      department: departmentText(row) || null,
+      rank: row.rank?.name ?? null,
       email: isAdmin ? (row.email ?? null) : null,
       status: row.status,
       updatedAt: row.updatedAt.toISOString(),
@@ -93,9 +97,7 @@ export async function GET(request: NextRequest) {
     total,
     page,
     pageSize,
-    departments: departmentRows
-      .map((row) => row.department)
-      .filter((name): name is string => Boolean(name)),
+    teams,
   };
 
   return NextResponse.json(body);
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ errors: fieldErrors(parsed.error) }, { status: 422 });
   }
 
-  const { familyName, givenName, email, rank, department, slug } = parsed.data;
+  const { familyName, givenName, email, rankId, teamId, partId, slug } = parsed.data;
 
   const company = await prisma.company.findFirst({ select: { id: true } });
   if (!company) {
@@ -188,8 +190,11 @@ export async function POST(request: NextRequest) {
         nameKo: `${familyName}${givenName}`,
         familyName,
         givenName,
-        rank,
-        department,
+        rankId,
+        teamId,
+        partId,
+        // 새 직원은 '팀원' 으로 시작합니다. 관리자가 목록에서 그 항목을 지웠으면 비워 둡니다.
+        positionId: await defaultPositionId(),
         status: "PENDING",
         companyId: company.id,
       },
