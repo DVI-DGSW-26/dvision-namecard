@@ -1,4 +1,5 @@
-import { MailIcon, MessageIcon, PhoneIcon, UserIcon } from "./icons";
+import { DownloadIcon, UserIcon } from "./icons";
+import { brand } from "@/config/brand";
 import type { Company, Employee } from "@/types";
 
 /**
@@ -16,6 +17,8 @@ import type { Company, Employee } from "@/types";
  */
 
 export type ProfileCardData = {
+  /** 명함 이미지(/c/[slug]/card.png) 주소를 만드는 데 씁니다. */
+  slug: string;
   nameKo: string;
   rank: string;
   /** 직책(팀장·본부장). 직급과 별개이고 선택 입력입니다. */
@@ -31,13 +34,34 @@ export type ProfileCardData = {
     nameEn: string;
     industry?: string | null;
     tagline?: string | null;
+    /** 스킴 없이 "dvi-ind.com" 으로 들어와도 됩니다. 카드가 붙여서 씁니다. */
+    homepageUrl?: string | null;
+    address?: string | null;
+    /** 회사 대표번호. 직원 사무실 번호(telWork)가 없을 때 대신 나갑니다. */
+    tel?: string | null;
+    /** 팩스는 개인 번호가 아니라 회사 공용입니다. */
+    fax?: string | null;
     certifications: string[];
   };
 };
 
+/**
+ * 홈페이지 주소를 링크로 쓸 수 있는 형태로 만듭니다.
+ *
+ * /edit 는 자유 입력이라 "dvi-ind.com" 처럼 스킴 없이 저장된 값이 섞입니다.
+ * 그대로 href 에 넣으면 브라우저가 상대 경로로 읽어 /c/dvi-ind.com 으로 갑니다.
+ * 값이 비면 브랜드 기본 주소로 떨어져 CTA 가 사라지지 않게 합니다.
+ */
+function homepageHref(raw?: string | null): string {
+  const url = raw?.trim();
+  if (!url) return brand.homepage;
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
 /** DB 레코드 → 카드 데이터. /c/[slug] 쪽 어댑터입니다. */
 export function toProfileCardData(employee: Employee, company: Company): ProfileCardData {
   return {
+    slug: employee.slug,
     nameKo: employee.nameKo,
     rank: employee.rank,
     position: employee.position,
@@ -52,6 +76,10 @@ export function toProfileCardData(employee: Employee, company: Company): Profile
       nameEn: company.nameEn,
       industry: company.industry,
       tagline: company.tagline,
+      homepageUrl: company.homepageUrl,
+      address: company.address,
+      tel: company.tel,
+      fax: company.fax,
       // certifications 는 Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 통과시킵니다.
       certifications: Array.isArray(company.certifications)
         ? company.certifications.filter((c): c is string => typeof c === "string")
@@ -70,40 +98,53 @@ function Wordmark() {
   );
 }
 
-function ActionButton({
-  href,
-  label,
-  children,
-}: {
-  href: string | null;
-  label: string;
-  children: React.ReactNode;
-}) {
-  const disabled = !href;
+/**
+ * 연락처 한 줄. `라벨 ———— 값` 형태로, 값이 없으면 줄째로 빠집니다.
+ *
+ * 아이콘 버튼을 이 줄로 바꾼 이유: 명함은 "번호를 눈으로 확인하는" 화면입니다.
+ * 아이콘만 있으면 저장하기 전에는 번호도 주소도 읽을 수 없었습니다.
+ * 누를 수 있는 값(전화·메일)은 줄 전체가 링크라 탭하면 그대로 걸립니다.
+ */
+function InfoRow({ label, value, href }: { label: string; value: string | null; href?: string }) {
+  if (!value) return null;
+
+  const inner = (
+    <>
+      <span className="shrink-0 text-caption text-sub-text">{label}</span>
+      {/* 이메일·주소는 좁은 화면에서 넘칩니다. 잘라내면 정보가 사라지므로 줄바꿈시킵니다. */}
+      <span className="text-body break-all text-right">{value}</span>
+    </>
+  );
+
+  const className = "flex items-center justify-between gap-group py-sibling";
+
   return (
-    <div className="flex flex-1 flex-col items-center gap-tight">
-      {/* 값이 없으면 링크가 아니라 비활성 표시로 렌더합니다. href="" 인 <a> 는 페이지를 새로고침시킵니다. */}
-      {disabled ? (
-        <span
-          aria-disabled
-          className="flex h-11 w-full items-center justify-center rounded-card border border-border text-border"
-        >
-          {children}
-        </span>
-      ) : (
-        <a
-          href={href}
-          className="flex h-11 w-full items-center justify-center rounded-card border border-border text-text transition-colors hover:border-text"
-        >
-          {children}
+    <li className="border-b border-border last:border-b-0">
+      {href ? (
+        <a href={href} className={`${className} transition-colors hover:bg-sub-bg`}>
+          {inner}
         </a>
+      ) : (
+        <div className={className}>{inner}</div>
       )}
-      <span className={`text-caption ${disabled ? "text-border" : "text-sub-text"}`}>{label}</span>
-    </div>
+    </li>
   );
 }
 
-export function ProfileCard({ data }: { data: ProfileCardData }) {
+export function ProfileCard({
+  data,
+  downloadable = true,
+}: {
+  data: ProfileCardData;
+  /**
+   * 신원 블록을 명함 이미지 다운로드 링크로 쓸지.
+   *
+   * /edit 미리보기는 끕니다. card.png 는 **저장된** 값으로 서버에서 굽는 이미지라,
+   * 편집 중에 눌러 받으면 눈앞의 미리보기와 다른 명함이 내려옵니다. 미리보기의
+   * 약속은 "공개 카드와 똑같이 보인다" 이므로 모양은 그대로 두고 동작만 뗍니다.
+   */
+  downloadable?: boolean;
+}) {
   const { company } = data;
 
   // 직급 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고 구분자가 혼자 남지 않도록
@@ -112,58 +153,106 @@ export function ProfileCard({ data }: { data: ProfileCardData }) {
     .filter(Boolean)
     .join(" · ");
 
-  const tel = data.telWork?.trim() || null;
-  // mobilePublic 이 false 면 번호가 있어도 공개하지 않습니다. (서명 규칙과 동일)
+  // 값 고르는 규칙은 lib/signature.ts 의 resolveFields 와 같아야 합니다.
+  // 여기만 따로 정하면 카드에 보이는 번호와 서명·vCard 의 번호가 갈립니다.
+  const tel = data.telWork?.trim() || company.tel?.trim() || null;
+  // mobilePublic 이 false 면 번호가 있어도 공개하지 않습니다.
   const mobile = data.mobilePublic ? data.telMobile?.trim() || null : null;
+  const fax = company.fax?.trim() || null;
   const email = data.email?.trim() || null;
+  const address = company.address?.trim() || null;
 
   const hasCompanyBlock =
-    company.industry || company.tagline || company.certifications.length > 0;
+    company.industry || company.tagline || address || company.certifications.length > 0;
+
+  /*
+    신원 블록은 가운데 정렬입니다. 명함은 훑어보는 화면이라 사진 → 이름 → 소속이
+    한 축에 놓여야 눈이 한 번에 내려갑니다. 왼쪽 정렬이면 원형 사진만 축에서
+    벗어나 보입니다.
+
+    블록 전체가 명함 이미지(card.png) 다운로드 링크입니다. 같은 이미지가
+    이메일 서명에 붙어 나가므로, 카드를 받은 사람도 그 한 장을 그대로
+    저장할 수 있습니다. (downloadable=false 면 모양만 같고 링크는 빠집니다)
+  */
+  const identity = (
+    <>
+      {/* 사진 — 업로드는 아직 구현 전이라 placeholder 를 그립니다. */}
+      <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-border bg-sub-bg">
+        {data.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- 업로드 도메인이 정해지기 전이라 next/image 설정을 미룹니다.
+          <img src={data.photoUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <UserIcon className="h-10 w-10 text-sub-text" />
+        )}
+      </div>
+
+      <h1 className="mt-group text-display">{data.nameKo}</h1>
+      {roleText ? <p className="mt-tight text-body text-sub-text">{roleText}</p> : null}
+      <p className="mt-sibling flex items-center justify-center gap-tight">
+        <Wordmark />
+        <span className="text-caption-bold text-text">{company.nameKo}</span>
+      </p>
+
+      {/* 누르는 자리라는 표시가 없으면 아무도 안 누릅니다. */}
+      <span className="mt-group inline-flex items-center gap-tight text-caption text-sub-text">
+        <DownloadIcon className="h-4 w-4" />
+        눌러서 명함 이미지 저장
+      </span>
+    </>
+  );
+
+  const identityClassName =
+    "flex flex-col items-center px-section pt-section pb-group text-center";
 
   return (
     <article className="bg-bg text-text">
-      {/*
-        신원 블록은 가운데 정렬입니다. 명함은 훑어보는 화면이라 사진 → 이름 → 소속이
-        한 축에 놓여야 눈이 한 번에 내려갑니다. 왼쪽 정렬이면 원형 사진만 축에서
-        벗어나 보입니다.
-      */}
-      <div className="flex flex-col items-center p-section text-center">
-        {/* 사진 — 업로드는 아직 구현 전이라 placeholder 를 그립니다. */}
-        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-border bg-sub-bg">
-          {data.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- 업로드 도메인이 정해지기 전이라 next/image 설정을 미룹니다.
-            <img src={data.photoUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <UserIcon className="h-10 w-10 text-sub-text" />
-          )}
-        </div>
+      {downloadable ? (
+        /*
+          download 속성이 필요합니다. card.png 라우트는 이미지를 inline 으로
+          내려주기 때문에, 이게 없으면 다운로드가 아니라 이미지 페이지로 이동합니다.
 
-        <h1 className="mt-group text-display">{data.nameKo}</h1>
-        {roleText ? <p className="mt-tight text-body text-sub-text">{roleText}</p> : null}
-        <p className="mt-sibling flex items-center justify-center gap-tight">
-          <Wordmark />
-          <span className="text-caption-bold text-text">{company.nameKo}</span>
-        </p>
-
-        {/* CTA — 화면에서 primary 를 채워 쓰는 유일한 요소입니다. */}
+          aria-label 이 없으면 링크 이름이 블록 안 글자를 전부 이어 붙인
+          "홍길동 부장 · DVISION … 눌러서 명함 이미지 저장" 이 됩니다. 이름은 h1 로
+          따로 읽히니 여기서는 행동만 말합니다. (안쪽 h1 은 그대로 제목으로 남습니다)
+        */
         <a
-          href="./vcard"
-          className="mt-section flex h-12 w-full items-center justify-center rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover"
+          href={`/c/${data.slug}/card.png`}
+          download={`${data.slug}.png`}
+          aria-label="명함 이미지 저장"
+          className={`${identityClassName} transition-colors hover:bg-sub-bg`}
         >
-          연락처 저장
+          {identity}
         </a>
+      ) : (
+        <div className={identityClassName}>{identity}</div>
+      )}
 
-        <div className="mt-group flex w-full gap-sibling">
-          <ActionButton href={tel ? `tel:${tel}` : null} label="전화">
-            <PhoneIcon className="h-5 w-5" />
-          </ActionButton>
-          <ActionButton href={mobile ? `sms:${mobile}` : null} label="문자">
-            <MessageIcon className="h-5 w-5" />
-          </ActionButton>
-          <ActionButton href={email ? `mailto:${email}` : null} label="메일">
-            <MailIcon className="h-5 w-5" />
-          </ActionButton>
-        </div>
+      <div className="px-section pb-section">
+        {/*
+          명함에 인쇄되는 값들을 그대로 한 번 더 보여 줍니다. 저장하지 않고
+          번호만 확인하고 끝내는 사람이 대부분이라, 이게 카드의 본문입니다.
+        */}
+        <ul className="border-t border-border">
+          <InfoRow label="전화" value={tel} href={tel ? `tel:${tel}` : undefined} />
+          <InfoRow label="휴대폰" value={mobile} href={mobile ? `tel:${mobile}` : undefined} />
+          {/* 팩스는 걸 수 있는 번호가 아니라 링크를 걸지 않습니다. */}
+          <InfoRow label="팩스" value={fax} />
+          <InfoRow label="이메일" value={email} href={email ? `mailto:${email}` : undefined} />
+        </ul>
+
+        {/*
+          CTA — 화면에서 primary 를 채워 쓰는 유일한 요소입니다.
+          명함을 받은 사람이 다음에 하는 행동은 "회사가 뭐 하는 곳인지 보기" 라서
+          회사 홈페이지로 보냅니다. 카드는 닫히지 않도록 새 탭으로 엽니다.
+        */}
+        <a
+          href={homepageHref(company.homepageUrl)}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-group flex h-12 w-full items-center justify-center rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover"
+        >
+          회사 홈페이지 바로가기
+        </a>
       </div>
 
       {/*
@@ -177,6 +266,9 @@ export function ProfileCard({ data }: { data: ProfileCardData }) {
           {company.tagline ? (
             <p className="mt-tight text-caption text-sub-text">{company.tagline}</p>
           ) : null}
+
+          {/* 주소는 회사 값이라 회사 블록에 둡니다. 명함 뒷면의 마지막 줄과 같은 자리입니다. */}
+          {address ? <p className="mt-sibling text-caption text-sub-text">{address}</p> : null}
 
           {company.certifications.length > 0 ? (
             <ul className="mt-group flex flex-wrap justify-center gap-sibling">

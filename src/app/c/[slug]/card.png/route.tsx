@@ -1,5 +1,7 @@
+import { unstable_cache } from "next/cache";
 import { ImageResponse } from "next/og";
 import { notFound } from "next/navigation";
+import { CARDS_TAG, cardTag } from "@/lib/card-cache";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -16,10 +18,29 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-// 이미지 자체는 자주 안 바뀌지만, 프로필을 수정하면 반영돼야 하니 캐시는 짧게 둡니다.
-export const revalidate = 60;
-
 const PRETENDARD = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@1.3.9/packages/pretendard/dist/public/static";
+
+/**
+ * 폰트는 한 프로세스에 한 번만 받습니다.
+ *
+ * 예전에는 요청마다 jsdelivr 에서 otf 두 개를 새로 받았습니다. 캐시가 걸린 지금은
+ * 미스일 때만 도는 자리지만, 그래도 사람마다 다시 받을 이유가 없습니다.
+ * 실패한 약속을 그대로 들고 있으면 그 프로세스가 영영 폰트를 못 받으므로,
+ * 실패하면 비워서 다음 요청이 다시 시도하게 합니다.
+ */
+let fonts: Promise<[ArrayBuffer, ArrayBuffer]> | null = null;
+
+function loadFonts(): Promise<[ArrayBuffer, ArrayBuffer]> {
+  fonts ??= Promise.all([
+    fetch(`${PRETENDARD}/Pretendard-Regular.otf`).then((r) => r.arrayBuffer()),
+    fetch(`${PRETENDARD}/Pretendard-SemiBold.otf`).then((r) => r.arrayBuffer()),
+  ]).catch((error) => {
+    fonts = null;
+    throw error;
+  }) as Promise<[ArrayBuffer, ArrayBuffer]>;
+
+  return fonts;
+}
 
 /** brandColor 검증. 형식이 깨졌으면 기본 브랜드색. (signature.ts 의 safeColor 와 같은 규칙) */
 function safeColor(value: string | null | undefined): string {
@@ -34,11 +55,18 @@ function present(value: string | null | undefined): string | null {
 
 type Props = { params: Promise<{ slug: string }> };
 
-export async function GET(_request: Request, { params }: Props) {
-  const { slug } = await params;
-
+/**
+ * PNG 를 구워 base64 로 돌려줍니다. 퇴사자·없는 slug 는 null 입니다.
+ *
+ * unstable_cache 는 JSON 으로 저장하므로 ArrayBuffer 를 그대로 담을 수 없습니다.
+ * base64 로 바꿔서 넣고 꺼낼 때 되돌립니다. (600x340 PNG 라 수십 KB 수준입니다)
+ *
+ * notFound() 를 여기서 부르지 않는 이유: 캐시 안에서 던지면 "없음" 이라는 결과가
+ * 예외로 저장돼 다음 요청에서 되살아납니다. 없음은 null 로 돌려주고 판단은 밖에서 합니다.
+ */
+async function renderCard(slug: string): Promise<string | null> {
   const employee = await prisma.employee.findUnique({ where: { slug }, include: { company: true } });
-  if (!employee || employee.status === "RESIGNED") notFound();
+  if (!employee || employee.status === "RESIGNED") return null;
 
   const { company } = employee;
   const base = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/+$/, "") ?? "";
@@ -65,12 +93,9 @@ export async function GET(_request: Request, { params }: Props) {
     ["E-MAIL", email],
   ].filter(([, v]) => v) as [string, string][];
 
-  const [regular, semibold] = await Promise.all([
-    fetch(`${PRETENDARD}/Pretendard-Regular.otf`).then((r) => r.arrayBuffer()),
-    fetch(`${PRETENDARD}/Pretendard-SemiBold.otf`).then((r) => r.arrayBuffer()),
-  ]);
+  const [regular, semibold] = await loadFonts();
 
-  return new ImageResponse(
+  const image = new ImageResponse(
     (
       <div
         style={{
@@ -142,4 +167,41 @@ export async function GET(_request: Request, { params }: Props) {
       ],
     },
   );
+
+  return Buffer.from(await image.arrayBuffer()).toString("base64");
+}
+
+/**
+ * 캐시.
+ *
+ * 예전에는 `export const revalidate = 60` 만 있었는데, [slug] 에
+ * generateStaticParams 가 없어 라우트가 ƒ(Dynamic) 으로 잡히는 바람에 아무 일도
+ * 하지 않았습니다. 요청마다 DB 를 읽고 폰트를 받고 satori 를 돌리고 있었습니다.
+ *
+ * 지금은 결과물(PNG)을 slug 별로 캐시합니다. 60 초는 이 캐시를 손대는 곳이 하나도
+ * 없을 때를 위한 바닥값이고, 실제로는 저장할 때 태그로 즉시 지웁니다.
+ * (api/employees/[id] · api/company 의 revalidateTag)
+ */
+const cachedCard = (slug: string) =>
+  unstable_cache(() => renderCard(slug), ["card-png", slug], {
+    tags: [cardTag(slug), CARDS_TAG],
+    revalidate: 60,
+  })();
+
+export async function GET(_request: Request, { params }: Props) {
+  const { slug } = await params;
+  const base64 = await cachedCard(slug);
+  if (!base64) notFound();
+
+  /*
+    캐시는 서버 쪽 이야기고, 브라우저·메일 클라이언트에는 매번 물어보게 합니다.
+    서명 이미지라 한번 박히면 오래 남는데, 여기서 max-age 를 주면 프로필을 고쳐도
+    받는 사람 화면에서는 옛 명함이 계속 보입니다.
+  */
+  return new Response(Buffer.from(base64, "base64"), {
+    headers: {
+      "content-type": "image/png",
+      "cache-control": "public, max-age=0, must-revalidate",
+    },
+  });
 }
