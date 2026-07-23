@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createSession, destroySession, verifyPassword } from "@/lib/auth";
+import { defaultPositionId } from "@/lib/org-store";
 import { prisma } from "@/lib/prisma";
 import { buildSlug } from "@/lib/slug";
 
@@ -92,7 +93,8 @@ async function createSelfServeEmployee(email: string, companyId: string) {
       // 정확한 성·이름은 관리자 화면에서 바로잡습니다.
       familyName: "",
       givenName: localPart,
-      rank: "사원",
+      // 직위·부서는 비워 둡니다 — 본인이 /edit 에서 고릅니다. 직책만 '팀원' 으로 시작합니다.
+      positionId: await defaultPositionId(),
       status: "ACTIVE",
       companyId,
     },

@@ -2,7 +2,9 @@ import { unstable_cache } from "next/cache";
 import { ImageResponse } from "next/og";
 import { notFound } from "next/navigation";
 import { CARDS_TAG, cardTag } from "@/lib/card-cache";
+import { officeLines, roleParts } from "@/lib/org";
 import { prisma } from "@/lib/prisma";
+import { companyOfficesInclude, employeeOrgInclude } from "@/types";
 
 /**
  * 명함을 PNG 한 장으로 렌더합니다. 이메일 서명이 이 이미지를 그대로 씁니다.
@@ -65,7 +67,10 @@ type Props = { params: Promise<{ slug: string }> };
  * 예외로 저장돼 다음 요청에서 되살아납니다. 없음은 null 로 돌려주고 판단은 밖에서 합니다.
  */
 async function renderCard(slug: string): Promise<string | null> {
-  const employee = await prisma.employee.findUnique({ where: { slug }, include: { company: true } });
+  const employee = await prisma.employee.findUnique({
+    where: { slug },
+    include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
+  });
   if (!employee || employee.status === "RESIGNED") return null;
 
   const { company } = employee;
@@ -76,7 +81,7 @@ async function renderCard(slug: string): Promise<string | null> {
   const SUB = "#6B6B6B";
   const LINE = "#E5E7EB";
 
-  const role = [employee.rank as string, present(employee.position), present(employee.credential)]
+  const role = [...roleParts(employee), present(employee.credential)]
     .filter(Boolean)
     .join("  •  ");
 
@@ -84,7 +89,7 @@ async function renderCard(slug: string): Promise<string | null> {
   const mobile = employee.mobilePublic ? present(employee.telMobile) : null;
   const fax = present(company.fax);
   const email = present(employee.email);
-  const address = present(company.address);
+  const addresses = officeLines(company.offices);
 
   const contacts = [
     ["TEL", tel],
@@ -139,8 +144,22 @@ async function renderCard(slug: string): Promise<string | null> {
             </div>
           </div>
 
-          {/* 회사 위치 */}
-          {address ? <div style={{ fontSize: 16, color: INK, marginTop: 30 }}>{address}</div> : null}
+          {/*
+            회사 위치 — 사업장마다 한 줄입니다. (본사 · R&D센터)
+
+            600x340 고정 캔버스라 줄이 늘어나면 아래가 밀립니다. 그래서 한 곳일 때의
+            여백(30)을 그대로 두고 둘째 줄부터는 줄간격만 좁게(4) 붙입니다.
+            satori 는 flex 하위 집합만 지원하므로 gap 대신 marginTop 을 씁니다.
+          */}
+          {addresses.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", marginTop: 30 }}>
+              {addresses.map((line, index) => (
+                <div key={line} style={{ fontSize: 16, color: INK, marginTop: index === 0 ? 0 : 4 }}>
+                  {line}
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           {/* 구분선 */}
           <div style={{ display: "flex", width: 330, height: 1, backgroundColor: LINE, marginTop: 14 }} />

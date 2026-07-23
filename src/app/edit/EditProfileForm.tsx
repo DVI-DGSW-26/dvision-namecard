@@ -4,15 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Field, FieldRow, Input, SectionHeader, Select } from "@/components/form";
 import { ProfileCard, type ProfileCardData } from "@/components/ProfileCard";
 import { ArrowRightIcon, ChevronDownIcon, UserIcon } from "@/components/icons";
+import { officeLines, type OrgLists } from "@/lib/org";
 import {
-  RANKS,
   companyProfileSchema,
   employeeProfileSchema,
   fieldErrors,
   formatPhone,
-
 } from "@/lib/validation";
-import type { Company, Employee } from "@/types";
+import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 /**
  * 프로필 편집 폼 + 실시간 미리보기.
@@ -26,8 +25,12 @@ import type { Company, Employee } from "@/types";
 type EmployeeForm = {
   nameKo: string;
   nameEn: string;
-  rank: string;
-  position: string;
+  /** 직위·직책·부서는 목록에서 고른 항목의 id 입니다. 비어 있으면 "없음". */
+  rankId: string;
+  executiveTitleId: string;
+  positionId: string;
+  teamId: string;
+  partId: string;
   credential: string;
   telWork: string;
   telMobile: string;
@@ -38,7 +41,6 @@ type CompanyForm = {
   nameKo: string;
   nameEn: string;
   industry: string;
-  address: string;
   fax: string;
   homepageUrl: string;
 };
@@ -49,10 +51,13 @@ export function EditProfileForm({
   role,
   employee,
   company,
+  org,
 }: {
   role: "member" | "admin";
-  employee: Employee;
-  company: Company;
+  employee: EmployeeWithOrg;
+  company: CompanyWithOffices;
+  /** 직위·직책·부서 선택지. 관리자가 /admin/org 에서 바꾼 목록입니다. */
+  org: OrgLists;
 }) {
   const isAdmin = role === "admin";
 
@@ -60,8 +65,11 @@ export function EditProfileForm({
     () => ({
       nameKo: employee.nameKo,
       nameEn: str(employee.nameEn),
-      rank: employee.rank,
-      position: str(employee.position),
+      rankId: str(employee.rankId),
+      executiveTitleId: str(employee.executiveTitleId),
+      positionId: str(employee.positionId),
+      teamId: str(employee.teamId),
+      partId: str(employee.partId),
       credential: str(employee.credential),
       telWork: str(employee.telWork),
       telMobile: str(employee.telMobile),
@@ -75,7 +83,6 @@ export function EditProfileForm({
       nameKo: company.nameKo,
       nameEn: company.nameEn,
       industry: str(company.industry),
-      address: company.address,
       fax: str(company.fax),
       homepageUrl: str(company.homepageUrl),
     }),
@@ -198,15 +205,36 @@ export function EditProfileForm({
     }
   }
 
+  /** 고른 팀에 속한 파트만. 팀을 안 골랐으면 빈 배열이라 파트 선택이 잠깁니다. */
+  const parts = useMemo(
+    () => org.teams.find((team) => team.id === emp.teamId)?.parts ?? [],
+    [org.teams, emp.teamId],
+  );
+
   /* 미리보기 ---------------------------------------------------------------- */
+
+  /**
+   * 고른 항목의 id 를 명함에 찍히는 이름으로 바꿉니다.
+   *
+   * 카드는 이름을 받고 폼은 id 를 들고 있어서 여기서 한 번 이어 줍니다. 순서는
+   * lib/org.ts 의 roleParts 와 같아야 합니다 — 저장 후 실제 카드와 어긋나지 않도록.
+   */
+  const previewRoles = useMemo(
+    () =>
+      [
+        org.ranks.find((r) => r.id === emp.rankId)?.name,
+        org.executiveTitles.find((t) => t.id === emp.executiveTitleId)?.name,
+        org.positions.find((p) => p.id === emp.positionId)?.name,
+      ].filter((name): name is string => Boolean(name)),
+    [org, emp.rankId, emp.executiveTitleId, emp.positionId],
+  );
 
   // 폼 state 를 카드 데이터로 변환합니다. debounce 없이 매 입력마다 다시 만듭니다.
   const previewData = useMemo<ProfileCardData>(
     () => ({
       slug: employee.slug,
       nameKo: emp.nameKo,
-      rank: emp.rank,
-      position: emp.position,
+      roles: previewRoles,
       credential: emp.credential,
       photoUrl: employee.photoUrl,
       telWork: emp.telWork,
@@ -220,7 +248,8 @@ export function EditProfileForm({
         tagline: company.tagline,
         // 홈페이지를 고치면 미리보기 CTA 도 그 자리에서 따라갑니다.
         homepageUrl: co.homepageUrl,
-        address: co.address,
+        // 미리보기 주소는 저장된 사업장 그대로입니다 — 이 폼에서 바꾸는 값이 아닙니다.
+        addresses: officeLines(company.offices),
         fax: co.fax,
         // 대표번호는 폼에 없는 값이라 DB 값을 그대로 씁니다.
         tel: company.tel,
@@ -232,12 +261,14 @@ export function EditProfileForm({
     [
       emp,
       co,
+      previewRoles,
       employee.slug,
       employee.photoUrl,
       employee.mobilePublic,
       company.tel,
       company.tagline,
       company.certifications,
+      company.offices,
     ],
   );
 
@@ -359,29 +390,96 @@ export function EditProfileForm({
                 </Field>
               </FieldRow>
               <FieldRow>
-                <Field label="직급" htmlFor="rank" error={err("rank")}>
+                <Field label="직위" htmlFor="rankId" error={err("rankId")}>
                   <Select
-                    id="rank"
-                    value={emp.rank}
-                    invalid={Boolean(err("rank"))}
-                    onChange={(e) => setEmpField("rank", e.target.value)}
+                    id="rankId"
+                    value={emp.rankId}
+                    invalid={Boolean(err("rankId"))}
+                    onChange={(e) => setEmpField("rankId", e.target.value)}
                   >
-                    {RANKS.map((rank) => (
-                      <option key={rank} value={rank}>
-                        {rank}
+                    <option value="">없음</option>
+                    {org.ranks.map((rank) => (
+                      <option key={rank.id} value={rank.id}>
+                        {rank.name}
                       </option>
                     ))}
                   </Select>
                 </Field>
-                {/* 직책은 직급과 별개입니다. 같은 부장이어도 팀장일 수도, 아닐 수도 있습니다. */}
-                <Field label="직책 (선택)" htmlFor="position" error={err("position")}>
-                  <Input
-                    id="position"
-                    placeholder="예: 기술영업팀장"
-                    value={emp.position}
-                    invalid={Boolean(err("position"))}
-                    onChange={(e) => setEmpField("position", e.target.value)}
-                  />
+                {/* 임원만 갖는 칸입니다. 임원이 아니면 "없음" 그대로 둡니다. */}
+                <Field
+                  label="임원 직책 (선택)"
+                  htmlFor="executiveTitleId"
+                  error={err("executiveTitleId")}
+                >
+                  <Select
+                    id="executiveTitleId"
+                    value={emp.executiveTitleId}
+                    invalid={Boolean(err("executiveTitleId"))}
+                    onChange={(e) => setEmpField("executiveTitleId", e.target.value)}
+                  >
+                    <option value="">없음</option>
+                    {org.executiveTitles.map((title) => (
+                      <option key={title.id} value={title.id}>
+                        {title.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </FieldRow>
+              <FieldRow>
+                {/* 직책은 직위와 별개입니다. 임원 직책과 함께 가질 수도 있습니다. */}
+                <Field label="직책 (선택)" htmlFor="positionId" error={err("positionId")}>
+                  <Select
+                    id="positionId"
+                    value={emp.positionId}
+                    invalid={Boolean(err("positionId"))}
+                    onChange={(e) => setEmpField("positionId", e.target.value)}
+                  >
+                    <option value="">없음</option>
+                    {org.positions.map((position) => (
+                      <option key={position.id} value={position.id}>
+                        {position.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </FieldRow>
+              <FieldRow>
+                <Field label="팀 (선택)" htmlFor="teamId" error={err("teamId")}>
+                  <Select
+                    id="teamId"
+                    value={emp.teamId}
+                    invalid={Boolean(err("teamId"))}
+                    // 팀을 바꾸면 파트를 비웁니다. 안 그러면 다른 팀의 파트가 남습니다.
+                    onChange={(e) => {
+                      const teamId = e.target.value;
+                      setEmp((prev) => ({ ...prev, teamId, partId: "" }));
+                    }}
+                  >
+                    <option value="">없음</option>
+                    {org.teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                {/* 파트는 고른 팀의 것만 보여 줍니다. 팀을 안 골랐으면 고를 것도 없습니다. */}
+                <Field label="파트 (선택)" htmlFor="partId" error={err("partId")}>
+                  <Select
+                    id="partId"
+                    value={emp.partId}
+                    disabled={parts.length === 0}
+                    invalid={Boolean(err("partId"))}
+                    onChange={(e) => setEmpField("partId", e.target.value)}
+                  >
+                    <option value="">없음</option>
+                    {parts.map((part) => (
+                      <option key={part.id} value={part.id}>
+                        {part.name}
+                      </option>
+                    ))}
+                  </Select>
                 </Field>
               </FieldRow>
               <FieldRow>
@@ -477,14 +575,19 @@ export function EditProfileForm({
               />
             </Field>
 
-            <Field label="주소" htmlFor="co-address" error={err("company.address")}>
-              <Input
-                id="co-address"
-                value={co.address}
-                invalid={Boolean(err("company.address"))}
-                onChange={(e) => setCoField("address", e.target.value)}
-              />
-            </Field>
+            {/*
+              주소 칸은 여기 없습니다. 사업장이 본사·R&D센터 둘이라 한 칸에 넣을 수 없고,
+              /admin/org 의 '사업장' 탭에서 관리합니다. 명함에는 등록된 사업장이 전부 찍힙니다.
+            */}
+            {isAdmin ? (
+              <p className="text-caption text-sub-text">
+                주소는{" "}
+                <a href="/admin/org" className="text-caption-bold text-primary">
+                  조직 관리 → 사업장
+                </a>
+                에서 관리합니다. 등록된 사업장이 명함에 전부 표시됩니다.
+              </p>
+            ) : null}
 
             <FieldRow>
               {/* 팩스는 회사 공용 번호입니다. 이메일 서명·vCard 가 이 값(Company.fax)을 씁니다. */}

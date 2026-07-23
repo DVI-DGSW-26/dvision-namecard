@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveEditTarget } from "@/lib/current-employee";
+import { readOrgLists } from "@/lib/org-store";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { TopNav } from "@/components/TopNav";
 import { EditProfileForm } from "./EditProfileForm";
@@ -77,6 +78,8 @@ export default async function EditPage({ searchParams }: Props) {
   }
 
   const { role, employee, company, viewingOther } = result;
+  // 선택 상자에 넣을 조직 목록. 관리자가 /admin/org 에서 바꾼 값이 그대로 옵니다.
+  const org = await readOrgLists();
 
   return (
     <>
@@ -95,7 +98,7 @@ export default async function EditPage({ searchParams }: Props) {
           </div>
         </div>
       ) : null}
-      <EditProfileForm role={role} employee={employee} company={company} />
+      <EditProfileForm role={role} employee={employee} company={company} org={org} />
       <BottomTabBar role={role} current="/edit" />
     </>
   );

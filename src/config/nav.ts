@@ -11,7 +11,7 @@ import type { Role } from "@/lib/session-token";
  * 서버 설정 파일이 JSX 에 묶여서, 아이콘과 무관한 곳에서도 딸려 들어옵니다.
  * 실제 매핑은 BottomTabBar 가 합니다.
  */
-export type NavIcon = "user" | "mail" | "users";
+export type NavIcon = "user" | "mail" | "users" | "org";
 
 export type NavItem = {
   href: string;
@@ -24,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/edit", label: "내 명함", icon: "user" },
   { href: "/edit/signature", label: "이메일 서명", icon: "mail" },
   { href: "/admin/employees", label: "임직원 관리", icon: "users", adminOnly: true },
+  { href: "/admin/org", label: "조직 관리", icon: "org", adminOnly: true },
 ];
 
 /**

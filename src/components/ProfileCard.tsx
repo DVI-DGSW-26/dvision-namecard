@@ -1,6 +1,7 @@
 import { DownloadIcon, UserIcon } from "./icons";
 import { brand } from "@/config/brand";
-import type { Company, Employee } from "@/types";
+import { officeLines, roleParts } from "@/lib/org";
+import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 /**
  * 공개 프로필 카드 — 앱 전체에서 이 컴포넌트 하나만 존재합니다.
@@ -20,9 +21,13 @@ export type ProfileCardData = {
   /** 명함 이미지(/c/[slug]/card.png) 주소를 만드는 데 씁니다. */
   slug: string;
   nameKo: string;
-  rank: string;
-  /** 직책(팀장·본부장). 직급과 별개이고 선택 입력입니다. */
-  position?: string | null;
+  /**
+   * 명함에 한 줄로 찍히는 역할 조각들 — 직위 · 임원 직책 · 직책 순서입니다.
+   *
+   * 세 값을 따로 받지 않고 이미 걸러진 배열로 받습니다. 조립 규칙(어떤 순서로,
+   * 없는 값은 어떻게)을 lib/org.ts 의 roleParts 한 곳에만 두기 위해서입니다.
+   */
+  roles: string[];
   credential?: string | null;
   photoUrl?: string | null;
   telWork?: string | null;
@@ -36,7 +41,13 @@ export type ProfileCardData = {
     tagline?: string | null;
     /** 스킴 없이 "dvi-ind.com" 으로 들어와도 됩니다. 카드가 붙여서 씁니다. */
     homepageUrl?: string | null;
-    address?: string | null;
+    /**
+     * 사업장 주소들 — 이미 `(43011) 대구시 …` 로 조립된 줄입니다.
+     *
+     * 본사와 R&D센터처럼 여러 곳이면 전부 한 줄씩 찍습니다. 조립 규칙은
+     * lib/org.ts 의 officeLines 한 곳에만 둡니다.
+     */
+    addresses: string[];
     /** 회사 대표번호. 직원 사무실 번호(telWork)가 없을 때 대신 나갑니다. */
     tel?: string | null;
     /** 팩스는 개인 번호가 아니라 회사 공용입니다. */
@@ -59,12 +70,14 @@ function homepageHref(raw?: string | null): string {
 }
 
 /** DB 레코드 → 카드 데이터. /c/[slug] 쪽 어댑터입니다. */
-export function toProfileCardData(employee: Employee, company: Company): ProfileCardData {
+export function toProfileCardData(
+  employee: EmployeeWithOrg,
+  company: CompanyWithOffices,
+): ProfileCardData {
   return {
     slug: employee.slug,
     nameKo: employee.nameKo,
-    rank: employee.rank,
-    position: employee.position,
+    roles: roleParts(employee),
     credential: employee.credential,
     photoUrl: employee.photoUrl,
     telWork: employee.telWork,
@@ -77,7 +90,7 @@ export function toProfileCardData(employee: Employee, company: Company): Profile
       industry: company.industry,
       tagline: company.tagline,
       homepageUrl: company.homepageUrl,
-      address: company.address,
+      addresses: officeLines(company.offices),
       tel: company.tel,
       fax: company.fax,
       // certifications 는 Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 통과시킵니다.
@@ -162,11 +175,9 @@ export function ProfileCard({
 }) {
   const { company } = data;
 
-  // 직급 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고 구분자가 혼자 남지 않도록
-  // 배열로 모아 join 합니다. (서명 조립 규칙과 같은 방식)
-  const roleText = [data.rank, data.position?.trim(), data.credential?.trim()]
-    .filter(Boolean)
-    .join(" · ");
+  // 직위 · 임원 직책 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고 구분자가
+  // 혼자 남지 않도록 배열로 모아 join 합니다. (서명 조립 규칙과 같은 방식)
+  const roleText = [...data.roles, data.credential?.trim()].filter(Boolean).join(" · ");
 
   // 값 고르는 규칙은 lib/signature.ts 의 resolveFields 와 같아야 합니다.
   // 여기만 따로 정하면 카드에 보이는 번호와 서명·vCard 의 번호가 갈립니다.
@@ -175,10 +186,10 @@ export function ProfileCard({
   const mobile = data.mobilePublic ? data.telMobile?.trim() || null : null;
   const fax = company.fax?.trim() || null;
   const email = data.email?.trim() || null;
-  const address = company.address?.trim() || null;
+  const addresses = company.addresses.filter((line) => line.trim());
 
   const hasCompanyBlock =
-    company.industry || company.tagline || address || company.certifications.length > 0;
+    company.industry || company.tagline || addresses.length > 0 || company.certifications.length > 0;
 
   /*
     신원 블록은 가운데 정렬입니다. 명함은 훑어보는 화면이라 사진 → 이름 → 소속이
@@ -283,7 +294,12 @@ export function ProfileCard({
           ) : null}
 
           {/* 주소는 회사 값이라 회사 블록에 둡니다. 명함 뒷면의 마지막 줄과 같은 자리입니다. */}
-          {address ? <p className="mt-sibling text-caption text-sub-text">{address}</p> : null}
+          {/* 사업장이 둘 이상이면 줄을 나눠 전부 찍습니다. (본사 · R&D센터) */}
+          {addresses.map((line) => (
+            <p key={line} className="mt-sibling text-caption text-sub-text">
+              {line}
+            </p>
+          ))}
 
           {company.certifications.length > 0 ? (
             <ul className="mt-group flex flex-wrap justify-center gap-sibling">

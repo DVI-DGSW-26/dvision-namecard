@@ -2,17 +2,27 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { escapeHtml, renderSignature, renderSignatureText } from "./signature";
-import type { Company, Employee } from "@/types";
+import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 // baseUrl() 은 모듈 로드 시점이 아니라 호출 시점에 env 를 읽으므로,
 // import 가 호이스팅돼도 테스트가 실행될 때는 이 값이 잡혀 있습니다.
 process.env.NEXT_PUBLIC_BASE_URL = "https://dvi-ind.com";
 
-const company: Company = {
+/** 사업장 한 줄. 서명에는 `(우편번호) 주소` 로 합쳐서 나갑니다. */
+const office = (name: string, postalCode: string, address: string) => ({
+  id: `office_${name}`,
+  name,
+  postalCode,
+  address,
+  sortOrder: 0,
+  companyId: "dvision",
+});
+
+const company: CompanyWithOffices = {
   id: "dvision",
   nameKo: "(주)디비전",
   nameEn: "DVISION Inc.",
-  address: "대구광역시 달성군 구지면 국가산단대로33길 237",
+  offices: [office("본사", "43011", "대구광역시 달성군 구지면 국가산단대로33길 237")],
   tel: "053-710-1022",
   fax: "053-715-2096",
   logoUrl: "/brand/logo.png",
@@ -23,7 +33,10 @@ const company: Company = {
   industry: "알루미늄 압출 · 정밀가공",
 };
 
-const employee: Employee = {
+/** 조직 목록 행 한 줄. 서명에서는 이름만 의미가 있습니다. */
+const orgItem = (name: string) => ({ id: `org_${name}`, name, nameEn: "", sortOrder: 0 });
+
+const employee: EmployeeWithOrg = {
   id: "emp_1",
   slug: "hong",
   email: "hong@dvi-ind.com",
@@ -31,9 +44,14 @@ const employee: Employee = {
   familyName: "홍",
   givenName: "길동",
   nameEn: null,
-  rank: "대표이사",
-  department: null,
+  rankId: "org_수석매니저",
+  rank: orgItem("수석매니저"),
+  executiveTitleId: null,
+  executiveTitle: null,
+  positionId: null,
   position: null,
+  teamId: null,
+  partId: null,
   credential: "공학박사",
   bio: null,
   telWork: "053-710-1022",
@@ -47,8 +65,14 @@ const employee: Employee = {
 };
 
 /** 테스트마다 필요한 필드만 덮어씁니다. */
-const emp = (overrides: Partial<Employee> = {}): Employee => ({ ...employee, ...overrides });
-const co = (overrides: Partial<Company> = {}): Company => ({ ...company, ...overrides });
+const emp = (overrides: Partial<EmployeeWithOrg> = {}): EmployeeWithOrg => ({
+  ...employee,
+  ...overrides,
+});
+const co = (overrides: Partial<CompanyWithOffices> = {}): CompanyWithOffices => ({
+  ...company,
+  ...overrides,
+});
 
 describe("escapeHtml", () => {
   it("HTML 특수문자 5종을 변환한다", () => {
@@ -103,8 +127,8 @@ describe("renderSignatureText", () => {
     assert.equal(
       text,
       [
-        "홍길동 대표이사 · 공학박사",
-        "대구광역시 달성군 구지면 국가산단대로33길 237",
+        "홍길동 수석매니저 · 공학박사",
+        "(43011) 대구광역시 달성군 구지면 국가산단대로33길 237",
         "TEL 053-710-1022",
         "FAX 053-715-2096",
         "MOBILE 010-1234-5678",
@@ -133,7 +157,7 @@ describe("renderSignatureText", () => {
   });
 
   it("credential 이 없으면 rank 만, 있으면 함께 표시한다", () => {
-    assert.match(renderSignatureText(emp({ credential: null }), co()), /^홍길동 대표이사$/m);
-    assert.match(renderSignatureText(emp(), co()), /^홍길동 대표이사 · 공학박사$/m);
+    assert.match(renderSignatureText(emp({ credential: null }), co()), /^홍길동 수석매니저$/m);
+    assert.match(renderSignatureText(emp(), co()), /^홍길동 수석매니저 · 공학박사$/m);
   });
 });

@@ -1,4 +1,5 @@
-import type { Company, Employee } from "@/types";
+import { officeLines, roleParts } from "@/lib/org";
+import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 /**
  * 이메일 서명 생성.
@@ -48,11 +49,12 @@ function baseUrl(): string {
 }
 
 /** 서명 텍스트 폴백에 쓸 값들. HTML 이미지 카드(card.png)와 같은 노출 규칙을 따릅니다. */
-function resolveFields(employee: Employee, company: Company) {
+function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices) {
   return {
     nameKo: employee.nameKo,
-    // 직급 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고 구분자가 혼자 남지 않도록 조립합니다.
-    roleText: [employee.rank as string, present(employee.position), present(employee.credential)]
+    // 직위 · 임원 직책 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고
+    // 구분자가 혼자 남지 않도록 조립합니다.
+    roleText: [...roleParts(employee), present(employee.credential)]
       .filter(Boolean)
       .join(" · "),
     // TEL 은 개인 사무실 번호 우선, 없으면 회사 대표번호.
@@ -62,7 +64,8 @@ function resolveFields(employee: Employee, company: Company) {
     // 팩스는 회사 공용 번호입니다.
     fax: present(company.fax),
     email: present(employee.email),
-    address: present(company.address),
+    // 사업장이 여러 곳이면 전부 줄을 나눠 넣습니다. `(43011) 대구시 …` 형태입니다.
+    addresses: officeLines(company.offices),
     profileUrl: `${baseUrl()}/c/${employee.slug}`,
   };
 }
@@ -73,7 +76,7 @@ function resolveFields(employee: Employee, company: Company) {
  * 카드의 실제 모양(이름·역할·로고·주소·연락처·워터마크)과 값 노출 규칙은 이미지 라우트
  * (app/c/[slug]/card.png)가 정합니다. 여기서는 그 이미지를 가리키고 클릭을 걸 뿐입니다.
  */
-export function renderSignature(employee: Employee, _company: Company): string {
+export function renderSignature(employee: EmployeeWithOrg, _company: CompanyWithOffices): string {
   // _company 는 renderSignatureText 와 시그니처를 맞추려고 받습니다. 카드의 실제 값은
   // 이미지 라우트가 DB 에서 직접 읽으므로 여기서는 slug·이름만 있으면 됩니다.
   const base = baseUrl();
@@ -92,12 +95,15 @@ export function renderSignature(employee: Employee, _company: Company): string {
  *
  * 평문이므로 이스케이프하지 않습니다. 여기서 escapeHtml 을 쓰면 이름의 `&` 가 `&amp;` 로 그대로 보입니다.
  */
-export function renderSignatureText(employee: Employee, company: Company): string {
+export function renderSignatureText(
+  employee: EmployeeWithOrg,
+  company: CompanyWithOffices,
+): string {
   const f = resolveFields(employee, company);
 
   const lines = [
     [f.nameKo, f.roleText].filter(Boolean).join(" "),
-    f.address,
+    ...f.addresses,
     f.tel && `TEL ${f.tel}`,
     f.fax && `FAX ${f.fax}`,
     f.mobile && `MOBILE ${f.mobile}`,

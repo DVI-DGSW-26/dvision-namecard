@@ -7,17 +7,6 @@ import { z } from "zod";
  * 이걸 클라이언트에서만 하면 API 를 직접 호출했을 때 규칙이 뚫립니다.
  */
 
-export const RANKS = [
-  "사원",
-  "주임",
-  "대리",
-  "과장",
-  "차장",
-  "부장",
-  "이사",
-  "대표이사",
-] as const;
-
 /**
  * 빈 문자열·공백만 있는 값을 null 로 바꿉니다. 선택 입력 칸을 비웠을 때의 정상 경로입니다.
  *
@@ -34,6 +23,15 @@ const emptyToNull = (value: unknown) => {
 
 const optionalText = (max: number, label: string) =>
   z.preprocess(emptyToNull, z.string().max(max, `${label}은(는) ${max}자 이내로 입력해 주세요.`).nullable());
+
+/**
+ * 조직 목록(직위 · 임원 직책 · 직책)에서 고른 항목의 id.
+ *
+ * 목록이 테이블이라 값이 아니라 id 를 받습니다. 여기서는 "빈 값이면 null" 만 보고,
+ * 그런 id 가 실제로 있는지는 DB 외래키가 판정합니다 — 앱에서 한 번 더 조회해
+ * 확인하면 그 사이에 지워지는 경쟁을 못 막으면서 쿼리만 늘어납니다.
+ */
+const orgRef = z.preprocess(emptyToNull, z.string().max(40).nullable());
 
 /** 숫자와 하이픈만. 자동 포맷팅은 formatPhone 이 담당하고 여기서는 형식만 봅니다. */
 const phone = z.preprocess(
@@ -52,9 +50,12 @@ export const employeeProfileSchema = z.object({
     .min(1, "이름을 입력해 주세요.")
     .max(20, "이름은 20자 이내로 입력해 주세요."),
   nameEn: optionalText(60, "영문명"),
-  rank: z.enum(RANKS, { message: "직급을 선택해 주세요." }),
-  // 직책·자격은 선택 입력입니다. 비우면 null 로 저장되고 카드·서명에서 통째로 빠집니다.
-  position: optionalText(30, "직책"),
+  // 직위 · 임원 직책 · 직책은 전부 목록에서 고릅니다. 셋 다 비워 둘 수 있습니다 —
+  // 관리자가 목록에서 항목을 지우면 그 칸이 비는데, 그 상태로도 저장은 돼야 합니다.
+  rankId: orgRef,
+  executiveTitleId: orgRef,
+  positionId: orgRef,
+  // 자격은 선택 입력입니다. 비우면 null 로 저장되고 카드·서명에서 통째로 빠집니다.
   credential: optionalText(40, "자격 · 학위"),
   telWork: phone,
   telMobile: phone,
@@ -75,8 +76,10 @@ export const employeeCreateSchema = z.object({
   familyName: z.string().trim().min(1, "성을 입력해 주세요.").max(10, "성이 너무 깁니다."),
   givenName: z.string().trim().min(1, "이름을 입력해 주세요.").max(10, "이름이 너무 깁니다."),
   email: z.preprocess(emptyToNull, z.email({ message: "이메일 형식이 올바르지 않습니다." })),
-  rank: z.enum(RANKS, { message: "직급을 선택해 주세요." }),
-  department: optionalText(30, "부서"),
+  rankId: orgRef,
+  // 부서는 팀·파트 2단계입니다. 관리자가 직원을 만들 때 정해 두면 본인이 안 골라도 됩니다.
+  teamId: orgRef,
+  partId: orgRef,
   /**
    * 공개 URL(/c/[slug])에 그대로 들어갑니다. 비우면 성에서 자동 생성합니다.
    * 표에 없는 성이라 자동 생성이 안 되면 서버가 이 필드로 에러를 돌려줍니다.
@@ -98,7 +101,8 @@ export const companyProfileSchema = z.object({
   nameKo: z.string().trim().min(1, "회사명을 입력해 주세요.").max(60, "회사명이 너무 깁니다."),
   nameEn: z.string().trim().min(1, "영문 회사명을 입력해 주세요.").max(80, "영문 회사명이 너무 깁니다."),
   industry: optionalText(60, "사업 분야"),
-  address: z.string().trim().min(1, "주소를 입력해 주세요.").max(120, "주소가 너무 깁니다."),
+  // 주소는 여기 없습니다 — 사업장이 여러 곳(본사·R&D센터)이라 Office 표로 빠졌고,
+  // /admin/org 의 '사업장' 탭에서 관리합니다.
   // 팩스는 회사 공용 번호입니다. 명함 카드·서명·vCard 가 모두 이 값을 씁니다.
   // (개인 전화는 Employee.telWork/telMobile 로 따로 있습니다.)
   fax: phone,

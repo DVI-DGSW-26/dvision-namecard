@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 import Link from "next/link";
 import { navItemsFor, type NavIcon } from "@/config/nav";
 import type { Role } from "@/lib/session-token";
-import { MailIcon, UserIcon, UsersIcon } from "./icons";
+import { MailIcon, OrgIcon, UserIcon, UsersIcon } from "./icons";
 
 /**
  * 모바일 하단 탭바. md(768px) 이상에서는 숨고 TopNav 의 가로 메뉴가 대신합니다.
@@ -22,6 +22,7 @@ const ICONS: Record<NavIcon, ComponentType<{ className?: string }>> = {
   user: UserIcon,
   mail: MailIcon,
   users: UsersIcon,
+  org: OrgIcon,
 };
 
 export function BottomTabBar({ role, current }: { role: Role; current: string }) {
@@ -43,7 +44,7 @@ export function BottomTabBar({ role, current }: { role: Role; current: string })
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              // 항목 수가 역할에 따라 2개(회원)·3개(관리자)로 달라져서 폭을 고정하지
+              // 항목 수가 역할에 따라 2개(회원)·4개(관리자)로 달라져서 폭을 고정하지
               // 않고 flex-1 로 균등 분할합니다.
               className={`flex flex-1 flex-col items-center justify-center gap-tight ${
                 // 활성 표시는 색이 아니라 굵기로 합니다. primary 예산은 CTA·링크에 씁니다.

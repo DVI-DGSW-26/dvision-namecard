@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildVCard } from "@/lib/vcard";
+import { companyOfficesInclude, employeeOrgInclude } from "@/types";
 
 type Context = {
   params: Promise<{ slug: string }>;
@@ -21,7 +22,7 @@ export async function GET(_request: NextRequest, { params }: Context) {
 
   const employee = await prisma.employee.findUnique({
     where: { slug },
-    include: { company: true },
+    include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
   });
 
   if (!employee || employee.status === "RESIGNED") {
