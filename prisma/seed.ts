@@ -55,15 +55,19 @@ const EXECUTIVE_TITLES = [
   ["재무총괄", "CFO", "Chief Financial Officer"],
 ] as const;
 
-/** 직책 — 고문은 분야별로 나눠 둡니다. 분야가 늘면 관리자가 /admin/org 에서 추가합니다. */
+/**
+ * 직책.
+ *
+ * 고문은 분야를 나누지 않습니다. 원본 표에 "Technical, Strategic, Manufacturing 등"
+ * 이라고 적혀 있지만 명함에는 그냥 "고문" 으로 나갑니다. 분야까지 찍을 일이 생기면
+ * 관리자가 /admin/org 에서 항목을 늘리면 됩니다.
+ */
 const POSITIONS = [
   ["팀원", "Team Member"],
   ["팀장", "Team Leader"],
   ["공장총괄", "Plant Manager"],
   ["연구소장", "Director, Corporate R&D"],
-  ["기술고문", "Technical Advisor"],
-  ["전략고문", "Strategic Advisor"],
-  ["생산고문", "Manufacturing Advisor"],
+  ["고문", "Advisor"],
 ] as const;
 
 /**
