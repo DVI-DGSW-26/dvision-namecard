@@ -43,6 +43,7 @@ const company: CompanyWithOffices = {
   brandColor: "#931B82",
   tagline: "자동차 경량 부품 전문",
   certifications: ["IATF 16949", "ISO 9001"],
+  certificationsEn: ["IATF 16949", "ISO 9001"],
   industry: "알루미늄 압출 · 정밀가공",
 };
 

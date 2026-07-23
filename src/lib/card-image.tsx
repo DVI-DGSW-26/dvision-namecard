@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { ImageResponse } from "next/og";
 import { CARDS_TAG, cardTag } from "@/lib/card-cache";
-import type { Lang } from "@/lib/lang";
+import { cardName, type Lang } from "@/lib/lang";
 import { officeLines, roleParts } from "@/lib/org";
 import { prisma } from "@/lib/prisma";
 import { companyOfficesInclude, employeeOrgInclude } from "@/types";
@@ -84,11 +84,15 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
   /*
     이름 자리.
 
-    영문 카드는 영문명을 이름 자리에 올립니다. 영문명이 없으면 한글 이름으로
-    떨어집니다 — 이름 없는 명함은 명함이 아닙니다. 그 경우 아래 보조 줄은
-    같은 값을 두 번 찍지 않도록 비웁니다.
+    영문 카드는 영문명을 이름 자리에 올립니다. 영문명이 없으면 이미지를 굽지
+    않습니다(null → 라우트가 404). 한글 이름으로 떨어뜨리면 영문 명함 한가운데
+    한글이 박히고, 그 이미지가 이메일 서명에 붙어 그대로 나갑니다.
+
+    국문 카드는 한글 이름 아래 영문명을 보조 줄로 답니다. 영문 카드에서는 위에서
+    이미 영문명을 올렸으므로 같은 값을 두 번 찍지 않도록 비웁니다.
   */
-  const name = en ? present(employee.nameEn) ?? employee.nameKo : employee.nameKo;
+  const name = cardName(employee, lang);
+  if (!name) return null;
   const subName = en ? null : present(employee.nameEn);
 
   const role = [
