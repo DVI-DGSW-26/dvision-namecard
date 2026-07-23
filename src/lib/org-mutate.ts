@@ -20,6 +20,8 @@ function dataFor(kind: OrgKind, values: ReturnType<typeof orgItemSchema.parse>) 
       name: values.name,
       postalCode: values.postalCode,
       address: values.address,
+      // 빈 문자열이 아니라 null 로 저장합니다. 카드가 "값 없음" 을 null 로 판단합니다.
+      addressEn: values.addressEn || null,
       sortOrder: values.sortOrder,
     };
   }

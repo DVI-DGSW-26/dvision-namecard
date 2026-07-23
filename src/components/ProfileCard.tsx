@@ -7,6 +7,7 @@ import {
   YouTubeIcon,
 } from "./icons";
 import { brand } from "@/config/brand";
+import { CARD_TEXT, cardPath, type Lang } from "@/lib/lang";
 import { officeLines, roleParts } from "@/lib/org";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
@@ -27,6 +28,13 @@ import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 export type ProfileCardData = {
   /** 명함 이미지(/c/[slug]/card.png) 주소를 만드는 데 씁니다. */
   slug: string;
+  /**
+   * 이 카드가 어느 언어인지.
+   *
+   * 값(이름·직위·주소)은 toProfileCardData 가 이미 골라 담아 옵니다. 이 필드는
+   * 화면이 스스로 그리는 말(라벨·안내)과 이미지 주소를 고르는 데만 씁니다.
+   */
+  lang: Lang;
   nameKo: string;
   /** 영문명. 비어 있으면 줄째로 빠집니다 — 선택 입력이라 안 적은 사람이 많습니다. */
   nameEn?: string | null;
@@ -93,32 +101,52 @@ function externalHref(raw: string): string {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
-/** DB 레코드 → 카드 데이터. /c/[slug] 쪽 어댑터입니다. */
+/**
+ * DB 레코드 → 카드 데이터. /c/[slug] 와 /c/[slug]/en 이 함께 씁니다.
+ *
+ * 언어별로 값을 고르는 규칙이 전부 여기 모여 있습니다. 화면 컴포넌트는 이미
+ * 고른 값을 받기만 하므로, 국문·영문 카드가 서로 다른 규칙으로 갈라지지 않습니다.
+ *
+ * 영문 값이 비면 그 줄을 뺍니다. 한글로 대신 채우지 않습니다 — 영문 명함에
+ * 한글이 섞이면 안 만든 것만 못합니다. 이름만 예외로, 영문명이 없으면 한글
+ * 이름으로 떨어집니다. 이름 없는 명함은 명함이 아닙니다.
+ */
 export function toProfileCardData(
   employee: EmployeeWithOrg,
   company: CompanyWithOffices,
+  lang: Lang = "ko",
 ): ProfileCardData {
+  const en = lang === "en";
+  /** 영문 카드에서 빈 값을 null 로 눌러 담습니다. 화면이 빈 문자열을 그리지 않도록. */
+  const pick = (value?: string | null) => value?.trim() || null;
+
   return {
     slug: employee.slug,
-    nameKo: employee.nameKo,
-    nameEn: employee.nameEn,
-    roles: roleParts(employee),
-    credential: employee.credential,
+    lang,
+    nameKo: en ? pick(employee.nameEn) ?? employee.nameKo : employee.nameKo,
+    // 국문 카드는 한글 이름 아래 영문명을 함께 보여 줍니다. 영문 카드에서는
+    // 위에서 이미 영문명을 이름 자리에 올렸으므로 같은 값을 두 번 찍지 않습니다.
+    nameEn: en ? null : employee.nameEn,
+    roles: roleParts(employee, lang),
+    credential: en ? pick(employee.credentialEn) : employee.credential,
     photoUrl: employee.photoUrl,
     telWork: employee.telWork,
     telMobile: employee.telMobile,
     mobilePublic: employee.mobilePublic,
     email: employee.email,
     company: {
-      nameKo: company.nameKo,
+      // 영문 카드는 회사명도 영문입니다. nameEn 은 필수 컬럼이라 항상 값이 있습니다.
+      nameKo: en ? company.nameEn : company.nameKo,
       nameEn: company.nameEn,
-      industry: company.industry,
-      tagline: company.tagline,
+      industry: en ? pick(company.industryEn) : company.industry,
+      tagline: en ? pick(company.taglineEn) : company.tagline,
       homepageUrl: company.homepageUrl,
       linkedinUrl: company.linkedinUrl,
-      youtubeUrl: company.youtubeUrl,
+      // 영문 소개 영상이 따로 있으면 그걸 걸고, 없으면 국문 영상이라도 겁니다 —
+      // 영상은 말이 안 통해도 볼 거리가 되므로 링크를 없애는 것보다 낫습니다.
+      youtubeUrl: en ? company.youtubeUrlEn?.trim() || company.youtubeUrl : company.youtubeUrl,
       instagramUrl: company.instagramUrl,
-      addresses: officeLines(company.offices),
+      addresses: officeLines(company.offices, lang),
       tel: company.tel,
       fax: company.fax,
       // certifications 는 Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 통과시킵니다.
@@ -202,6 +230,9 @@ export function ProfileCard({
   downloadable?: boolean;
 }) {
   const { company } = data;
+  // 화면이 스스로 그리는 말(라벨·안내)은 여기서 한 번에 고릅니다. DB 값은 이미
+  // 언어에 맞춰 들어온 상태입니다 — toProfileCardData 가 골라 담습니다.
+  const t = CARD_TEXT[data.lang];
 
   // 직위 · 임원 직책 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고 구분자가
   // 혼자 남지 않도록 배열로 모아 join 합니다. (서명 조립 규칙과 같은 방식)
@@ -224,10 +255,10 @@ export function ProfileCard({
    * homepageHref 가 브랜드 기본 주소로 떨어뜨려서 항상 남습니다.
    */
   const links = [
-    { key: "linkedin", label: "링크드인", raw: company.linkedinUrl, Icon: LinkedInIcon },
-    { key: "youtube", label: "회사 소개 영상", raw: company.youtubeUrl, Icon: YouTubeIcon },
-    { key: "instagram", label: "인스타그램", raw: company.instagramUrl, Icon: InstagramIcon },
-    { key: "homepage", label: "회사 홈페이지", raw: company.homepageUrl ?? "", Icon: GlobeIcon },
+    { key: "linkedin", label: t.linkedin, raw: company.linkedinUrl, Icon: LinkedInIcon },
+    { key: "youtube", label: t.youtube, raw: company.youtubeUrl, Icon: YouTubeIcon },
+    { key: "instagram", label: t.instagram, raw: company.instagramUrl, Icon: InstagramIcon },
+    { key: "homepage", label: t.homepage, raw: company.homepageUrl ?? "", Icon: GlobeIcon },
   ]
     .filter((item) => item.key === "homepage" || item.raw?.trim())
     .map((item) => ({
@@ -279,7 +310,7 @@ export function ProfileCard({
       {/* 누르는 자리라는 표시가 없으면 아무도 안 누릅니다. */}
       <span className="mt-group inline-flex items-center gap-tight text-caption text-sub-text">
         <DownloadIcon className="h-4 w-4" />
-        눌러서 명함 이미지 저장
+        {t.saveCard}
       </span>
     </>
   );
@@ -299,9 +330,14 @@ export function ProfileCard({
           따로 읽히니 여기서는 행동만 말합니다. (안쪽 h1 은 그대로 제목으로 남습니다)
         */
         <a
-          href={`/c/${data.slug}/card.png`}
-          download={downloadName(data.nameKo, data.slug)}
-          aria-label="명함 이미지 저장"
+          href={cardPath(data.slug, data.lang, "card.png")}
+          // 영문 카드는 영문 이름으로 저장됩니다. 영문명을 안 적었으면 한글 이름으로
+          // 떨어집니다 — 파일명이 비면 브라우저가 slug 를 그대로 씁니다.
+          download={downloadName(
+            data.lang === "en" ? data.nameEn?.trim() || data.nameKo : data.nameKo,
+            data.slug,
+          )}
+          aria-label={t.saveCard}
           className={`${identityClassName} transition-colors hover:bg-sub-bg`}
         >
           {identity}
@@ -316,11 +352,11 @@ export function ProfileCard({
           번호만 확인하고 끝내는 사람이 대부분이라, 이게 카드의 본문입니다.
         */}
         <ul className="border-t border-border">
-          <InfoRow label="전화" value={tel} href={tel ? `tel:${tel}` : undefined} />
-          <InfoRow label="휴대폰" value={mobile} href={mobile ? `tel:${mobile}` : undefined} />
+          <InfoRow label={t.phone} value={tel} href={tel ? `tel:${tel}` : undefined} />
+          <InfoRow label={t.mobile} value={mobile} href={mobile ? `tel:${mobile}` : undefined} />
           {/* 팩스는 걸 수 있는 번호가 아니라 링크를 걸지 않습니다. */}
-          <InfoRow label="팩스" value={fax} />
-          <InfoRow label="이메일" value={email} href={email ? `mailto:${email}` : undefined} />
+          <InfoRow label={t.fax} value={fax} />
+          <InfoRow label={t.email} value={email} href={email ? `mailto:${email}` : undefined} />
         </ul>
 
         {/*

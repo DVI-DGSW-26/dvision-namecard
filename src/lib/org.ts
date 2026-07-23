@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { Lang } from "@/lib/lang";
+
 /**
  * 조직 목록(직위 · 임원 직책 · 직책)의 공용 계약.
  *
@@ -37,6 +39,8 @@ export type OfficeItem = {
   name: string;
   postalCode: string;
   address: string;
+  /** 영문 명함용. 비면 영문 카드에서 그 줄이 빠집니다. */
+  addressEn: string | null;
   sortOrder: number;
 };
 
@@ -122,6 +126,8 @@ export const orgItemSchema = z.object({
     .max(10, "우편번호가 너무 깁니다.")
     .default(""),
   address: z.string().trim().max(120, "주소는 120자 이내로 입력해 주세요.").default(""),
+  /** 사업장에만 있습니다. 비면 영문 명함에서 그 줄이 빠집니다. */
+  addressEn: z.string().trim().max(160, "영문 주소는 160자 이내로 입력해 주세요.").default(""),
 });
 
 export type OrgItemInput = z.input<typeof orgItemSchema>;
@@ -131,7 +137,14 @@ export type OrgItemInput = z.input<typeof orgItemSchema>;
  *
  * 우편번호가 없으면 괄호만 남지 않도록 주소만 내보냅니다.
  */
-export function officeLine(office: { postalCode: string; address: string }): string {
+export function officeLine(
+  office: { postalCode: string; address: string; addressEn?: string | null },
+  lang: Lang = "ko",
+): string {
+  // 영문 주소는 우편번호가 끝에 오는 표기가 표준이라 적힌 그대로 내보냅니다.
+  // 국문처럼 앞에 괄호로 붙이면 "(41585) 51, Homam-ro …" 가 되어 어색합니다.
+  if (lang === "en") return office.addressEn?.trim() ?? "";
+
   const address = office.address.trim();
   const postalCode = office.postalCode.trim();
   if (!address) return "";
@@ -139,8 +152,11 @@ export function officeLine(office: { postalCode: string; address: string }): str
 }
 
 /** 값이 있는 사업장만 줄 문자열로. 카드·서명·vCard 가 같은 규칙을 쓰도록 여기 한 곳에 둡니다. */
-export function officeLines(offices: { postalCode: string; address: string }[]): string[] {
-  return offices.map(officeLine).filter(Boolean);
+export function officeLines(
+  offices: { postalCode: string; address: string; addressEn?: string | null }[],
+  lang: Lang = "ko",
+): string[] {
+  return offices.map((office) => officeLine(office, lang)).filter(Boolean);
 }
 
 /** 부서 표기 — "경영관리 · 회계/재무". 팀만 있으면 팀만 나옵니다. */
@@ -160,12 +176,20 @@ export function departmentText(employee: {
  * 직위 · 임원 직책 · 직책 순서로 늘어놓습니다. 세 값 모두 비어 있을 수 있어서
  * 이어 붙이는 쪽에서 매번 filter 를 반복하지 않도록 여기서 한 번만 걸러 줍니다.
  */
-export function roleParts(employee: {
-  rank?: { name: string } | null;
-  executiveTitle?: { name: string } | null;
-  position?: { name: string } | null;
-}): string[] {
-  return [employee.rank?.name, employee.executiveTitle?.name, employee.position?.name]
+export function roleParts(
+  employee: {
+    rank?: { name: string; nameEn: string } | null;
+    executiveTitle?: { name: string; nameEn: string } | null;
+    position?: { name: string; nameEn: string } | null;
+  },
+  lang: Lang = "ko",
+): string[] {
+  const pick = (item?: { name: string; nameEn: string } | null) =>
+    lang === "en" ? item?.nameEn : item?.name;
+
+  // 영문 표기를 안 채운 항목은 그 조각만 빠집니다. 한글로 대신 넣으면
+  // "Chief Manager · 팀장" 처럼 섞인 줄이 나옵니다.
+  return [pick(employee.rank), pick(employee.executiveTitle), pick(employee.position)]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
 }

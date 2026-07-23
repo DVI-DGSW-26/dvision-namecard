@@ -1,3 +1,4 @@
+import { cardPath, type Lang } from "@/lib/lang";
 import { roleParts } from "@/lib/org";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
@@ -65,13 +66,19 @@ function baseUrl(): string {
   return url.replace(/\/+$/, "");
 }
 
-export function buildVCard(employee: EmployeeWithOrg, company: CompanyWithOffices): string {
+export function buildVCard(
+  employee: EmployeeWithOrg,
+  company: CompanyWithOffices,
+  lang: Lang = "ko",
+): string {
+  const en = lang === "en";
+
   // mobilePublic 이 false 면 번호가 있어도 내보내지 않습니다.
   const mobile = employee.mobilePublic ? present(employee.telMobile) : null;
 
   // 직위(수석매니저) · 임원 직책(대표이사) · 직책(연구소장)은 각각 다른 값입니다.
   // 가진 것만 순서대로 이어 붙입니다.
-  const title = roleParts(employee).join(" ");
+  const title = roleParts(employee, lang).join(" ");
 
   const lines: (string | null)[] = [
     "BEGIN:VCARD",
@@ -80,9 +87,11 @@ export function buildVCard(employee: EmployeeWithOrg, company: CompanyWithOffice
     // N 은 성과 이름을 분리해야 연락처 앱이 정렬·검색을 제대로 합니다.
     // nameKo 를 쪼개면 두 글자 성(남궁·선우)에서 틀리므로 분리 저장된 컬럼만 씁니다.
     `N:${escapeValue(employee.familyName)};${escapeValue(employee.givenName)};;;`,
-    `FN:${escapeValue(employee.nameKo)}`,
+    // 영문 vCard 는 표시 이름(FN)만 영문으로 바꿉니다. N 의 성·이름은 정렬·검색용
+    // 구조 필드라, 영문명 한 줄을 쪼개 넣으면 두 글자 성처럼 틀릴 여지가 생깁니다.
+    `FN:${escapeValue(en ? present(employee.nameEn) ?? employee.nameKo : employee.nameKo)}`,
 
-    `ORG:${escapeValue(company.nameKo)}`,
+    `ORG:${escapeValue(en ? company.nameEn : company.nameKo)}`,
     title ? `TITLE:${escapeValue(title)}` : null,
 
     present(employee.telWork) ? `TEL;TYPE=WORK,VOICE:${escapeValue(employee.telWork!)}` : null,
@@ -101,15 +110,23 @@ export function buildVCard(employee: EmployeeWithOrg, company: CompanyWithOffice
       명함처럼 `(43011) 주소` 로 합쳐 버리면 연락처 앱이 우편번호를 인식하지 못합니다.
     */
     ...company.offices
-      .filter((office) => present(office.address))
+      .map((office) => ({
+        // 영문 vCard 는 영문 주소만 냅니다. 안 채운 사업장은 줄이 통째로 빠집니다 —
+        // 영문 연락처에 한글 주소가 섞이면 상대방 주소록에서 못 읽습니다.
+        address: present(en ? office.addressEn : office.address),
+        postalCode: office.postalCode,
+      }))
+      .filter((office) => office.address)
       .map(
         (office) =>
-          `ADR;TYPE=WORK:;;${escapeValue(office.address)};;;${escapeValue(office.postalCode)};`,
+          `ADR;TYPE=WORK:;;${escapeValue(office.address!)};;;${escapeValue(office.postalCode)};`,
       ),
 
-    `URL:${escapeValue(`${baseUrl()}/c/${employee.slug}`)}`,
+    `URL:${escapeValue(`${baseUrl()}${cardPath(employee.slug, lang)}`)}`,
 
-    present(employee.credential) ? `NOTE:${escapeValue(employee.credential!)}` : null,
+    present(en ? employee.credentialEn : employee.credential)
+      ? `NOTE:${escapeValue((en ? employee.credentialEn : employee.credential)!)}`
+      : null,
 
     "END:VCARD",
   ];

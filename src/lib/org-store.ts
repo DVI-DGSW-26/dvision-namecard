@@ -19,7 +19,14 @@ export async function readOrgLists(): Promise<OrgLists> {
     prisma.team.findMany({ orderBy: ORDER, include: { parts: { orderBy: ORDER } } }),
     prisma.office.findMany({
       orderBy: ORDER,
-      select: { id: true, name: true, postalCode: true, address: true, sortOrder: true },
+      select: {
+        id: true,
+        name: true,
+        postalCode: true,
+        address: true,
+        addressEn: true,
+        sortOrder: true,
+      },
     }),
   ]);
   return { ranks, executiveTitles, positions, teams, offices };

@@ -113,9 +113,18 @@ model Office {
   /// 사업장 이름(본사 · R&D센터). 명함에는 찍지 않고 관리 화면에서 구분용으로만 씁니다.
   name String
 
-  /// 우편번호. 명함에는 `(43011) 대구시 …` 처럼 주소 앞에 괄호로 붙습니다.
+  /// 우편번호. 국문 명함에는 `(43011) 대구시 …` 처럼 주소 앞에 괄호로 붙습니다.
   postalCode String
   address    String
+
+  /**
+   * 영문 주소. 영문 명함(/c/[slug]/en)이 이 값을 씁니다.
+   *
+   * 국문처럼 우편번호를 앞에 붙이지 않고 적힌 그대로 내보냅니다 — 영문 주소는
+   * 우편번호가 끝에 오는 표기가 표준이라, 통째로 적어 두는 편이 정확합니다.
+   * 비어 있으면 영문 카드에서 그 줄이 빠집니다.
+   */
+  addressEn String?
 
   sortOrder Int @default(0)
 
@@ -144,8 +153,10 @@ model Company {
    */
   homepageUrl  String?
   linkedinUrl  String?
-  /// 채널이 아니라 회사 소개 영상입니다. 영문 카드를 만들면 영문 영상이 따로 붙습니다.
+  /// 채널이 아니라 회사 소개 영상입니다. 국문 카드가 씁니다.
   youtubeUrl   String?
+  /// 영문 소개 영상. 비어 있으면 영문 카드도 국문 영상을 겁니다.
+  youtubeUrlEn String?
   instagramUrl String?
 
   brandColor     String   @default("#931B82")
@@ -153,6 +164,11 @@ model Company {
   certifications Json
 
   industry String? // 사업 분야: "알루미늄 압출 · 정밀가공"
+
+  // 영문 카드가 쓰는 값. 비어 있으면 영문 카드에서 그 줄이 빠집니다 —
+  // 한글을 대신 넣지 않습니다. 영문 명함에 한글이 섞이면 안 만든 것만 못합니다.
+  industryEn String?
+  taglineEn  String?
 
   offices   Office[]
   employees Employee[]
@@ -193,7 +209,9 @@ model Employee {
   part   Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
 
   credential String?
-  bio        String? @db.VarChar(80)
+  /// 자격·학위의 영문 표기 (공학박사 → Ph.D.). 비면 영문 카드에서 빠집니다.
+  credentialEn String?
+  bio          String? @db.VarChar(80)
 
   telWork      String?
   telMobile    String?

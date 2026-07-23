@@ -32,6 +32,7 @@ type EmployeeForm = {
   teamId: string;
   partId: string;
   credential: string;
+  credentialEn: string;
   telWork: string;
   telMobile: string;
   email: string;
@@ -42,6 +43,8 @@ type CompanyForm = {
   nameEn: string;
   industry: string;
   tagline: string;
+  industryEn: string;
+  taglineEn: string;
   /** 쉼표로 구분한 한 줄. 저장할 때 스키마가 배열로 바꿉니다. */
   certifications: string;
   tel: string;
@@ -49,6 +52,7 @@ type CompanyForm = {
   homepageUrl: string;
   linkedinUrl: string;
   youtubeUrl: string;
+  youtubeUrlEn: string;
   instagramUrl: string;
 };
 
@@ -78,6 +82,7 @@ export function EditProfileForm({
       teamId: str(employee.teamId),
       partId: str(employee.partId),
       credential: str(employee.credential),
+      credentialEn: str(employee.credentialEn),
       telWork: str(employee.telWork),
       telMobile: str(employee.telMobile),
       email: employee.email,
@@ -91,6 +96,8 @@ export function EditProfileForm({
       nameEn: company.nameEn,
       industry: str(company.industry),
       tagline: str(company.tagline),
+      industryEn: str(company.industryEn),
+      taglineEn: str(company.taglineEn),
       // Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 골라 한 줄로 붙입니다.
       certifications: Array.isArray(company.certifications)
         ? company.certifications.filter((c): c is string => typeof c === "string").join(", ")
@@ -100,6 +107,7 @@ export function EditProfileForm({
       homepageUrl: str(company.homepageUrl),
       linkedinUrl: str(company.linkedinUrl),
       youtubeUrl: str(company.youtubeUrl),
+      youtubeUrlEn: str(company.youtubeUrlEn),
       instagramUrl: str(company.instagramUrl),
     }),
     [company],
@@ -249,7 +257,12 @@ export function EditProfileForm({
   const previewData = useMemo<ProfileCardData>(
     () => ({
       slug: employee.slug,
+      // 편집 미리보기는 국문 카드만 보여 줍니다. 영문판은 값을 채운 뒤
+      // /c/[slug]/en 에서 확인합니다 — 폼 하나에 미리보기 둘을 붙이면
+      // 좁은 화면에서 편집할 자리가 남지 않습니다.
+      lang: "ko",
       nameKo: emp.nameKo,
+      nameEn: emp.nameEn,
       roles: previewRoles,
       credential: emp.credential,
       photoUrl: employee.photoUrl,
@@ -509,6 +522,23 @@ export function EditProfileForm({
                     onChange={(e) => setEmpField("credential", e.target.value)}
                   />
                 </Field>
+                {/*
+                  영문 명함(/c/[slug]/en)에 나가는 값입니다. 비우면 영문 카드에서만
+                  빠지고 국문 카드는 그대로입니다 — 한글을 대신 넣지 않습니다.
+                */}
+                <Field
+                  label="자격 / 학위 영문 (선택)"
+                  htmlFor="credentialEn"
+                  error={err("credentialEn")}
+                >
+                  <Input
+                    id="credentialEn"
+                    placeholder="예: Ph.D."
+                    value={emp.credentialEn}
+                    invalid={Boolean(err("credentialEn"))}
+                    onChange={(e) => setEmpField("credentialEn", e.target.value)}
+                  />
+                </Field>
               </FieldRow>
             </div>
           </div>
@@ -583,14 +613,33 @@ export function EditProfileForm({
               </Field>
             </FieldRow>
 
-            <Field label="사업 분야 (선택)" htmlFor="co-industry" error={err("company.industry")}>
-              <Input
-                id="co-industry"
-                value={co.industry}
-                invalid={Boolean(err("company.industry"))}
-                onChange={(e) => setCoField("industry", e.target.value)}
-              />
-            </Field>
+            {/*
+              영문 칸은 영문 명함(/c/[slug]/en)에만 나갑니다. 비우면 영문 카드에서
+              그 줄이 빠집니다 — 한글로 대신 채우지 않습니다.
+            */}
+            <FieldRow>
+              <Field label="사업 분야 (선택)" htmlFor="co-industry" error={err("company.industry")}>
+                <Input
+                  id="co-industry"
+                  value={co.industry}
+                  invalid={Boolean(err("company.industry"))}
+                  onChange={(e) => setCoField("industry", e.target.value)}
+                />
+              </Field>
+              <Field
+                label="사업 분야 영문 (선택)"
+                htmlFor="co-industryEn"
+                error={err("company.industryEn")}
+              >
+                <Input
+                  id="co-industryEn"
+                  placeholder="Aluminium Extrusion · Precision Machining"
+                  value={co.industryEn}
+                  invalid={Boolean(err("company.industryEn"))}
+                  onChange={(e) => setCoField("industryEn", e.target.value)}
+                />
+              </Field>
+            </FieldRow>
 
             {/*
               주소 칸은 여기 없습니다. 사업장이 본사·R&D센터 둘이라 한 칸에 넣을 수 없고,
@@ -606,20 +655,35 @@ export function EditProfileForm({
               </p>
             ) : null}
 
-            <Field
-              label="태그라인 (선택)"
-              htmlFor="co-tagline"
-              error={err("company.tagline")}
-              hint="명함 하단 회사 블록에 사업 분야와 함께 두 줄로 나옵니다."
-            >
-              <Input
-                id="co-tagline"
-                value={co.tagline}
-                placeholder="예: 자동차 경량 부품 전문"
-                invalid={Boolean(err("company.tagline"))}
-                onChange={(e) => setCoField("tagline", e.target.value)}
-              />
-            </Field>
+            <FieldRow>
+              <Field
+                label="태그라인 (선택)"
+                htmlFor="co-tagline"
+                error={err("company.tagline")}
+                hint="명함 하단 회사 블록에 사업 분야와 함께 두 줄로 나옵니다."
+              >
+                <Input
+                  id="co-tagline"
+                  value={co.tagline}
+                  placeholder="예: 자동차 경량 부품 전문"
+                  invalid={Boolean(err("company.tagline"))}
+                  onChange={(e) => setCoField("tagline", e.target.value)}
+                />
+              </Field>
+              <Field
+                label="태그라인 영문 (선택)"
+                htmlFor="co-taglineEn"
+                error={err("company.taglineEn")}
+              >
+                <Input
+                  id="co-taglineEn"
+                  placeholder="Lightweight Automotive Components"
+                  value={co.taglineEn}
+                  invalid={Boolean(err("company.taglineEn"))}
+                  onChange={(e) => setCoField("taglineEn", e.target.value)}
+                />
+              </Field>
+            </FieldRow>
 
             <Field
               label="인증 (선택)"
@@ -718,6 +782,21 @@ export function EditProfileForm({
                 />
               </Field>
             </FieldRow>
+
+            <Field
+              label="유튜브 영문 (선택)"
+              htmlFor="co-youtubeUrlEn"
+              error={err("company.youtubeUrlEn")}
+              hint="영문 소개 영상. 비우면 영문 명함도 국문 영상을 겁니다."
+            >
+              <Input
+                id="co-youtubeUrlEn"
+                value={co.youtubeUrlEn}
+                placeholder="youtu.be/…"
+                invalid={Boolean(err("company.youtubeUrlEn"))}
+                onChange={(e) => setCoField("youtubeUrlEn", e.target.value)}
+              />
+            </Field>
           </fieldset>
         </section>
 

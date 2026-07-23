@@ -1,3 +1,4 @@
+import { CARD_TEXT, cardPath, type Lang } from "@/lib/lang";
 import { officeLines, roleParts } from "@/lib/org";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
@@ -49,12 +50,18 @@ function baseUrl(): string {
 }
 
 /** 서명 텍스트 폴백에 쓸 값들. HTML 이미지 카드(card.png)와 같은 노출 규칙을 따릅니다. */
-function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices) {
+function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices, lang: Lang) {
+  const en = lang === "en";
   return {
-    nameKo: employee.nameKo,
+    // 영문 서명은 영문명을 씁니다. 안 적었으면 한글 이름으로 떨어집니다 —
+    // 이름 없는 서명은 서명이 아닙니다.
+    nameKo: en ? present(employee.nameEn) ?? employee.nameKo : employee.nameKo,
     // 직위 · 임원 직책 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고
     // 구분자가 혼자 남지 않도록 조립합니다.
-    roleText: [...roleParts(employee), present(employee.credential)]
+    roleText: [
+      ...roleParts(employee, lang),
+      present(en ? employee.credentialEn : employee.credential),
+    ]
       .filter(Boolean)
       .join(" · "),
     // TEL 은 개인 사무실 번호 우선, 없으면 회사 대표번호.
@@ -65,8 +72,9 @@ function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices) {
     fax: present(company.fax),
     email: present(employee.email),
     // 사업장이 여러 곳이면 전부 줄을 나눠 넣습니다. `(43011) 대구시 …` 형태입니다.
-    addresses: officeLines(company.offices),
-    profileUrl: `${baseUrl()}/c/${employee.slug}`,
+    // 영문은 영문 주소만 나갑니다 — 안 채운 사업장은 줄이 빠집니다.
+    addresses: officeLines(company.offices, lang),
+    profileUrl: `${baseUrl()}${cardPath(employee.slug, lang)}`,
   };
 }
 
@@ -76,16 +84,23 @@ function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices) {
  * 카드의 실제 모양(이름·역할·로고·주소·연락처·워터마크)과 값 노출 규칙은 이미지 라우트
  * (app/c/[slug]/card.png)가 정합니다. 여기서는 그 이미지를 가리키고 클릭을 걸 뿐입니다.
  */
-export function renderSignature(employee: EmployeeWithOrg, _company: CompanyWithOffices): string {
+export function renderSignature(
+  employee: EmployeeWithOrg,
+  _company: CompanyWithOffices,
+  lang: Lang = "ko",
+): string {
   // _company 는 renderSignatureText 와 시그니처를 맞추려고 받습니다. 카드의 실제 값은
   // 이미지 라우트가 DB 에서 직접 읽으므로 여기서는 slug·이름만 있으면 됩니다.
   const base = baseUrl();
-  const cardUrl = `${base}/c/${employee.slug}/card.png`;
-  const profileUrl = `${base}/c/${employee.slug}`;
+  const cardUrl = `${base}${cardPath(employee.slug, lang, "card.png")}`;
+  const profileUrl = `${base}${cardPath(employee.slug, lang)}`;
+  // 이미지를 막은 수신자가 보는 글자입니다. 영문 서명이면 영문 이름으로 나갑니다.
+  const altName =
+    lang === "en" ? present(employee.nameEn) ?? employee.nameKo : employee.nameKo;
 
   return (
     `<a href="${escapeHtml(profileUrl)}" style="display:inline-block;text-decoration:none;">` +
-    `<img src="${escapeHtml(cardUrl)}" alt="${escapeHtml(`${employee.nameKo} 명함`)}" width="600" style="display:block;border:0;width:600px;max-width:100%;height:auto;" />` +
+    `<img src="${escapeHtml(cardUrl)}" alt="${escapeHtml(CARD_TEXT[lang].cardOf(altName))}" width="600" style="display:block;border:0;width:600px;max-width:100%;height:auto;" />` +
     `</a>`
   );
 }
@@ -98,8 +113,9 @@ export function renderSignature(employee: EmployeeWithOrg, _company: CompanyWith
 export function renderSignatureText(
   employee: EmployeeWithOrg,
   company: CompanyWithOffices,
+  lang: Lang = "ko",
 ): string {
-  const f = resolveFields(employee, company);
+  const f = resolveFields(employee, company, lang);
 
   const lines = [
     [f.nameKo, f.roleText].filter(Boolean).join(" "),

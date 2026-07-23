@@ -41,6 +41,7 @@ type Draft = {
   teamId: string;
   postalCode: string;
   address: string;
+  addressEn: string;
 };
 
 const emptyDraft = (sortOrder: number, teamId = ""): Draft => ({
@@ -51,6 +52,7 @@ const emptyDraft = (sortOrder: number, teamId = ""): Draft => ({
   teamId,
   postalCode: "",
   address: "",
+  addressEn: "",
 });
 
 /** 목록마다 쓰는 칸이 달라서, 없는 값은 빈 문자열로 채웁니다. 서버가 kind 별로 골라 씁니다. */
@@ -63,6 +65,7 @@ type AnyItem = {
   teamId?: string;
   postalCode?: string;
   address?: string;
+  addressEn?: string | null;
 };
 
 const toDraft = (item: AnyItem): Draft => ({
@@ -73,6 +76,7 @@ const toDraft = (item: AnyItem): Draft => ({
   teamId: item.teamId ?? "",
   postalCode: item.postalCode ?? "",
   address: item.address ?? "",
+  addressEn: item.addressEn ?? "",
 });
 
 export function OrgManager({ initial }: { initial: OrgLists }) {
@@ -343,6 +347,28 @@ function ItemRow({
               onChange={(e) => set("address")(e.target.value)}
             />
           </Field>
+
+          {/*
+            영문 주소는 영문 명함(/c/[slug]/en)에만 나갑니다. 국문처럼 우편번호를
+            앞에 붙이지 않고 적힌 그대로 내보내므로, 우편번호까지 통째로 적으세요.
+            비우면 영문 명함에서 이 사업장 줄이 빠집니다.
+          */}
+          <div className="mt-group">
+            <Field
+              label="영문 주소"
+              htmlFor={`${kind}-${item?.id ?? "new"}-addressEn`}
+              error={err("addressEn")}
+              hint="영문 명함에 이 줄이 그대로 나갑니다. 비우면 영문 명함에서 빠집니다."
+            >
+              <Input
+                id={`${kind}-${item?.id ?? "new"}-addressEn`}
+                value={draft.addressEn}
+                placeholder="51, Homam-ro, Buk-gu, Daegu 41585, Korea"
+                invalid={Boolean(err("addressEn"))}
+                onChange={(e) => set("addressEn")(e.target.value)}
+              />
+            </Field>
+          </div>
         </div>
       ) : null}
 
