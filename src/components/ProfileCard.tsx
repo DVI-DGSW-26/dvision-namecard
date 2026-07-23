@@ -1,4 +1,11 @@
-import { DownloadIcon, UserIcon } from "./icons";
+import {
+  DownloadIcon,
+  GlobeIcon,
+  InstagramIcon,
+  LinkedInIcon,
+  UserIcon,
+  YouTubeIcon,
+} from "./icons";
 import { brand } from "@/config/brand";
 import { officeLines, roleParts } from "@/lib/org";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
@@ -41,6 +48,10 @@ export type ProfileCardData = {
     tagline?: string | null;
     /** 스킴 없이 "dvi-ind.com" 으로 들어와도 됩니다. 카드가 붙여서 씁니다. */
     homepageUrl?: string | null;
+    linkedinUrl?: string | null;
+    /** 채널이 아니라 회사 소개 영상입니다. */
+    youtubeUrl?: string | null;
+    instagramUrl?: string | null;
     /**
      * 사업장 주소들 — 이미 `(43011) 대구시 …` 로 조립된 줄입니다.
      *
@@ -66,6 +77,17 @@ export type ProfileCardData = {
 function homepageHref(raw?: string | null): string {
   const url = raw?.trim();
   if (!url) return brand.homepage;
+  return externalHref(url);
+}
+
+/**
+ * 스킴이 없는 주소에 https 를 붙입니다.
+ *
+ * 회사 정보는 자유 입력이라 "instagram.com/dvi_ind" 처럼 저장된 값이 섞입니다.
+ * 그대로 href 에 넣으면 브라우저가 상대 경로로 읽어 /c/instagram.com/... 으로 갑니다.
+ */
+function externalHref(raw: string): string {
+  const url = raw.trim();
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
@@ -90,6 +112,9 @@ export function toProfileCardData(
       industry: company.industry,
       tagline: company.tagline,
       homepageUrl: company.homepageUrl,
+      linkedinUrl: company.linkedinUrl,
+      youtubeUrl: company.youtubeUrl,
+      instagramUrl: company.instagramUrl,
       addresses: officeLines(company.offices),
       tel: company.tel,
       fax: company.fax,
@@ -188,6 +213,25 @@ export function ProfileCard({
   const email = data.email?.trim() || null;
   const addresses = company.addresses.filter((line) => line.trim());
 
+  /**
+   * 아이콘 줄에 실제로 걸 링크만 추립니다.
+   *
+   * 값이 빈 SNS 는 통째로 빠집니다 — 회사가 하나를 접었을 때 아이콘만 남아
+   * 아무 데도 안 가는 것보다 없는 게 낫습니다. 홈페이지는 비어 있어도
+   * homepageHref 가 브랜드 기본 주소로 떨어뜨려서 항상 남습니다.
+   */
+  const links = [
+    { key: "linkedin", label: "링크드인", raw: company.linkedinUrl, Icon: LinkedInIcon },
+    { key: "youtube", label: "회사 소개 영상", raw: company.youtubeUrl, Icon: YouTubeIcon },
+    { key: "instagram", label: "인스타그램", raw: company.instagramUrl, Icon: InstagramIcon },
+    { key: "homepage", label: "회사 홈페이지", raw: company.homepageUrl ?? "", Icon: GlobeIcon },
+  ]
+    .filter((item) => item.key === "homepage" || item.raw?.trim())
+    .map((item) => ({
+      ...item,
+      href: item.key === "homepage" ? homepageHref(item.raw) : externalHref(item.raw!),
+    }));
+
   const hasCompanyBlock =
     company.industry || company.tagline || addresses.length > 0 || company.certifications.length > 0;
 
@@ -267,18 +311,31 @@ export function ProfileCard({
         </ul>
 
         {/*
-          CTA — 화면에서 primary 를 채워 쓰는 유일한 요소입니다.
-          명함을 받은 사람이 다음에 하는 행동은 "회사가 뭐 하는 곳인지 보기" 라서
-          회사 홈페이지로 보냅니다. 카드는 닫히지 않도록 새 탭으로 엽니다.
+          회사로 가는 통로 — 링크드인 · 유튜브 · 인스타그램 · 홈페이지.
+
+          예전에는 "회사 홈페이지 바로가기" 전체폭 버튼 하나였습니다. 갈 곳이 넷이
+          되면서 버튼을 넷으로 늘리면 카드 절반이 버튼이 되므로 아이콘 줄로 바꿨습니다.
+
+          아이콘만 있으면 스크린리더가 읽을 게 없어서 각각 aria-label 을 답니다.
+          손가락으로 눌러야 하므로 아이콘(20px)보다 넉넉한 44px 판을 줍니다.
+          카드가 닫히지 않도록 전부 새 탭으로 엽니다.
         */}
-        <a
-          href={homepageHref(company.homepageUrl)}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-group flex h-12 w-full items-center justify-center rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover"
-        >
-          회사 홈페이지 바로가기
-        </a>
+        <ul className="mt-group flex items-center justify-center gap-group">
+          {links.map(({ key, label, href, Icon }) => (
+            <li key={key}>
+              <a
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={label}
+                title={label}
+                className="flex h-11 w-11 items-center justify-center rounded-card text-sub-text transition-colors hover:text-primary"
+              >
+                <Icon className="h-6 w-6" />
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/*

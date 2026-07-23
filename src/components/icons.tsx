@@ -51,6 +51,56 @@ export function OrgIcon({ className }: IconProps) {
   );
 }
 
+/*
+ * 공개 카드 아래 아이콘 줄 — 링크드인 · 유튜브 · 인스타그램 · 홈페이지.
+ *
+ * 브랜드 공식 로고(면으로 채운 글리프)를 쓰지 않고 이 파일의 선 스타일에 맞췄습니다.
+ * 넷이 나란히 놓이는데 셋만 면이고 하나만 선이면 줄이 들쭉날쭉해 보입니다.
+ * currentColor 를 물려받아야 hover 색이 따라오는 것도 같은 이유입니다.
+ */
+
+export function LinkedInIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="2.5" y="2.5" width="19" height="19" rx="3.5" />
+      {/* i 의 점만 면으로 채웁니다. 이 크기에서 선으로 그리면 뭉개집니다. */}
+      <circle cx="7.5" cy="7.4" r="0.9" fill="currentColor" stroke="none" />
+      <path d="M7.5 10.6V17" />
+      <path d="M11.6 17v-6.4M11.6 13.4c0-1.6 1.1-2.8 2.6-2.8s2.3 1.2 2.3 2.8V17" />
+    </svg>
+  );
+}
+
+export function YouTubeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="2.5" y="5.5" width="19" height="13" rx="3.5" />
+      <path d="M10.6 9.6 15.8 12l-5.2 2.4V9.6Z" />
+    </svg>
+  );
+}
+
+export function InstagramIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.2" cy="6.8" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** 홈페이지. 지구본이라 "회사 사이트" 로 읽힙니다 — 집 아이콘은 이 앱의 홈으로 오해됩니다. */
+export function GlobeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3c2.4 2.5 3.7 5.6 3.7 9s-1.3 6.5-3.7 9c-2.4-2.5-3.7-5.6-3.7-9S9.6 5.5 12 3Z" />
+    </svg>
+  );
+}
+
 export function PhoneIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

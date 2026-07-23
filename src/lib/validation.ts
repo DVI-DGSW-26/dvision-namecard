@@ -106,7 +106,12 @@ export const companyProfileSchema = z.object({
   // 팩스는 회사 공용 번호입니다. 명함 카드·서명·vCard 가 모두 이 값을 씁니다.
   // (개인 전화는 Employee.telWork/telMobile 로 따로 있습니다.)
   fax: phone,
+  // 공개 카드 아래 아이콘 줄. 스킴 없이 넣어도 카드가 https 를 붙여 엽니다.
   homepageUrl: optionalText(120, "홈페이지"),
+  linkedinUrl: optionalText(200, "링크드인"),
+  // 채널이 아니라 회사 소개 영상 주소입니다. 공유 링크(youtu.be/…)가 그대로 들어옵니다.
+  youtubeUrl: optionalText(200, "유튜브"),
+  instagramUrl: optionalText(200, "인스타그램"),
 });
 
 export type EmployeeProfileInput = z.input<typeof employeeProfileSchema>;
