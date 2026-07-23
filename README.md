@@ -1,36 +1,17 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DVISION 디지털 명함
 
-## Getting Started
+(주)디비전 사내용 **디지털 명함 · 이메일 서명** 서비스입니다.
 
-First, run the development server:
+직원이 자기 프로필을 한 번 입력해두면, 링크로 공유하는 공개 명함과 메일에 붙여넣는 이메일 서명이 자동으로 만들어집니다. 종이 명함을 새로 찍거나 서명을 사람마다 다르게 만들 필요 없이, 회사 전체가 같은 형식을 씁니다.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 무엇을 할 수 있나요
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **공개 디지털 명함** — 링크 하나로 공유하는 모바일 명함. 카카오톡·문자로 보내면 명함 카드가 미리보기로 뜹니다.
+- **연락처 저장** — 상대가 버튼 한 번으로 폰 연락처에 바로 저장합니다.
+- **이메일 서명** — 명함 이미지가 들어간 서명을 복사해 Gmail·Outlook·네이버 메일에 붙여넣습니다.
+- **프로필 편집** — 이름·직함·연락처를 직접 수정하고 결과를 바로 미리봅니다.
+- **임직원 관리** — 관리자가 직원을 추가하고 목록을 관리합니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 로그인
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+개인 계정 없이 **사내 이메일 + 공용 비밀번호**로 들어갑니다. 사내 도메인 이메일이면 등록되어 있지 않아도 첫 로그인 때 본인 명함이 자동으로 만들어집니다.
