@@ -102,6 +102,16 @@ function externalHref(raw: string): string {
 }
 
 /**
+ * Json 컬럼 → 문자열 배열.
+ *
+ * 인증 목록은 Json 이라 타입이 보장되지 않습니다(직접 UPDATE 한 값, 예전 형식).
+ * 카드는 문자열만 그리므로 여기서 좁혀서 넘깁니다.
+ */
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+/**
  * DB 레코드 → 카드 데이터. /c/[slug] 와 /c/[slug]/en 이 함께 씁니다.
  *
  * 언어별로 값을 고르는 규칙이 전부 여기 모여 있습니다. 화면 컴포넌트는 이미
@@ -153,10 +163,10 @@ export function toProfileCardData(
       addresses: officeLines(company.offices, lang),
       tel: company.tel,
       fax: company.fax,
-      // certifications 는 Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 통과시킵니다.
-      certifications: Array.isArray(company.certifications)
-        ? company.certifications.filter((c): c is string => typeof c === "string")
-        : [],
+      // 영문 카드는 영문 인증 목록만 씁니다. 비면 뱃지 줄이 통째로 빠집니다 —
+      // "IATF 16949" 처럼 원래 영문인 항목이 많다고 국문 목록을 그대로 쓰면,
+      // 한글 인증명이 하나 추가되는 날 영문 명함에 그대로 나갑니다.
+      certifications: stringList(en ? company.certificationsEn : company.certifications),
     },
   };
 }

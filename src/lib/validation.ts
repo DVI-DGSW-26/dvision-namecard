@@ -155,6 +155,24 @@ export const employeeBulkSchema = z.discriminatedUnion("action", [
 ]);
 export type EmployeeCreateValues = z.output<typeof employeeCreateSchema>;
 
+/**
+ * 인증 뱃지 한 줄 → 문자열 배열. 국문·영문 칸이 같은 규칙을 씁니다.
+ *
+ * 두 칸에 각자 적어 두면 한쪽만 고치는 순간 개수 제한이나 길이 제한이 갈립니다.
+ */
+const certificationList = z.preprocess(
+  (value) =>
+    typeof value === "string"
+      ? value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : value,
+  z
+    .array(z.string().max(30, "인증 이름은 30자 이내로 입력해 주세요."))
+    .max(6, "인증은 6개까지 넣을 수 있습니다."),
+);
+
 export const companyProfileSchema = z.object({
   nameKo: z.string().trim().min(1, "회사명을 입력해 주세요.").max(60, "회사명이 너무 깁니다."),
   nameEn: z.string().trim().min(1, "영문 회사명을 입력해 주세요.").max(80, "영문 회사명이 너무 깁니다."),
@@ -174,18 +192,15 @@ export const companyProfileSchema = z.object({
    * DB 는 Json 컬럼이라 무엇이든 들어갑니다. 카드는 문자열만 그리므로
    * 여기서 문자열 배열로 좁혀서 저장합니다.
    */
-  certifications: z.preprocess(
-    (value) =>
-      typeof value === "string"
-        ? value
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean)
-        : value,
-    z
-      .array(z.string().max(30, "인증 이름은 30자 이내로 입력해 주세요."))
-      .max(6, "인증은 6개까지 넣을 수 있습니다."),
-  ),
+  certifications: certificationList,
+  /**
+   * 영문 인증 뱃지. 영문 카드가 이 값만 씁니다.
+   *
+   * 국문 값으로 떨어지지 않습니다. "IATF 16949" 처럼 원래 영문인 항목이 대부분이라
+   * 그냥 써도 될 것 같지만, "품질경영시스템 인증" 한 줄이 추가되는 순간 영문
+   * 명함에 한글이 박힙니다. 다른 영문 칸과 같은 규칙 — 비면 그 줄이 빠집니다.
+   */
+  certificationsEn: certificationList,
   // 주소는 여기 없습니다 — 사업장이 여러 곳(본사·R&D센터)이라 Office 표로 빠졌고,
   // /admin/org 의 '사업장' 탭에서 관리합니다.
   /**
