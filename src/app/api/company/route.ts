@@ -1,5 +1,7 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
+import { CARDS_TAG } from "@/lib/card-cache";
 import { prisma } from "@/lib/prisma";
 import { companyProfileSchema, fieldErrors } from "@/lib/validation";
 
@@ -38,6 +40,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     await prisma.company.update({ where: { id: company.id }, data: parsed.data });
+
+    // 회사 값(주소·팩스·대표번호)은 전 직원의 명함 이미지에 찍힙니다. 한 명씩 지울
+    // 수 없으니 카드 전체에 걸어 둔 태그를 지웁니다.
+    revalidateTag(CARDS_TAG, { expire: 0 });
+
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });

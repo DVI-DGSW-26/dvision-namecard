@@ -1,5 +1,7 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
+import { cardTag } from "@/lib/card-cache";
 import { prisma } from "@/lib/prisma";
 import { employeeProfileSchema, fieldErrors } from "@/lib/validation";
 
@@ -46,7 +48,18 @@ export async function PATCH(request: NextRequest, { params }: Context) {
   }
 
   try {
-    await prisma.employee.update({ where: { id }, data: parsed.data });
+    // slug 는 캐시를 비우는 데 씁니다. 이 엔드포인트로는 못 바꾸는 값이라 저장 전후가 같습니다.
+    const employee = await prisma.employee.update({
+      where: { id },
+      data: parsed.data,
+      select: { slug: true },
+    });
+
+    // 이 사람 명함 이미지 캐시를 지웁니다. 없으면 저장은 됐는데 카드와 서명에는
+    // 최대 60 초 동안 옛 번호가 나갑니다. 공개 페이지(/c/[slug])는 캐시가 없어 그냥 둡니다.
+    // expire: 0 — 저장한 사람이 바로 확인하러 가므로 옛 이미지를 한 번도 더 내보내지 않습니다.
+    revalidateTag(cardTag(employee.slug), { expire: 0 });
+
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
