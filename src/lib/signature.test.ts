@@ -9,11 +9,17 @@ import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 process.env.NEXT_PUBLIC_BASE_URL = "https://dvi-ind.com";
 
 /** 사업장 한 줄. 서명에는 `(우편번호) 주소` 로 합쳐서 나갑니다. */
-const office = (name: string, postalCode: string, address: string) => ({
+const office = (
+  name: string,
+  postalCode: string,
+  address: string,
+  addressEn: string | null = null,
+) => ({
   id: `office_${name}`,
   name,
   postalCode,
   address,
+  addressEn,
   sortOrder: 0,
   companyId: "dvision",
 });
@@ -27,6 +33,9 @@ const company: CompanyWithOffices = {
   fax: "053-715-2096",
   logoUrl: "/brand/logo.png",
   homepageUrl: null,
+  industryEn: null,
+  taglineEn: null,
+  youtubeUrlEn: null,
   linkedinUrl: null,
   youtubeUrl: null,
   instagramUrl: null,
@@ -56,6 +65,7 @@ const employee: EmployeeWithOrg = {
   teamId: null,
   partId: null,
   credential: "공학박사",
+  credentialEn: null,
   bio: null,
   telWork: "053-710-1022",
   telMobile: "010-1234-5678",

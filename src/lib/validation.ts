@@ -57,6 +57,8 @@ export const employeeProfileSchema = z.object({
   positionId: orgRef,
   // 자격은 선택 입력입니다. 비우면 null 로 저장되고 카드·서명에서 통째로 빠집니다.
   credential: optionalText(40, "자격 · 학위"),
+  // 영문 카드(/c/[slug]/en)가 쓰는 값. 비우면 영문 카드에서만 빠집니다.
+  credentialEn: optionalText(40, "자격 · 학위 영문"),
   telWork: phone,
   telMobile: phone,
   email: z.preprocess(
@@ -144,6 +146,10 @@ export const companyProfileSchema = z.object({
   nameEn: z.string().trim().min(1, "영문 회사명을 입력해 주세요.").max(80, "영문 회사명이 너무 깁니다."),
   industry: optionalText(60, "사업 분야"),
   tagline: optionalText(60, "태그라인"),
+  // 영문 카드가 쓰는 값. 비우면 영문 카드에서 그 줄이 빠집니다 —
+  // 한글을 대신 넣지 않습니다. 영문 명함에 한글이 섞이면 안 만든 것만 못합니다.
+  industryEn: optionalText(60, "사업 분야 영문"),
+  taglineEn: optionalText(60, "태그라인 영문"),
   /**
    * 인증 뱃지 — 명함 하단의 "IATF 16949" · "ISO 9001".
    *
@@ -188,6 +194,8 @@ export const companyProfileSchema = z.object({
   linkedinUrl: optionalText(200, "링크드인"),
   // 채널이 아니라 회사 소개 영상 주소입니다. 공유 링크(youtu.be/…)가 그대로 들어옵니다.
   youtubeUrl: optionalText(200, "유튜브"),
+  // 영문 소개 영상. 비우면 영문 카드도 국문 영상을 겁니다.
+  youtubeUrlEn: optionalText(200, "유튜브 영문"),
   instagramUrl: optionalText(200, "인스타그램"),
 });
 

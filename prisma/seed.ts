@@ -89,9 +89,21 @@ const TEAMS = [
  * 시안에 있던 "경기 화성시 팔탄면 서봉로 1013" 은 실제 주소가 아닙니다 — 되돌리지 마세요.
  */
 const OFFICES = [
-  { name: "본사", postalCode: "43011", address: "대구시 달성군 구지면 국가산단대로33길 237" },
-  { name: "R&D센터", postalCode: "41585", address: "대구 북구 홈암로 51" },
-] as const;
+  {
+    name: "본사",
+    postalCode: "43011",
+    address: "대구시 달성군 구지면 국가산단대로33길 237",
+    // 영문 주소는 아직 회사에서 받지 못했습니다. 비워 두면 영문 명함에서 이 줄이
+    // 빠집니다 — /admin/org 사업장 탭에서 채우면 그때부터 나옵니다.
+    addressEn: null as string | null,
+  },
+  {
+    name: "R&D센터",
+    postalCode: "41585",
+    address: "대구 북구 홈암로 51",
+    addressEn: null as string | null,
+  },
+];
 
 async function seedOffices(companyId: string) {
   for (const [index, office] of OFFICES.entries()) {
@@ -181,9 +193,9 @@ async function main() {
       // 공개 카드 아래 아이콘 줄. 전부 회사가 실제로 쓰는 주소입니다.
       homepageUrl: "dvi-ind.com",
       linkedinUrl: "https://www.linkedin.com/company/dvi-ind/",
-      // 채널이 아니라 회사 소개 영상입니다. 지금 카드는 국문판이라 국문 영상을 겁니다.
-      // 영문 카드를 만들 때 쓸 영문 영상: https://youtu.be/Wef9PO2yX4I?si=E8Xzm55e_hxarWqW
+      // 채널이 아니라 회사 소개 영상입니다. 국문 카드와 영문 카드가 각자 겁니다.
       youtubeUrl: "https://youtu.be/9NsSwkFx0PM?si=0HVz7H5LVhw5rJgG",
+      youtubeUrlEn: "https://youtu.be/Wef9PO2yX4I?si=E8Xzm55e_hxarWqW",
       instagramUrl: "instagram.com/dvi_ind",
       // 시안에서는 industry 와 tagline 이 두 줄로 나뉘어 표시됩니다.
       industry: "알루미늄 압출 · 정밀가공",
