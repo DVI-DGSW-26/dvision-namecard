@@ -17,7 +17,13 @@ import type { Status } from "@/types";
 
 type Props = {
   /** null 이면 닫힌 상태입니다. 열 때 대상 직원을 통째로 넘깁니다. */
-  target: { id: string; nameKo: string; slug: string; status: Status } | null;
+  target: {
+    id: string;
+    nameKo: string;
+    slug: string;
+    status: Status;
+    role: "MEMBER" | "ADMIN";
+  } | null;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -65,8 +71,8 @@ function SlugForm({
     setSaveError(null);
     setErrors({});
 
-    // 상태는 바꾸지 않지만 스키마가 두 값을 함께 받으므로 현재 값을 그대로 실어 보냅니다.
-    const payload = { slug, status: target.status };
+    // 상태·권한은 바꾸지 않지만 스키마가 세 값을 함께 받으므로 현재 값을 그대로 실어 보냅니다.
+    const payload = { slug, status: target.status, role: target.role };
 
     const parsed = employeeAdminSchema.safeParse(payload);
     if (!parsed.success) {

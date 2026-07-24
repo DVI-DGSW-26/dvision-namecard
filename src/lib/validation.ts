@@ -44,6 +44,39 @@ const phone = z.preprocess(
 );
 
 /**
+ * 비밀번호 규칙.
+ *
+ * 자릿수 하나만 봅니다. 대문자·특수문자를 섞으라고 강제하면 Password1! 류가 나오고,
+ * 그건 12자 무작위 문구보다 약합니다. 상한을 두는 이유는 거대한 문자열로 해시
+ * 연산을 반복시키는 걸 막기 위해서입니다.
+ */
+const passwordRule = z
+  .string()
+  .min(10, "비밀번호는 10자 이상으로 정해 주세요.")
+  .max(200, "비밀번호가 너무 깁니다.");
+
+/**
+ * 본인 비밀번호 변경. 현재 비밀번호를 함께 받습니다.
+ *
+ * 새 비밀번호를 두 번 받아 확인하는 이유: 틀리게 친 값으로 바뀌면 본인도 못 들어와서
+ * 관리자에게 재발급을 부탁해야 합니다. 여기서 한 번 막는 편이 쌉니다.
+ */
+export const passwordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1, "현재 비밀번호를 입력해 주세요.").max(200),
+    newPassword: passwordRule,
+    newPasswordConfirm: z.string(),
+  })
+  .refine((v) => v.newPassword === v.newPasswordConfirm, {
+    path: ["newPasswordConfirm"],
+    message: "새 비밀번호가 서로 다릅니다.",
+  })
+  .refine((v) => v.newPassword !== v.currentPassword, {
+    path: ["newPassword"],
+    message: "지금 쓰는 비밀번호와 다르게 정해 주세요.",
+  });
+
+/**
  * 표시용 합본 이름. 성·이름을 붙인 값입니다.
  *
  * 직원 추가와 프로필 수정 두 경로가 같은 규칙을 쓰도록 여기 한 곳에 둡니다.
@@ -165,6 +198,14 @@ const slugRule = z
 export const employeeAdminSchema = z.object({
   status: z.enum(["PENDING", "ACTIVE", "RESIGNED"], { message: "상태를 선택해 주세요." }),
   slug: slugRule,
+  /**
+   * 권한. 예전에는 어떤 공용 비밀번호로 들어왔느냐로 갈렸습니다.
+   *
+   * 비밀번호가 곧 역할이면 권한을 주는 일이 비밀번호를 알려주는 일이 되고, 한
+   * 사람에게서 회수하려면 전원이 새 비밀번호를 외워야 했습니다. 이제 사람에게
+   * 붙어 있어서 관리자가 목록에서 켜고 끕니다.
+   */
+  role: z.enum(["MEMBER", "ADMIN"], { message: "권한을 선택해 주세요." }),
 });
 
 /**

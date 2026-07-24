@@ -74,6 +74,9 @@ export async function GET(request: NextRequest) {
         // 항상 조회한 뒤 아래 매핑에서 member 응답에는 넣지 않습니다.
         // select 에 boolean 변수를 넣으면 반환 타입이 union 으로 갈라져 다루기 번거롭습니다.
         email: true,
+        role: true,
+        // 해시는 응답에 넣지 않고 발급 여부(불리언)로만 바꿔서 내보냅니다.
+        passwordHash: true,
       },
     }),
     // 필터용 팀 목록. 직원이 아직 없는 팀도 골라 볼 수 있어야 하므로 조직 목록에서 그대로 가져옵니다.
@@ -92,6 +95,9 @@ export async function GET(request: NextRequest) {
       rank: row.rank?.name ?? null,
       email: isAdmin ? (row.email ?? null) : null,
       status: row.status,
+      role: row.role,
+      // 해시는 내려보내지 않습니다. 발급받았는지만 알려 주면 화면이 할 일은 다 됩니다.
+      hasPassword: Boolean(row.passwordHash),
       updatedAt: row.updatedAt.toISOString(),
     })),
     total,

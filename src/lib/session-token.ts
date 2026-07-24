@@ -27,6 +27,14 @@ export type Role = "member" | "admin";
 export type Session = {
   role: Role;
   /**
+   * 관리자가 발급한 초기 비밀번호를 아직 안 바꿨는지.
+   *
+   * DB 가 아니라 토큰에 담는 이유: 이 값을 보고 막는 곳이 middleware 인데, 거기는
+   * Edge 런타임이라 prisma 를 부를 수 없습니다. 비밀번호를 바꾸면 세션을 다시
+   * 발급해 false 로 덮습니다.
+   */
+  mustChangePassword: boolean;
+  /**
    * 로그인한 본인의 Employee.id.
    *
    * 공용 비밀번호는 "우리 회사 사람인지" 만 증명하므로, 신원은 게이트에서 받은
@@ -58,7 +66,11 @@ export async function signSessionToken(
   session: Session,
   maxAgeSeconds: number = SESSION_MAX_AGE_SECONDS,
 ): Promise<string> {
-  return new SignJWT({ role: session.role, employeeId: session.employeeId })
+  return new SignJWT({
+    role: session.role,
+    employeeId: session.employeeId,
+    mustChangePassword: session.mustChangePassword,
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${maxAgeSeconds}s`)
@@ -75,7 +87,13 @@ export async function verifySessionToken(token: string): Promise<Session | null>
     const employeeId = payload.employeeId;
     // 토큰에 담기는 값이라 문자열인지 확인합니다. 예전 형식(employeeId 없음)의
     // 쿠키를 들고 오면 null 로 떨어지고, /edit 이 다시 로그인하도록 안내합니다.
-    return { role, employeeId: typeof employeeId === "string" ? employeeId : null };
+    return {
+      role,
+      employeeId: typeof employeeId === "string" ? employeeId : null,
+      // 공용 비밀번호 시절 쿠키에는 이 값이 없습니다. 없으면 "바꿀 필요 없음" 으로
+      // 봅니다 — 그 쿠키는 어차피 만료되면 새 로그인으로 다시 발급됩니다.
+      mustChangePassword: payload.mustChangePassword === true,
+    };
   } catch {
     return null;
   }

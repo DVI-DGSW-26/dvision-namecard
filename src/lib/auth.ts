@@ -1,5 +1,6 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { verifyPassword } from "./password";
+import { prisma } from "./prisma";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
@@ -11,49 +12,49 @@ import {
 } from "./session-token";
 
 /**
- * 공용 비밀번호 인증. 개인 계정은 없습니다.
+ * 계정 인증. 직원마다 이메일 + 본인 비밀번호를 갖습니다.
  *
- * node:crypto 를 쓰므로 이 파일은 Node 런타임 전용입니다.
+ * 예전에는 공용 비밀번호 두 개(직원용·관리자용)였습니다. 그 구조에서는 비밀번호를
+ * 아는 사람이 남의 이메일로도 들어올 수 있어 사칭을 기술적으로 막을 수 없었고,
+ * 한 사람에게서 권한을 회수하려면 전원이 새 비밀번호를 외워야 했습니다.
+ *
+ * prisma 와 node:crypto 를 쓰므로 이 파일은 Node 런타임 전용입니다.
  * middleware(Edge)에서는 lib/session-token.ts 를 직접 import 하세요.
  */
 
 export { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, SESSION_REMEMBER_MAX_AGE_SECONDS };
 export type { Role, Session };
 
-/**
- * 길이를 노출하지 않는 상수시간 문자열 비교.
- *
- * timingSafeEqual 은 두 버퍼의 길이가 다르면 예외를 던지고, 길이 자체도 정보를 흘립니다.
- * 그래서 양쪽을 SHA-256 으로 먼저 고정 길이(32바이트)로 만든 뒤 비교합니다.
- */
-function safeEqual(a: string, b: string): boolean {
-  const ha = createHash("sha256").update(a, "utf8").digest();
-  const hb = createHash("sha256").update(b, "utf8").digest();
-  return timingSafeEqual(ha, hb);
-}
+/** 인증에 성공한 사람. 세션에 담을 값과 초기 비밀번호 여부를 함께 돌려줍니다. */
+export type Authenticated = {
+  employeeId: string;
+  role: Role;
+  mustChangePassword: boolean;
+};
 
 /**
- * 입력값을 공용 비밀번호와 대조해 역할을 판정합니다. 일치하지 않으면 null.
+ * 이메일과 비밀번호로 직원을 인증합니다. 맞지 않으면 null.
  *
- * 조기 리턴하지 않고 두 비교를 항상 모두 실행해서, 응답 시간으로 어느 쪽이
- * 틀렸는지 추측할 수 없게 합니다.
+ * 없는 이메일일 때도 해시 검증을 한 번 돌립니다. 곧바로 null 을 돌려주면 응답이
+ * 눈에 띄게 빨라서, 그 차이만으로 어떤 이메일이 등록돼 있는지 훑을 수 있습니다.
+ *
+ * 퇴사자(RESIGNED)는 비밀번호가 맞아도 들이지 않습니다. 비밀번호를 지우는 것과
+ * 별개로, 상태 하나만 바꿔도 즉시 막히는 길이 있어야 합니다.
  */
-export function verifyPassword(input: string): Role | null {
-  const memberPassword = process.env.ACCESS_PASSWORD;
-  const adminPassword = process.env.ADMIN_PASSWORD;
+export async function authenticate(email: string, password: string): Promise<Authenticated | null> {
+  const employee = await prisma.employee.findFirst({
+    where: { email, status: { not: "RESIGNED" } },
+    select: { id: true, role: true, passwordHash: true, mustChangePassword: true },
+  });
 
-  if (!memberPassword || !adminPassword) {
-    throw new Error(
-      "ACCESS_PASSWORD / ADMIN_PASSWORD 환경변수가 설정되지 않았습니다. .env 를 확인하세요.",
-    );
-  }
+  const ok = await verifyPassword(password, employee?.passwordHash ?? null);
+  if (!employee || !ok) return null;
 
-  const isAdmin = safeEqual(input, adminPassword);
-  const isMember = safeEqual(input, memberPassword);
-
-  if (isAdmin) return "admin";
-  if (isMember) return "member";
-  return null;
+  return {
+    employeeId: employee.id,
+    role: employee.role === "ADMIN" ? "admin" : "member",
+    mustChangePassword: employee.mustChangePassword,
+  };
 }
 
 /**

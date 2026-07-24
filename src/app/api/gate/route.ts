@@ -1,28 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createSession, destroySession, verifyPassword } from "@/lib/auth";
-import { defaultPositionId } from "@/lib/org-store";
-import { prisma } from "@/lib/prisma";
-import { buildSlug } from "@/lib/slug";
+import { authenticate, createSession, destroySession } from "@/lib/auth";
 
 /**
- * 사내 이메일 도메인. 이 도메인 + 올바른 공용 비밀번호이면, 아직 등록되지 않은
- * 이메일이라도 본인 명함을 즉석에서 만들어 들여보냅니다. (아래 createSelfServeEmployee)
- */
-const COMPANY_DOMAIN = "dvi-ind.com";
-
-/**
- * 사내 이메일 + 공용 비밀번호 검증 → 세션 쿠키 발급.
+ * 이메일 + 본인 비밀번호 검증 → 세션 쿠키 발급.
  *
- * 비밀번호는 "우리 회사 사람인지" 만 증명합니다. 누구인지는 이메일로 확인해서
- * 세션에 employeeId 로 담습니다. 이게 없으면 /edit 이 누구 명함을 열어야 할지
- * 알 수 없어서, 로그인한 모든 사람이 같은(첫 번째) 직원 명함을 보게 됩니다.
+ * 계정은 관리자가 임직원 관리에서 만들고 초기 비밀번호를 발급합니다. 이 라우트는
+ * 계정을 만들지 않습니다 — 예전에는 사내 이메일이기만 하면 등록되지 않은 사람도
+ * 그 자리에서 직원 레코드를 만들어 들여보냈는데, 공용 비밀번호 하나만 새면 아무
+ * 문자열로나 명함이 생기고 오타로 들어가도 유령 직원이 남았습니다.
  *
- * 한계: 공용 비밀번호를 아는 사람은 남의 이메일로도 들어올 수 있습니다. 이 구조로는
- * 사칭을 기술적으로 막을 수 없습니다. 사내 도구라 신뢰 기반으로 두되, 필요해지면
- * 수정 이력(ProfileView.action)을 남기는 걸 검토하세요.
- *
- * verifyPassword 가 node:crypto 를 쓰므로 Node 런타임이어야 합니다.
+ * authenticate 가 prisma·node:crypto 를 쓰므로 Node 런타임이어야 합니다.
  * (Route Handler 는 기본이 Node 런타임이라 별도 설정은 필요 없습니다.)
  */
 
@@ -73,37 +61,6 @@ function clientIp(request: NextRequest): string {
   return forwarded?.split(",")[0]?.trim() || "unknown";
 }
 
-/**
- * 사내 이메일로 처음 들어온 사람에게 빈 명함을 만들어 줍니다.
- *
- * 비밀번호가 사실상 유일한 관문이라, 이름·연락처는 로그인 후 본인이 /edit 에서 채웁니다.
- * 지금은 이메일 앞부분을 임시 이름·슬러그로 씁니다. slug 는 공개 URL 에 그대로 들어가므로
- * 로마자·숫자만 남기고(buildSlug), 충돌하면 숫자를 붙입니다.
- */
-async function createSelfServeEmployee(email: string, companyId: string) {
-  const localPart = email.split("@")[0] || "member";
-  const takenSlugs = (await prisma.employee.findMany({ select: { slug: true } })).map((e) => e.slug);
-  // localPart 가 한글 등이라 로마자로 못 만들면 member2, member3 … 으로 폴백합니다.
-  const slug = buildSlug({ familyName: localPart }, takenSlugs) ?? `member${takenSlugs.length + 1}`;
-
-  return prisma.employee.create({
-    data: {
-      email,
-      slug,
-      nameKo: localPart,
-      // familyName/givenName 은 vCard N 필드용입니다. 임시로 이름 자리에만 넣어 두고
-      // 정확한 성·이름은 관리자 화면에서 바로잡습니다.
-      familyName: "",
-      givenName: localPart,
-      // 직위·부서는 비워 둡니다 — 본인이 /edit 에서 고릅니다. 직책만 '팀원' 으로 시작합니다.
-      positionId: await defaultPositionId(),
-      status: "ACTIVE",
-      companyId,
-    },
-    select: { id: true },
-  });
-}
-
 export async function POST(request: NextRequest) {
   const ip = clientIp(request);
   if (RATE_LIMIT_ENABLED && !rateLimit(ip)) {
@@ -125,67 +82,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "이메일과 비밀번호를 입력해 주세요." }, { status: 400 });
   }
 
-  const role = verifyPassword(parsed.data.password);
-  if (!role) {
+  const auth = await authenticate(parsed.data.email, parsed.data.password);
+  if (!auth) {
     // 이메일이 틀렸는지 비밀번호가 틀렸는지 구분해 주지 않습니다. 구분해 주면
     // 어떤 이메일이 등록되어 있는지 확인하는 도구가 됩니다.
     return NextResponse.json({ error: "이메일 또는 비밀번호가 올바르지 않습니다." }, { status: 401 });
   }
 
-  let employee: { id: string } | null = null;
-  try {
-    employee = await prisma.employee.findFirst({
-      // 퇴사자는 링크를 알아도 들어올 수 없어야 합니다.
-      where: { email: parsed.data.email, status: { not: "RESIGNED" } },
-      select: { id: true },
-    });
-  } catch {
-    return NextResponse.json({ error: "로그인 처리 중 오류가 발생했습니다." }, { status: 500 });
-  }
-
-  if (!employee) {
-    // 사내 이메일이면, 등록이 없어도 그 자리에 본인 명함을 만들어 들여보냅니다.
-    // (명함을 만들려면 회사가 하나는 있어야 하므로, 회사가 없으면 아래 부트스트랩으로 넘어갑니다.)
-    const emailIsCompany = parsed.data.email.endsWith(`@${COMPANY_DOMAIN}`);
-    const company = emailIsCompany
-      ? await prisma.company.findFirst({ select: { id: true } })
-      : null;
-
-    if (company) {
-      try {
-        employee = await createSelfServeEmployee(parsed.data.email, company.id);
-      } catch {
-        // 같은 이메일로 동시에 들어오면 unique 제약에 걸립니다. 이미 만들어진 걸 다시 집습니다.
-        employee = await prisma.employee.findFirst({
-          where: { email: parsed.data.email, status: { not: "RESIGNED" } },
-          select: { id: true },
-        });
-        if (!employee) {
-          return NextResponse.json({ error: "로그인 처리 중 오류가 발생했습니다." }, { status: 500 });
-        }
-      }
-    } else if (role === "admin" && (await prisma.employee.count()) === 0) {
-      /*
-       * 부트스트랩: 회사·직원이 아직 없는 새 환경의 관리자는 이메일 확인 없이 들여보냅니다.
-       * 그러지 않으면 아무도 못 들어가고, 못 들어가니 첫 직원을 등록할 수도 없습니다.
-       * 이 세션은 employeeId 가 null 이라 "내 명함" 이 없고 임직원 관리만 쓸 수 있습니다.
-       *
-       * 직원 수를 여기서 세는 이유: 이 분기는 회사가 아직 없는 새 환경에서만 닿습니다.
-       * 예전처럼 위에서 미리 세어 두면 평소 로그인이 쓰지도 않는 count 때문에 DB 를
-       * 한 번 더 왕복합니다.
-       */
-      await createSession({ role, employeeId: null }, parsed.data.remember);
-      attempts.delete(ip);
-      return NextResponse.json({ ok: true, bootstrap: true });
-    } else {
-      return NextResponse.json({ error: "이메일 또는 비밀번호가 올바르지 않습니다." }, { status: 401 });
-    }
-  }
-
-  await createSession({ role, employeeId: employee.id }, parsed.data.remember);
+  await createSession(
+    {
+      role: auth.role,
+      employeeId: auth.employeeId,
+      mustChangePassword: auth.mustChangePassword,
+    },
+    parsed.data.remember,
+  );
   // 정상 사용자가 오타 몇 번 뒤에 한도에 걸리지 않도록 성공 시 기록을 지웁니다.
   attempts.delete(ip);
-  return NextResponse.json({ ok: true });
+
+  /*
+    관리자가 발급한 초기 비밀번호로 들어온 경우입니다.
+
+    화면이 비밀번호 변경으로 보내야 하므로 이 사실만 알려 줍니다. 여기서 막지
+    않는 이유: 세션은 이미 본인이 맞다는 증명이고, 못 바꾸게 하면 바꿀 화면에도
+    못 들어갑니다. 강제는 화면(/edit/password)과 middleware 가 맡습니다.
+  */
+  return NextResponse.json({ ok: true, mustChangePassword: auth.mustChangePassword });
 }
 
 /** 로그아웃 — 세션 쿠키를 제거합니다. */

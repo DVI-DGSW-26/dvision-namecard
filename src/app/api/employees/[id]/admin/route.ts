@@ -37,9 +37,35 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     return NextResponse.json({ errors: fieldErrors(parsed.error) }, { status: 422 });
   }
 
-  const before = await prisma.employee.findUnique({ where: { id }, select: { slug: true } });
+  const before = await prisma.employee.findUnique({
+    where: { id },
+    select: { slug: true, role: true },
+  });
   if (!before) {
     return NextResponse.json({ error: "없는 직원입니다." }, { status: 404 });
+  }
+
+  /*
+    마지막 관리자의 권한을 뺏지 않습니다.
+
+    관리자가 0명이 되면 임직원 관리에 아무도 못 들어가고, 권한을 되돌릴 화면도
+    관리자 전용이라 스스로 복구할 방법이 없어집니다. 그때는 서버에서 스크립트를
+    돌려야 하는데 — 그게 바로 "개발자를 부르게 되는" 상황입니다.
+
+    퇴사 처리도 같습니다. 마지막 관리자를 RESIGNED 로 바꾸면 로그인이 막힙니다.
+  */
+  const losesAdmin =
+    before.role === "ADMIN" && (parsed.data.role !== "ADMIN" || parsed.data.status === "RESIGNED");
+  if (losesAdmin) {
+    const admins = await prisma.employee.count({
+      where: { role: "ADMIN", status: { not: "RESIGNED" } },
+    });
+    if (admins <= 1) {
+      return NextResponse.json(
+        { error: "마지막 관리자입니다. 다른 사람을 관리자로 지정한 뒤에 바꿔 주세요." },
+        { status: 409 },
+      );
+    }
   }
 
   try {
