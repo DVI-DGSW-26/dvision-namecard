@@ -102,6 +102,7 @@ export function EditProfileForm({
       // Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 골라 한 줄로 붙입니다.
       certifications: certLine(company.certifications),
       certificationsEn: certLine(company.certificationsEn),
+      brandColor: company.brandColor,
       tel: company.tel,
       fax: str(company.fax),
       homepageUrl: str(company.homepageUrl),

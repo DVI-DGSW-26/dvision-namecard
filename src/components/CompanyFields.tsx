@@ -28,6 +28,8 @@ export type CompanyFormValues = {
   certifications: string;
   /** 영문 카드가 쓰는 인증 목록. 국문 목록으로 떨어지지 않습니다. */
   certificationsEn: string;
+  /** 명함 이미지의 강조색. `#931B82` 형식입니다. */
+  brandColor: string;
   tel: string;
   fax: string;
   homepageUrl: string;
@@ -183,6 +185,44 @@ export function CompanyFields({ values, error, onChange, disabled, showOfficeHin
           />
         </Field>
       </FieldRow>
+
+      {/*
+        명함 색.
+
+        웹 카드가 아니라 **명함 이미지(card.png)** 의 이름·연락처 라벨 색입니다.
+        웹 카드는 디자인 토큰(text-primary)을 쓰기 때문에 여기서 바꿔도 화면 카드와
+        편집 미리보기는 그대로입니다. 그 사실을 안내에 적어 두지 않으면 "바꿨는데
+        아무 일도 안 일어난다" 로 읽힙니다.
+
+        색 상자와 글자 칸을 함께 두는 이유: 상자만 있으면 회사가 정한 값(#931B82)을
+        정확히 넣을 수 없고, 글자 칸만 있으면 지금 무슨 색인지 눈으로 알 수 없습니다.
+      */}
+      <Field
+        label="명함 색"
+        htmlFor="co-brandColor"
+        error={err("brandColor")}
+        hint="명함 이미지와 이메일 서명의 이름·라벨 색입니다. 화면 카드 색은 바뀌지 않습니다."
+      >
+        <div className="flex items-center gap-sibling">
+          <input
+            type="color"
+            aria-label="색 고르기"
+            disabled={disabled}
+            // 형식이 깨진 값이 들어 있으면 색 상자가 검정으로 떨어집니다. 기본색을 보여 줍니다.
+            value={/^#[0-9A-Fa-f]{6}$/.test(co.brandColor) ? co.brandColor : "#931B82"}
+            onChange={(e) => set("brandColor", e.target.value.toUpperCase())}
+            className="h-12 w-14 shrink-0 cursor-pointer rounded-card border border-border bg-bg p-tight disabled:cursor-default"
+          />
+          <Input
+            id="co-brandColor"
+            value={co.brandColor}
+            placeholder="#931B82"
+            maxLength={7}
+            invalid={Boolean(err("brandColor"))}
+            onChange={(e) => set("brandColor", e.target.value)}
+          />
+        </div>
+      </Field>
 
       <FieldRow>
         {/*

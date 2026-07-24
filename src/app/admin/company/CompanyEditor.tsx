@@ -29,6 +29,7 @@ export function CompanyEditor({ company }: { company: CompanyWithOffices }) {
       taglineEn: str(company.taglineEn),
       certifications: certLine(company.certifications),
       certificationsEn: certLine(company.certificationsEn),
+      brandColor: company.brandColor,
       tel: company.tel,
       fax: str(company.fax),
       homepageUrl: str(company.homepageUrl),
