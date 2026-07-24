@@ -242,6 +242,8 @@ async function main() {
     telWork?: string;
     telMobile?: string;
     mobilePublic?: boolean;
+    bio?: string;
+    bioEn?: string;
     status: "PENDING" | "ACTIVE" | "RESIGNED";
   };
 
@@ -262,6 +264,7 @@ async function main() {
       telWork: "031-355-1234",
       telMobile: "010-1234-5678",
       mobilePublic: true,
+      bio: "더 가볍고 강한 부품과 스마트한 제조로 미래를 만듭니다",
       status: "ACTIVE",
     },
     {

@@ -42,6 +42,9 @@ type EmployeeForm = {
   partId: string;
   credential: string;
   credentialEn: string;
+  /** 소개 한 줄. 카드의 이름·직함 아래에 나갑니다. */
+  bio: string;
+  bioEn: string;
   telWork: string;
   telMobile: string;
   /** 휴대폰을 명함에 내보낼지. 유일한 불리언이라 setEmpField 대신 setEmpFlag 로 바꿉니다. */
@@ -83,6 +86,8 @@ export function EditProfileForm({
       partId: str(employee.partId),
       credential: str(employee.credential),
       credentialEn: str(employee.credentialEn),
+      bio: str(employee.bio),
+      bioEn: str(employee.bioEn),
       telWork: str(employee.telWork),
       telMobile: str(employee.telMobile),
       mobilePublic: employee.mobilePublic,
@@ -278,6 +283,7 @@ export function EditProfileForm({
       nameEn: emp.nameEn,
       roles: previewRoles,
       credential: emp.credential,
+      bio: emp.bio,
       photoUrl,
       telWork: emp.telWork,
       telMobile: emp.telMobile,
@@ -571,6 +577,46 @@ export function EditProfileForm({
                     value={emp.credentialEn}
                     invalid={Boolean(err("credentialEn"))}
                     onChange={(e) => setEmpField("credentialEn", e.target.value)}
+                  />
+                </Field>
+              </FieldRow>
+
+              {/*
+                소개 한 줄. 카드의 이름·직함 아래에 나갑니다.
+
+                자격 칸 다음에 두는 이유: 위쪽 칸들이 전부 "목록에서 고르는 값"
+                인데 이건 직접 쓰는 값이라, 성격이 같은 자격 옆에 붙여 둡니다.
+                80자로 묶인 건 명함이 한 줄로 읽히는 화면이기 때문입니다.
+              */}
+              <FieldRow>
+                <Field
+                  label="소개 한 줄 (선택)"
+                  htmlFor="bio"
+                  error={err("bio")}
+                  hint="명함의 이름·직함 아래에 나옵니다. 80자까지."
+                >
+                  <Input
+                    id="bio"
+                    maxLength={80}
+                    placeholder="예: 더 가볍고 강한 부품으로 미래를 만듭니다"
+                    value={emp.bio}
+                    invalid={Boolean(err("bio"))}
+                    onChange={(e) => setEmpField("bio", e.target.value)}
+                  />
+                </Field>
+                <Field
+                  label="소개 한 줄 영문 (선택)"
+                  htmlFor="bioEn"
+                  error={err("bioEn")}
+                  hint="비우면 영문 명함에서 이 줄이 빠집니다."
+                >
+                  <Input
+                    id="bioEn"
+                    maxLength={120}
+                    placeholder="Lighter, stronger parts for what comes next"
+                    value={emp.bioEn}
+                    invalid={Boolean(err("bioEn"))}
+                    onChange={(e) => setEmpField("bioEn", e.target.value)}
                   />
                 </Field>
               </FieldRow>
