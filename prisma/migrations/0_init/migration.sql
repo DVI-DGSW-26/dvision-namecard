@@ -62,6 +62,7 @@ CREATE TABLE "Office" (
     "name" TEXT NOT NULL,
     "postalCode" TEXT NOT NULL,
     "address" TEXT NOT NULL,
+    "addressEn" TEXT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "companyId" TEXT NOT NULL,
 
@@ -77,10 +78,18 @@ CREATE TABLE "Company" (
     "fax" TEXT,
     "logoUrl" TEXT NOT NULL,
     "homepageUrl" TEXT,
+    "homepageUrlEn" TEXT,
+    "linkedinUrl" TEXT,
+    "youtubeUrl" TEXT,
+    "youtubeUrlEn" TEXT,
+    "instagramUrl" TEXT,
     "brandColor" TEXT NOT NULL DEFAULT '#931B82',
     "tagline" TEXT,
     "certifications" JSONB NOT NULL,
+    "certificationsEn" JSONB NOT NULL DEFAULT '[]',
     "industry" TEXT,
+    "industryEn" TEXT,
+    "taglineEn" TEXT,
 
     CONSTRAINT "Company_pkey" PRIMARY KEY ("id")
 );
@@ -100,6 +109,7 @@ CREATE TABLE "Employee" (
     "teamId" TEXT,
     "partId" TEXT,
     "credential" TEXT,
+    "credentialEn" TEXT,
     "bio" VARCHAR(80),
     "telWork" TEXT,
     "telMobile" TEXT,
@@ -197,4 +207,3 @@ ALTER TABLE "Employee" ADD CONSTRAINT "Employee_companyId_fkey" FOREIGN KEY ("co
 
 -- AddForeignKey
 ALTER TABLE "ProfileView" ADD CONSTRAINT "ProfileView_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
