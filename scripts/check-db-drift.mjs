@@ -45,8 +45,12 @@ console.warn("     이대로 두면 없는 컬럼을 조회하다 500 이 납니
 console.warn("");
 console.warn((summary.stdout ?? "").trim().split("\n").map((l) => "     " + l).join("\n"));
 console.warn("");
-console.warn("     해결: pnpm db:push");
-console.warn("     (컬럼이 삭제되는 변경이면 pnpm db:push --accept-data-loss)");
+console.warn("     schema.prisma 를 고친 뒤라면 마이그레이션을 만드세요:");
+console.warn("       pnpm db:migrate --name <이름>");
+console.warn("");
+console.warn("     남이 만든 마이그레이션을 아직 안 받은 것뿐이라면:");
+console.warn("       git pull && pnpm db:migrate");
+console.warn("     (README > 데이터베이스)");
 console.warn("─".repeat(64) + "\n");
 
 process.exit(0);
