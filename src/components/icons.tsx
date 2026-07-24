@@ -51,6 +51,23 @@ export function OrgIcon({ className }: IconProps) {
   );
 }
 
+/**
+ * 건물 — 회사 정보 탭.
+ *
+ * 조직 관리(OrgIcon, 계통도)와 나란히 놓이므로 모양이 확실히 달라야 합니다.
+ * 창이 뚫린 사각 건물이라 축소해도 계통도와 헷갈리지 않습니다.
+ */
+export function CompanyIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 21V6.5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1V21" />
+      <path d="M14 10.5h5a1 1 0 0 1 1 1V21" />
+      <path d="M2.5 21h19" />
+      <path d="M7 9.5h1.5M10 9.5h1.5M7 13.5h1.5M10 13.5h1.5M17 14.5h.01" />
+    </svg>
+  );
+}
+
 /*
  * 공개 카드 아래 아이콘 줄 — 링크드인 · 유튜브 · 인스타그램 · 홈페이지.
  *

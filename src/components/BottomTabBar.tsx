@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 import Link from "next/link";
 import { navItemsFor, type NavIcon } from "@/config/nav";
 import type { Role } from "@/lib/session-token";
-import { MailIcon, OrgIcon, UserIcon, UsersIcon } from "./icons";
+import { CompanyIcon, MailIcon, OrgIcon, UserIcon, UsersIcon } from "./icons";
 
 /**
  * 모바일 하단 탭바. md(768px) 이상에서는 숨고 TopNav 의 가로 메뉴가 대신합니다.
@@ -23,6 +23,7 @@ const ICONS: Record<NavIcon, ComponentType<{ className?: string }>> = {
   mail: MailIcon,
   users: UsersIcon,
   org: OrgIcon,
+  company: CompanyIcon,
 };
 
 export function BottomTabBar({ role, current }: { role: Role; current: string }) {
