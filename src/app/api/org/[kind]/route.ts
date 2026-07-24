@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { guardOrgWrite, orgDelegate, orgWriteError, parseOrgBody } from "@/lib/org-mutate";
+import { invalidateOrgCache } from "@/lib/org-store";
 import { prisma } from "@/lib/prisma";
 
 type Context = { params: Promise<{ kind: string }> };
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest, { params }: Context) {
     const created = await (orgDelegate(guard.kind).create as (args: unknown) => Promise<{ id: string }>)({
       data,
     });
+    invalidateOrgCache();
     return NextResponse.json(created, { status: 201 });
   } catch (cause) {
     return orgWriteError(cause);
