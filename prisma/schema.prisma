@@ -164,7 +164,6 @@ model Company {
   nameEn         String
   tel            String
   fax            String?
-  logoUrl        String
 
   /**
    * 공개 카드 아래 아이콘 줄에 걸리는 주소들.
@@ -267,7 +266,6 @@ model Employee {
   credential String?
   /// 자격·학위의 영문 표기 (공학박사 → Ph.D.). 비면 영문 카드에서 빠집니다.
   credentialEn String?
-  bio          String? @db.VarChar(80)
 
   telWork      String?
   telMobile    String?
