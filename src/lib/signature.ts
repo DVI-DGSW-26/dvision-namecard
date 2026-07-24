@@ -1,3 +1,4 @@
+import { tokens } from "@/config/tokens";
 import { CARD_TEXT, cardPath, requireCardName, type Lang } from "@/lib/lang";
 import { officeLines, roleParts } from "@/lib/org";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
@@ -79,10 +80,53 @@ function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices, l
 }
 
 /**
- * 서명 HTML — 명함 이미지 한 장을 프로필 링크로 감쌉니다.
+ * 메일에서도 버티는 글꼴 지정.
+ *
+ * 웹폰트는 못 씁니다(Gmail 이 @font-face 를 지웁니다). 받는 사람 기기에 이미 있는
+ * 글꼴만 나열하고, 한글이 없는 글꼴을 먼저 적어도 한글 글리프는 뒤 항목에서 옵니다.
+ */
+const CTA_FONT =
+  "-apple-system,'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕',Arial,sans-serif";
+
+/**
+ * 명함 이미지 아래에 붙는 클릭 유도 버튼.
+ *
+ * 서명이 이미지 한 장이라 받는 사람 눈에는 그냥 그림입니다 — 눌러 볼 생각 자체를
+ * 하지 않습니다. 그래서 카드는 손대지 않고(모양은 card.png 가 정합니다) 그 아래에
+ * 버튼을 한 줄 답니다. 카드 안에 넣지 않는 건 디자인을 지키기 위해서이기도 하지만,
+ * 이미지 안의 "눌러 보세요" 는 눌러도 아무 일이 없어서 오히려 신뢰를 깎기 때문입니다.
+ *
+ * a 태그에 padding 을 준 버튼이 아니라 표(table)로 만든 이유: Outlook 데스크톱은
+ * Word 엔진이라 inline-block 의 padding 을 무시해서, 글자에 배경색만 딱 붙은 모양이
+ * 됩니다. 배경·테두리를 td 가 맡으면 어느 클라이언트에서든 버튼으로 보입니다.
+ * (border-radius 를 못 읽는 Outlook 에서는 각진 버튼이 됩니다 — 그 정도는 괜찮습니다.)
+ *
+ * 색은 primary 를 씁니다. "화면의 5% 이내" 규칙에서 CTA 는 허용된 자리입니다.
+ */
+function renderCta(profileUrl: string, lang: Lang): string {
+  return (
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">` +
+    `<tr>` +
+    // bgcolor 속성을 style 과 같이 적습니다 — 예전 Outlook 은 td 의 background-color 를 무시합니다.
+    `<td bgcolor="${tokens.color.primarySoft}" style="background-color:${tokens.color.primarySoft};border:1px solid ${tokens.color.primary};border-radius:6px;padding:${tokens.space.sibling}px ${tokens.space.group}px;">` +
+    `<a href="${escapeHtml(profileUrl)}" style="display:inline-block;color:${tokens.color.primary};text-decoration:none;font-family:${CTA_FONT};font-size:${tokens.font.captionBold.size}px;font-weight:${tokens.font.captionBold.weight};line-height:1.4;letter-spacing:${tokens.letterSpacing};white-space:nowrap;">` +
+    // 고정 문구라 이스케이프하지 않습니다. 사용자 입력이 아닙니다.
+    CARD_TEXT[lang].signatureCta +
+    `</a>` +
+    `</td>` +
+    `</tr>` +
+    `</table>`
+  );
+}
+
+/**
+ * 서명 HTML — 명함 이미지 한 장을 프로필 링크로 감싸고, 그 아래 버튼을 답니다.
  *
  * 카드의 실제 모양(이름·역할·로고·주소·연락처·워터마크)과 값 노출 규칙은 이미지 라우트
  * (app/c/[slug]/card.png)가 정합니다. 여기서는 그 이미지를 가리키고 클릭을 걸 뿐입니다.
+ *
+ * 바깥을 표로 감싸는 이유: 이미지와 버튼을 div 로 쌓으면 Outlook 이 사이에 제멋대로
+ * 여백을 넣고, 메일 클라이언트가 서명을 인용문 안에 넣을 때 두 줄이 갈라지기도 합니다.
  */
 export function renderSignature(
   employee: EmployeeWithOrg,
@@ -98,9 +142,15 @@ export function renderSignature(
   const altName = requireCardName(employee, lang);
 
   return (
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">` +
+    `<tr><td style="padding:0;">` +
     `<a href="${escapeHtml(profileUrl)}" style="display:inline-block;text-decoration:none;">` +
     `<img src="${escapeHtml(cardUrl)}" alt="${escapeHtml(CARD_TEXT[lang].cardOf(altName))}" width="600" style="display:block;border:0;width:600px;max-width:100%;height:auto;" />` +
-    `</a>`
+    `</a>` +
+    `</td></tr>` +
+    // 카드와 버튼이 한 덩어리로 보이도록 8px 만 띄웁니다. 더 벌리면 서명에 딸린 별개 링크처럼 읽힙니다.
+    `<tr><td style="padding:${tokens.space.sibling}px 0 0;">${renderCta(profileUrl, lang)}</td></tr>` +
+    `</table>`
   );
 }
 
