@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CompanyFields, certLine, type CompanyFormValues } from "@/components/CompanyFields";
 import { Field, FieldRow, Input, SectionHeader, Select } from "@/components/form";
 import { ProfileCard, type ProfileCardData } from "@/components/ProfileCard";
 import { ArrowRightIcon, ChevronDownIcon, UserIcon } from "@/components/icons";
@@ -38,36 +39,13 @@ type EmployeeForm = {
   email: string;
 };
 
-type CompanyForm = {
-  nameKo: string;
-  nameEn: string;
-  industry: string;
-  tagline: string;
-  industryEn: string;
-  taglineEn: string;
-  /** 쉼표로 구분한 한 줄. 저장할 때 스키마가 배열로 바꿉니다. */
-  certifications: string;
-  /** 영문 카드가 쓰는 인증 목록. 국문 목록으로 떨어지지 않습니다. */
-  certificationsEn: string;
-  tel: string;
-  fax: string;
-  homepageUrl: string;
-  homepageUrlEn: string;
-  linkedinUrl: string;
-  youtubeUrl: string;
-  youtubeUrlEn: string;
-  instagramUrl: string;
-};
+/**
+ * 회사 폼의 모양은 CompanyFields 가 정합니다 — 칸을 그리는 쪽과 값을 담는 쪽이
+ * 갈라지면 칸을 하나 늘릴 때 한쪽만 고치게 됩니다. (/admin/company 도 같은 타입)
+ */
+type CompanyForm = CompanyFormValues;
 
 const str = (value: string | null | undefined) => value ?? "";
-
-/**
- * Json 인증 목록 → 쉼표 한 줄. 국문·영문 두 칸이 같은 규칙을 씁니다.
- *
- * Json 컬럼이라 타입이 보장되지 않아 문자열만 골라 붙입니다.
- */
-const certLine = (value: unknown) =>
-  Array.isArray(value) ? value.filter((c): c is string => typeof c === "string").join(", ") : "";
 
 export function EditProfileForm({
   role,
@@ -604,252 +582,28 @@ export function EditProfileForm({
 
         {/* 03 회사 정보 ------------------------------------------------------ */}
         <section className="mt-block border-t border-border pt-block">
+          {/*
+            관리자에게는 전용 화면(/admin/company)을 알려 줍니다. 여기서도 고칠 수
+            있지만, 회사 값을 바꾸러 "내 명함" 으로 들어와야 한다는 걸 아무도
+            떠올리지 못합니다. 메뉴에 있는 자리를 알려 주는 게 이 문구의 일입니다.
+          */}
           <SectionHeader
             number="03"
             title="회사 정보"
-            description={isAdmin ? undefined : "관리자만 수정할 수 있습니다."}
+            description={
+              isAdmin
+                ? "관리자 메뉴의 회사 정보에서도 바꿀 수 있습니다."
+                : "관리자만 수정할 수 있습니다."
+            }
           />
 
-          <fieldset disabled={!isAdmin} className="flex flex-col gap-group">
-            <FieldRow>
-              <Field label="회사명" htmlFor="co-nameKo" error={err("company.nameKo")}>
-                <Input
-                  id="co-nameKo"
-                  value={co.nameKo}
-                  invalid={Boolean(err("company.nameKo"))}
-                  onChange={(e) => setCoField("nameKo", e.target.value)}
-                />
-              </Field>
-              <Field label="영문명" htmlFor="co-nameEn" error={err("company.nameEn")}>
-                <Input
-                  id="co-nameEn"
-                  value={co.nameEn}
-                  invalid={Boolean(err("company.nameEn"))}
-                  onChange={(e) => setCoField("nameEn", e.target.value)}
-                />
-              </Field>
-            </FieldRow>
-
-            {/*
-              영문 칸은 영문 명함(/c/[slug]/en)에만 나갑니다. 비우면 영문 카드에서
-              그 줄이 빠집니다 — 한글로 대신 채우지 않습니다.
-            */}
-            <FieldRow>
-              <Field label="사업 분야 (선택)" htmlFor="co-industry" error={err("company.industry")}>
-                <Input
-                  id="co-industry"
-                  value={co.industry}
-                  invalid={Boolean(err("company.industry"))}
-                  onChange={(e) => setCoField("industry", e.target.value)}
-                />
-              </Field>
-              <Field
-                label="사업 분야 영문 (선택)"
-                htmlFor="co-industryEn"
-                error={err("company.industryEn")}
-              >
-                <Input
-                  id="co-industryEn"
-                  placeholder="Aluminium Extrusion · Precision Machining"
-                  value={co.industryEn}
-                  invalid={Boolean(err("company.industryEn"))}
-                  onChange={(e) => setCoField("industryEn", e.target.value)}
-                />
-              </Field>
-            </FieldRow>
-
-            {/*
-              주소 칸은 여기 없습니다. 사업장이 본사·R&D센터 둘이라 한 칸에 넣을 수 없고,
-              /admin/org 의 '사업장' 탭에서 관리합니다. 명함에는 등록된 사업장이 전부 찍힙니다.
-            */}
-            {isAdmin ? (
-              <p className="text-caption text-sub-text">
-                주소는{" "}
-                <a href="/admin/org" className="text-caption-bold text-primary">
-                  조직 관리 → 사업장
-                </a>
-                에서 관리합니다. 등록된 사업장이 명함에 전부 표시됩니다.
-              </p>
-            ) : null}
-
-            <FieldRow>
-              <Field
-                label="태그라인 (선택)"
-                htmlFor="co-tagline"
-                error={err("company.tagline")}
-                hint="명함 하단 회사 블록에 사업 분야와 함께 두 줄로 나옵니다."
-              >
-                <Input
-                  id="co-tagline"
-                  value={co.tagline}
-                  placeholder="예: 자동차 경량 부품 전문"
-                  invalid={Boolean(err("company.tagline"))}
-                  onChange={(e) => setCoField("tagline", e.target.value)}
-                />
-              </Field>
-              <Field
-                label="태그라인 영문 (선택)"
-                htmlFor="co-taglineEn"
-                error={err("company.taglineEn")}
-              >
-                <Input
-                  id="co-taglineEn"
-                  placeholder="Lightweight Automotive Components"
-                  value={co.taglineEn}
-                  invalid={Boolean(err("company.taglineEn"))}
-                  onChange={(e) => setCoField("taglineEn", e.target.value)}
-                />
-              </Field>
-            </FieldRow>
-
-            <FieldRow>
-              <Field
-                label="인증 (선택)"
-                htmlFor="co-certifications"
-                error={err("company.certifications")}
-                hint="쉼표로 구분해 적습니다. 명함에 뱃지로 하나씩 나옵니다."
-              >
-                <Input
-                  id="co-certifications"
-                  value={co.certifications}
-                  placeholder="IATF 16949, ISO 9001"
-                  invalid={Boolean(err("company.certifications"))}
-                  onChange={(e) => setCoField("certifications", e.target.value)}
-                />
-              </Field>
-              {/*
-                국문 칸을 그대로 복사해 쓰는 자리가 아닙니다. 규격 이름이라 대개
-                같은 값이 들어가지만, 한글 인증명을 국문 칸에만 추가하는 날
-                영문 명함이 따라가지 않도록 목록을 갈라 둡니다.
-              */}
-              <Field
-                label="인증 영문 (선택)"
-                htmlFor="co-certificationsEn"
-                error={err("company.certificationsEn")}
-                hint="비우면 영문 명함에서 뱃지 줄이 빠집니다."
-              >
-                <Input
-                  id="co-certificationsEn"
-                  value={co.certificationsEn}
-                  placeholder="IATF 16949, ISO 9001"
-                  invalid={Boolean(err("company.certificationsEn"))}
-                  onChange={(e) => setCoField("certificationsEn", e.target.value)}
-                />
-              </Field>
-            </FieldRow>
-
-            <FieldRow>
-              {/*
-                대표번호는 개인 사무실 번호가 없는 직원의 명함에 대신 나갑니다.
-                그래서 선택이 아니라 필수입니다 — 비우면 그 직원 카드에서 전화가 사라집니다.
-              */}
-              <Field
-                label="대표번호"
-                htmlFor="co-tel"
-                error={err("company.tel")}
-                hint="사무실 번호를 안 적은 직원의 명함에 이 번호가 나갑니다."
-              >
-                <Input
-                  id="co-tel"
-                  inputMode="tel"
-                  value={co.tel}
-                  invalid={Boolean(err("company.tel"))}
-                  onChange={(e) => setCoField("tel", formatPhone(e.target.value))}
-                />
-              </Field>
-              {/* 팩스는 회사 공용 번호입니다. 이메일 서명·vCard 가 이 값(Company.fax)을 씁니다. */}
-              <Field label="팩스 (선택)" htmlFor="co-fax" error={err("company.fax")}>
-                <Input
-                  id="co-fax"
-                  inputMode="tel"
-                  value={co.fax}
-                  invalid={Boolean(err("company.fax"))}
-                  onChange={(e) => setCoField("fax", formatPhone(e.target.value))}
-                />
-              </Field>
-            </FieldRow>
-
-            {/*
-              공개 카드 아래 아이콘 줄에 걸리는 주소들. 비우면 그 아이콘이 통째로
-              빠집니다 — 아무 데도 안 가는 아이콘이 남는 것보다 없는 편이 낫습니다.
-              스킴(https://)은 없어도 됩니다. 카드가 붙여서 엽니다.
-            */}
-            <FieldRow>
-              <Field label="홈페이지 (선택)" htmlFor="co-homepageUrl" error={err("company.homepageUrl")}>
-                <Input
-                  id="co-homepageUrl"
-                  value={co.homepageUrl}
-                  placeholder="dvi-ind.com"
-                  invalid={Boolean(err("company.homepageUrl"))}
-                  onChange={(e) => setCoField("homepageUrl", e.target.value)}
-                />
-              </Field>
-              <Field
-                label="홈페이지 영문 (선택)"
-                htmlFor="co-homepageUrlEn"
-                error={err("company.homepageUrlEn")}
-                hint="비우면 영문 명함도 국문 홈페이지를 겁니다."
-              >
-                <Input
-                  id="co-homepageUrlEn"
-                  value={co.homepageUrlEn}
-                  placeholder="dvi-ind.com/en/"
-                  invalid={Boolean(err("company.homepageUrlEn"))}
-                  onChange={(e) => setCoField("homepageUrlEn", e.target.value)}
-                />
-              </Field>
-              <Field label="링크드인 (선택)" htmlFor="co-linkedinUrl" error={err("company.linkedinUrl")}>
-                <Input
-                  id="co-linkedinUrl"
-                  value={co.linkedinUrl}
-                  placeholder="linkedin.com/company/…"
-                  invalid={Boolean(err("company.linkedinUrl"))}
-                  onChange={(e) => setCoField("linkedinUrl", e.target.value)}
-                />
-              </Field>
-            </FieldRow>
-
-            <FieldRow>
-              <Field label="인스타그램 (선택)" htmlFor="co-instagramUrl" error={err("company.instagramUrl")}>
-                <Input
-                  id="co-instagramUrl"
-                  value={co.instagramUrl}
-                  placeholder="instagram.com/…"
-                  invalid={Boolean(err("company.instagramUrl"))}
-                  onChange={(e) => setCoField("instagramUrl", e.target.value)}
-                />
-              </Field>
-              <Field
-                label="유튜브 (선택)"
-                htmlFor="co-youtubeUrl"
-                error={err("company.youtubeUrl")}
-                hint="채널이 아니라 회사 소개 영상 주소를 넣습니다."
-              >
-                <Input
-                  id="co-youtubeUrl"
-                  value={co.youtubeUrl}
-                  placeholder="youtu.be/…"
-                  invalid={Boolean(err("company.youtubeUrl"))}
-                  onChange={(e) => setCoField("youtubeUrl", e.target.value)}
-                />
-              </Field>
-            </FieldRow>
-
-            <Field
-              label="유튜브 영문 (선택)"
-              htmlFor="co-youtubeUrlEn"
-              error={err("company.youtubeUrlEn")}
-              hint="영문 소개 영상. 비우면 영문 명함도 국문 영상을 겁니다."
-            >
-              <Input
-                id="co-youtubeUrlEn"
-                value={co.youtubeUrlEn}
-                placeholder="youtu.be/…"
-                invalid={Boolean(err("company.youtubeUrlEn"))}
-                onChange={(e) => setCoField("youtubeUrlEn", e.target.value)}
-              />
-            </Field>
-          </fieldset>
+          <CompanyFields
+            values={co}
+            error={(field) => err(`company.${field}`)}
+            onChange={setCoField}
+            disabled={!isAdmin}
+            showOfficeHint={isAdmin}
+          />
         </section>
 
         {/*
