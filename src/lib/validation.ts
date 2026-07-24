@@ -255,6 +255,18 @@ export const companyProfileSchema = z.object({
   industryEn: optionalText(60, "사업 분야 영문"),
   taglineEn: optionalText(60, "태그라인 영문"),
   /**
+   * 명함 이미지의 강조색. 이름과 연락처 라벨에 쓰입니다.
+   *
+   * 검증 규칙은 card-image.tsx 의 safeColor 와 같아야 합니다. 저기는 형식이 깨진
+   * 값을 기본색으로 되돌리는 마지막 방어선이고, 여기서 먼저 막아야 관리자가
+   * 오타를 낸 순간 화면에서 알 수 있습니다. 한쪽만 고치면 저장은 되는데 명함에는
+   * 다른 색이 나오는, 원인을 찾기 어려운 상태가 됩니다.
+   */
+  brandColor: z
+    .string()
+    .trim()
+    .regex(/^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/, "색은 #931B82 처럼 적어 주세요."),
+  /**
    * 인증 뱃지 — 명함 하단의 "IATF 16949" · "ISO 9001".
    *
    * 폼에서는 쉼표로 구분한 한 줄로 받고 여기서 배열로 바꿉니다. 항목마다 칸을
