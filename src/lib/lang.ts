@@ -80,6 +80,14 @@ export const CARD_TEXT = {
     fax: "팩스",
     email: "이메일",
     saveCard: "눌러서 명함 이미지 저장",
+    /**
+     * 이메일 서명에서 명함 이미지 아래에 붙는 버튼 문구.
+     *
+     * 서명 본체가 이미지 한 장이라 받는 사람은 그게 눌린다는 걸 모릅니다.
+     * 이 버튼이 그걸 알려 주는 유일한 글자라, 눌렀을 때 도착하는 곳과 말이
+     * 맞아야 합니다. 문구를 바꾸면 영문 쪽(en.signatureCta)도 같이 보세요.
+     */
+    signatureCta: "프로필 보러 가기 →",
     homepage: "회사 홈페이지",
     linkedin: "링크드인",
     youtube: "회사 소개 영상",
@@ -93,6 +101,7 @@ export const CARD_TEXT = {
     fax: "FAX",
     email: "E-MAIL",
     saveCard: "Tap to save card image",
+    signatureCta: "Tap the card to save my contact →",
     homepage: "Company website",
     linkedin: "LinkedIn",
     youtube: "Company introduction video",
