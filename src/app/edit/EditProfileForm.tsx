@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CompanyFields, certLine, type CompanyFormValues } from "@/components/CompanyFields";
 import { Checkbox, Field, FieldRow, Input, SectionHeader, Select } from "@/components/form";
+import { PhotoPicker } from "@/components/PhotoPicker";
 import { ProfileCard, type ProfileCardData } from "@/components/ProfileCard";
-import { ArrowRightIcon, ChevronDownIcon, UserIcon } from "@/components/icons";
+import { ArrowRightIcon, ChevronDownIcon } from "@/components/icons";
 import { officeLines, type OrgLists } from "@/lib/org";
 import {
   companyProfileSchema,
@@ -119,6 +120,11 @@ export function EditProfileForm({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  /**
+   * 사진 주소. 폼 state 와 나눠 둡니다 — 사진은 저장 버튼을 거치지 않고 그 자리에서
+   * 올라가므로, emp 에 섞으면 "저장하지 않은 변경" 으로 잘못 잡힙니다.
+   */
+  const [photoUrl, setPhotoUrl] = useState(employee.photoUrl);
 
   // 회원은 회사 정보를 못 바꾸므로 dirty 판정에서도 제외합니다.
   const dirty =
@@ -271,7 +277,7 @@ export function EditProfileForm({
       nameEn: emp.nameEn,
       roles: previewRoles,
       credential: emp.credential,
-      photoUrl: employee.photoUrl,
+      photoUrl,
       telWork: emp.telWork,
       telMobile: emp.telMobile,
       // 체크를 끄면 미리보기에서도 그 자리에서 휴대폰 줄이 사라집니다.
@@ -303,7 +309,8 @@ export function EditProfileForm({
       co,
       previewRoles,
       employee.slug,
-      employee.photoUrl,
+      // 사진을 올리거나 지우면 미리보기가 그 자리에서 따라가야 합니다.
+      photoUrl,
       company.offices,
     ],
   );
@@ -391,19 +398,11 @@ export function EditProfileForm({
           <SectionHeader number="01" title="기본 정보" />
 
           <div className="flex flex-col gap-section sm:flex-row sm:gap-block">
-            <div className="flex flex-col gap-tight">
-              <span className="text-caption text-sub-text">프로필 사진</span>
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-sub-bg">
-                <UserIcon className="h-10 w-10 text-sub-text" />
-              </div>
-              {/* 업로드는 이번 범위 밖입니다. 클릭해도 아무 일도 일어나지 않습니다. */}
-              <button
-                type="button"
-                className="mt-sibling h-9 rounded-card border border-border px-group text-caption-bold text-text"
-              >
-                변경
-              </button>
-            </div>
+            {/*
+              사진은 폼 저장과 별개로 그 자리에서 올라갑니다. 올린 주소를 여기서
+              들고 있어야 미리보기 카드가 곧바로 새 사진을 그립니다.
+            */}
+            <PhotoPicker employeeId={employee.id} photoUrl={photoUrl} onChange={setPhotoUrl} />
 
             <div className="flex flex-1 flex-col gap-group">
               {/*
