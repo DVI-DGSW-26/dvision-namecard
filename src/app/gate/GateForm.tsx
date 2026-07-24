@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Field, Input } from "@/components/form";
+import { EyeIcon, EyeOffIcon } from "@/components/icons";
 
 /**
  * 공용 비밀번호 입력 폼.
@@ -15,6 +16,9 @@ export function GateForm({ next }: { next: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // 입력한 값을 눈으로 확인하기 위한 것이므로 폼 안에만 두고 저장하지 않습니다.
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -27,7 +31,7 @@ export function GateForm({ next }: { next: string }) {
       const response = await fetch("/api/gate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, remember }),
       });
 
       if (!response.ok) {
@@ -80,13 +84,45 @@ export function GateForm({ next }: { next: string }) {
       <Field label="비밀번호" htmlFor="password" error={error ?? undefined}>
         <Input
           id="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           autoComplete="current-password"
           value={password}
           invalid={Boolean(error)}
           onChange={(e) => setPassword(e.target.value)}
+          action={
+            <button
+              type="button"
+              // 폼 안의 버튼이라 type 을 지정하지 않으면 submit 이 되어, 보기를 누른 순간
+              // 로그인 시도가 나갑니다.
+              onClick={() => setShowPassword((shown) => !shown)}
+              // 상태를 텍스트로도 알립니다 — 아이콘만으로는 화면 낭독기에서 구분되지 않습니다.
+              aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+              aria-pressed={showPassword}
+              className="flex h-11 w-11 items-center justify-center rounded-card text-sub-text transition-colors hover:text-text"
+            >
+              {showPassword ? (
+                <EyeOffIcon className="h-5 w-5" />
+              ) : (
+                <EyeIcon className="h-5 w-5" />
+              )}
+            </button>
+          }
         />
       </Field>
+
+      {/*
+        로그인 유지. 사내 이메일과 공용 비밀번호를 매번 치는 건 모바일에서 특히 번거롭습니다.
+        기본값은 꺼짐입니다 — 공용 PC 에서 켜진 채로 들어오면 다음 사람이 그대로 이어받습니다.
+      */}
+      <label className="flex min-h-11 items-center gap-sibling text-caption text-sub-text">
+        <input
+          type="checkbox"
+          checked={remember}
+          onChange={(e) => setRemember(e.target.checked)}
+          className="h-4 w-4 accent-primary"
+        />
+        로그인 유지 (30일)
+      </label>
 
       <button
         type="submit"

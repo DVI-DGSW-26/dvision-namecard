@@ -30,6 +30,8 @@ const bodySchema = z.object({
   email: z.string().trim().toLowerCase().max(200),
   // 상한이 없으면 거대한 문자열로 해시 연산을 반복시킬 수 있습니다.
   password: z.string().min(1).max(200),
+  // "로그인 유지" — 없으면 꺼진 것으로 봅니다. 세션이 길어지는 건 명시적으로 켠 경우만.
+  remember: z.boolean().optional().default(false),
 });
 
 /**
@@ -172,7 +174,7 @@ export async function POST(request: NextRequest) {
        * 예전처럼 위에서 미리 세어 두면 평소 로그인이 쓰지도 않는 count 때문에 DB 를
        * 한 번 더 왕복합니다.
        */
-      await createSession({ role, employeeId: null });
+      await createSession({ role, employeeId: null }, parsed.data.remember);
       attempts.delete(ip);
       return NextResponse.json({ ok: true, bootstrap: true });
     } else {
@@ -180,7 +182,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  await createSession({ role, employeeId: employee.id });
+  await createSession({ role, employeeId: employee.id }, parsed.data.remember);
   // 정상 사용자가 오타 몇 번 뒤에 한도에 걸리지 않도록 성공 시 기록을 지웁니다.
   attempts.delete(ip);
   return NextResponse.json({ ok: true });

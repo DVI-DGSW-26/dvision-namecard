@@ -176,3 +176,31 @@ export function CloseIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/**
+ * 눈 — 비밀번호 표시 토글.
+ *
+ * 아이콘은 "지금 상태" 가 아니라 "누르면 일어날 일" 을 가리킵니다. 가려져 있을 때
+ * 눈을 보여 주고(= 누르면 보인다), 보이는 중에는 EyeOffIcon 을 보여 줍니다.
+ * 반대로 두면 눈이 떠 있는데 값은 점으로 가려져 있는, 서로 어긋난 화면이 됩니다.
+ */
+export function EyeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+      <circle cx="12" cy="12" r="2.75" />
+    </svg>
+  );
+}
+
+/** 가려진 눈 — 값이 보이는 중일 때. 누르면 다시 가려집니다. */
+export function EyeOffIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M10.6 6.2A9.7 9.7 0 0 1 12 6c6 0 9.5 6 9.5 6a16.5 16.5 0 0 1-3.2 3.8" />
+      <path d="M6.7 7.6A16.4 16.4 0 0 0 2.5 12S6 18 12 18a9.6 9.6 0 0 0 3.3-.6" />
+      <path d="M10.1 10.1a2.75 2.75 0 0 0 3.9 3.9" />
+      <path d="m4.5 4.5 15 15" />
+    </svg>
+  );
+}

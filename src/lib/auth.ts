@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
+  SESSION_REMEMBER_MAX_AGE_SECONDS,
   signSessionToken,
   verifySessionToken,
   type Role,
@@ -16,7 +17,7 @@ import {
  * middleware(Edge)에서는 lib/session-token.ts 를 직접 import 하세요.
  */
 
-export { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS };
+export { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, SESSION_REMEMBER_MAX_AGE_SECONDS };
 export type { Role, Session };
 
 /**
@@ -55,16 +56,25 @@ export function verifyPassword(input: string): Role | null {
   return null;
 }
 
-/** 인증 성공 시 서명된 httpOnly 세션 쿠키를 심습니다. (Route Handler / Server Action 전용) */
-export async function createSession(session: Session): Promise<void> {
-  const token = await signSessionToken(session);
+/**
+ * 인증 성공 시 서명된 httpOnly 세션 쿠키를 심습니다. (Route Handler / Server Action 전용)
+ *
+ * remember 는 "로그인 유지" 체크박스입니다. 켜면 30일, 아니면 12시간짜리 쿠키를 줍니다.
+ * 브라우저를 닫으면 사라지는 세션 쿠키(maxAge 없음)로 만들지 않는 이유는, 모바일에서는
+ * 브라우저를 닫는다는 개념이 흐릿해서 체크를 안 해도 사실상 계속 남아 버리기 때문입니다.
+ * 유효기간으로 구분해야 두 선택이 실제로 다르게 동작합니다.
+ */
+export async function createSession(session: Session, remember = false): Promise<void> {
+  const maxAge = remember ? SESSION_REMEMBER_MAX_AGE_SECONDS : SESSION_MAX_AGE_SECONDS;
+  // 쿠키가 살아 있는데 토큰만 만료되는 상태를 막으려면 같은 값을 양쪽에 넣어야 합니다.
+  const token = await signSessionToken(session, maxAge);
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+    maxAge,
   });
 }
 
