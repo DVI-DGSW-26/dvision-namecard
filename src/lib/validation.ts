@@ -129,6 +129,12 @@ export const employeeProfileSchema = z.object({
   credential: optionalText(40, "자격 · 학위"),
   // 영문 카드(/c/[slug]/en)가 쓰는 값. 비우면 영문 카드에서만 빠집니다.
   credentialEn: optionalText(40, "자격 · 학위 영문"),
+  /*
+    소개 한 줄. 길이 상한은 스키마의 VarChar 와 같아야 합니다 — 여기서 더 길게
+    받으면 저장할 때 DB 가 거부하고, 화면에는 원인을 알 수 없는 오류만 뜹니다.
+  */
+  bio: optionalText(80, "소개"),
+  bioEn: optionalText(120, "소개 영문"),
   telWork: phone,
   telMobile: phone,
   /**

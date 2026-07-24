@@ -46,6 +46,12 @@ export type ProfileCardData = {
    */
   roles: string[];
   credential?: string | null;
+  /**
+   * 본인 소개 한 줄. 이름·직함 아래에 나갑니다.
+   *
+   * 언어에 맞는 값이 이미 골라져 들어옵니다 — 영문 카드는 bioEn, 비어 있으면 null.
+   */
+  bio?: string | null;
   photoUrl?: string | null;
   telWork?: string | null;
   telMobile?: string | null;
@@ -141,6 +147,7 @@ export function toProfileCardData(
     nameEn: en ? null : employee.nameEn,
     roles: roleParts(employee, lang),
     credential: en ? pick(employee.credentialEn) : employee.credential,
+    bio: en ? pick(employee.bioEn) : employee.bio,
     photoUrl: employee.photoUrl,
     telWork: employee.telWork,
     telMobile: employee.telMobile,
@@ -320,6 +327,16 @@ export function ProfileCard({
         <p className="mt-tight text-body text-sub-text">{data.nameEn.trim()}</p>
       ) : null}
       {roleText ? <p className="mt-tight text-body text-sub-text">{roleText}</p> : null}
+      {/*
+        소개 한 줄. 직함 아래, 회사 워드마크 위입니다 — "이 사람이 누구인가" 를
+        말하는 줄들끼리 붙여 두어야 눈이 한 번에 내려갑니다.
+
+        회사 태그라인과 자리가 다릅니다. 저건 카드 아래 회사 블록에 있고 전 직원이
+        같은 문장이지만, 이건 본인이 적는 값이라 사람마다 다릅니다.
+      */}
+      {data.bio?.trim() ? (
+        <p className="mt-sibling max-w-[280px] text-caption text-sub-text">{data.bio.trim()}</p>
+      ) : null}
       <p className="mt-sibling flex items-center justify-center gap-tight">
         <Wordmark />
         <span className="text-caption-bold text-text">{company.nameKo}</span>

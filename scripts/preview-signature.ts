@@ -45,6 +45,8 @@ const employee = {
   executiveTitle: null,
   position: null,
   credential: "공학박사",
+  bio: "더 가볍고 강한 부품과 스마트한 제조로 미래를 만듭니다",
+  bioEn: null,
   telWork: "053-710-1022",
   telMobile: "010-3131-6834",
   mobilePublic: true,

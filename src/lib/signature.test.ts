@@ -72,6 +72,8 @@ const employee: EmployeeWithOrg = {
   partId: null,
   credential: "공학박사",
   credentialEn: null,
+  bio: null,
+  bioEn: null,
   telWork: "053-710-1022",
   telMobile: "010-1234-5678",
   mobilePublic: true,
