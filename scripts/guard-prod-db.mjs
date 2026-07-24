@@ -7,10 +7,27 @@ import "dotenv/config";
  * 즉시 깨지고, 되돌릴 방법도 없습니다. 실수로 운영 연결 문자열을 .env 에 붙여넣는
  * 것만으로 그렇게 되므로 여기서 한 번 걸러냅니다.
  *
- * 보호할 호스트는 .env 의 PROTECTED_DB_HOSTS 에 적습니다. 값이 없으면 경고만 하고
- * 통과시킵니다 — 이 스크립트는 마지막 안전망이지, 권한 분리를 대신하지 못합니다.
- * 진짜 차단은 운영 연결 문자열을 각자 .env 에서 없애고 배포 환경변수에만 두는 것입니다.
+ * 보호 대상은 두 곳에서 옵니다:
+ *   1. 아래 BUILT_IN_PROTECTED_HOSTS — 운영 DB 는 설정과 무관하게 항상 막힙니다.
+ *   2. .env 의 PROTECTED_DB_HOSTS — 각자 추가로 보호할 호스트가 있으면 여기 적습니다.
+ *
+ * 예전에는 (2)에만 의존했는데, .env 는 각자 관리라 아무도 채우지 않았고 — 값이 비면
+ * 경고만 하고 통과했습니다. 그 틈으로 운영 DB 에 db push 가 실제로 들어갔습니다.
+ * 그래서 운영 DB 하나는 코드에 박아 기본값으로 항상 막습니다.
+ *
+ * 한계: 이 가드는 package.json 의 db:push / db:seed 스크립트에서만 돕니다.
+ * `prisma db push` 를 직접 치면 건너뜁니다 — 반드시 pnpm db:push 로 실행하세요.
  */
+
+/**
+ * 코드에 박아 두는 기본 보호 호스트 — 이 프로젝트의 운영 Neon DB.
+ *
+ * 호스트 이름은 비밀이 아닙니다. 접속에는 별도 자격증명이 필요하고, 이 값은 이미
+ * 모두의 .env 와 배포 환경변수에 들어 있습니다. 여기 박아 두는 건 "누가 .env 를
+ * 어떻게 두든 이 DB 로 가는 push 는 막는다" 를 보장하기 위해서입니다.
+ * 개인 Neon 브랜치는 호스트가 달라 영향받지 않습니다.
+ */
+const BUILT_IN_PROTECTED_HOSTS = ["ep-holy-scene-azik95w5.c-3.ap-southeast-1.aws.neon.tech"];
 
 // Neon 은 같은 엔드포인트에 -pooler 가 붙은 호스트를 하나 더 줍니다. 둘은 같은 DB 라
 // 한쪽만 적어도 막히도록 접미사를 떼고 비교합니다.
@@ -32,15 +49,11 @@ try {
   process.exit(1);
 }
 
-const protectedHosts = (process.env.PROTECTED_DB_HOSTS ?? "")
-  .split(",")
-  .map(normalize)
-  .filter(Boolean);
-
-if (protectedHosts.length === 0) {
-  console.warn("\n[db] PROTECTED_DB_HOSTS 가 비어 있어 운영 DB 보호가 꺼져 있습니다. (.env.example 참고)\n");
-  process.exit(0);
-}
+// 코드에 박은 기본값 + .env 추가분. 기본값이 늘 있으므로 "보호가 꺼진" 상태는 없습니다.
+const protectedHosts = [
+  ...BUILT_IN_PROTECTED_HOSTS.map(normalize),
+  ...(process.env.PROTECTED_DB_HOSTS ?? "").split(",").map(normalize).filter(Boolean),
+];
 
 if (!protectedHosts.includes(host)) process.exit(0);
 
