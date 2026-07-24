@@ -22,7 +22,6 @@ const company = {
   ],
   tel: "053-710-1022",
   fax: "053-715-2096",
-  logoUrl: "/brand/logo.png",
   homepageUrl: "https://dvi-ind.com",
   // config/tokens.ts 의 primary 와 같은 값이어야 합니다. 어긋나면 미리보기가
   // 실제 서명과 다른 색으로 나와서, 색을 확인하려고 뽑는 의미가 없어집니다.
@@ -46,7 +45,6 @@ const employee = {
   executiveTitle: null,
   position: null,
   credential: "공학박사",
-  bio: "더 가볍고 강한 부품과 스마트한 제조로 미래를 만듭니다",
   telWork: "053-710-1022",
   telMobile: "010-3131-6834",
   mobilePublic: true,

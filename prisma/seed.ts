@@ -190,7 +190,6 @@ async function main() {
       // 주소는 Office 표에 있습니다 — 아래 seedOffices 를 보세요.
       tel: "031-355-1234",
       fax: "053-715-2096",
-      logoUrl: "/brand/logo.png",
       brandColor: "#931B82",
       // 공개 카드 아래 아이콘 줄. 전부 회사가 실제로 쓰는 주소입니다.
       homepageUrl: "dvi-ind.com",
@@ -243,7 +242,6 @@ async function main() {
     telWork?: string;
     telMobile?: string;
     mobilePublic?: boolean;
-    bio?: string;
     status: "PENDING" | "ACTIVE" | "RESIGNED";
   };
 
@@ -264,7 +262,6 @@ async function main() {
       telWork: "031-355-1234",
       telMobile: "010-1234-5678",
       mobilePublic: true,
-      bio: "더 가볍고 강한 부품과 스마트한 제조로 미래를 만듭니다",
       status: "ACTIVE",
     },
     {
