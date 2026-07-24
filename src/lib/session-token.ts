@@ -10,8 +10,17 @@ import { SignJWT, jwtVerify } from "jose";
 
 export const SESSION_COOKIE = "dvi_session";
 
-/** 세션 유효기간 12시간. */
+/** 세션 유효기간 12시간. 공용 기기에서 자리를 뜬 사람이 그대로 남지 않을 정도의 길이입니다. */
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+
+/**
+ * "로그인 유지" 를 켰을 때의 유효기간 30일.
+ *
+ * 본인 기기에서 하루에 한 번씩 비밀번호를 다시 치게 하면, 공지에 적힌 공용 비밀번호를
+ * 메모장이나 채팅방에 붙여 두게 됩니다. 그게 쿠키가 오래 남는 것보다 위험합니다.
+ * 대신 무기한은 두지 않습니다 — 퇴사자의 쿠키가 영원히 살아 있으면 안 되니까요.
+ */
+export const SESSION_REMEMBER_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export type Role = "member" | "admin";
 
@@ -38,12 +47,21 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-/** 역할과 본인 식별자를 담은 세션 JWT 를 서명해 문자열로 만듭니다. */
-export async function signSessionToken(session: Session): Promise<string> {
+/**
+ * 역할과 본인 식별자를 담은 세션 JWT 를 서명해 문자열로 만듭니다.
+ *
+ * 만료는 인자로 받습니다. 쿠키 maxAge 와 토큰 exp 가 따로 놀면, 쿠키는 살아 있는데
+ * 토큰만 만료돼 로그인한 것처럼 보이다가 튕기는 상태가 생깁니다. 부르는 쪽(auth.ts)에서
+ * 같은 값을 양쪽에 넣습니다.
+ */
+export async function signSessionToken(
+  session: Session,
+  maxAgeSeconds: number = SESSION_MAX_AGE_SECONDS,
+): Promise<string> {
   return new SignJWT({ role: session.role, employeeId: session.employeeId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
+    .setExpirationTime(`${maxAgeSeconds}s`)
     .sign(getSecret());
 }
 

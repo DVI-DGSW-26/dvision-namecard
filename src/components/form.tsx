@@ -66,10 +66,18 @@ type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   suffix?: string;
   /** 인풋 왼쪽 안쪽에 붙는 아이콘 (검색 등) */
   icon?: React.ReactNode;
+  /**
+   * 인풋 오른쪽 안쪽에 붙는 조작 요소 (비밀번호 표시 토글 등).
+   *
+   * suffix 와 나눠 둔 이유: suffix 는 pointer-events-none 이라 거기에 버튼을 넣으면
+   * 눌리지 않습니다. 값을 읽는 표시(suffix)와 값을 바꾸는 조작(action)은 클릭을
+   * 받아야 하는지가 달라서 자리를 따로 둡니다.
+   */
+  action?: React.ReactNode;
   invalid?: boolean;
 };
 
-export function Input({ suffix, icon, invalid, className = "", ...props }: InputProps) {
+export function Input({ suffix, icon, action, invalid, className = "", ...props }: InputProps) {
   const field = (
     <input
       {...props}
@@ -81,14 +89,14 @@ export function Input({ suffix, icon, invalid, className = "", ...props }: Input
         // 비활성(회사 정보 · 회원)은 배경으로 구분합니다. 값은 그대로 읽을 수 있어야 합니다.
         "disabled:bg-sub-bg disabled:text-sub-text",
         invalid ? "border-text" : "border-border",
-        suffix ? "pr-block" : "",
+        suffix || action ? "pr-block" : "",
         icon ? "pl-block" : "",
         className,
       ].join(" ")}
     />
   );
 
-  if (!suffix && !icon) return field;
+  if (!suffix && !icon && !action) return field;
 
   return (
     <div className="relative">
@@ -102,6 +110,14 @@ export function Input({ suffix, icon, invalid, className = "", ...props }: Input
         <span className="pointer-events-none absolute inset-y-0 right-group flex items-center text-caption text-sub-text">
           {suffix}
         </span>
+      ) : null}
+      {/*
+        right-tight 로 붙이는 이유: 안에 들어오는 버튼이 손가락에 맞는 크기(44px)를
+        가지려면 자기 여백이 필요한데, right-group(16px) 에 두면 그 여백까지 더해져
+        인풋 테두리 밖으로 밀려납니다.
+      */}
+      {action ? (
+        <span className="absolute inset-y-0 right-tight flex items-center">{action}</span>
       ) : null}
     </div>
   );
