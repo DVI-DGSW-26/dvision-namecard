@@ -272,7 +272,17 @@ model Employee {
   telWork      String?
   telMobile    String?
   mobilePublic Boolean @default(false)
-  photoUrl     String?
+
+  /**
+   * 명함에 그릴 사진 주소.
+   *
+   * 실제 바이트는 EmployeePhoto 에 있고 여기에는 그걸 내주는 주소가 들어갑니다
+   * (`/c/<slug>/photo?v=<시각>`). 카드·미리보기가 전부 이 문자열만 보므로,
+   * 나중에 외부 저장소로 옮기더라도 화면 코드는 그대로 둘 수 있습니다.
+   */
+  photoUrl String?
+
+  photo EmployeePhoto?
 
   status Status @default(PENDING)
 
@@ -290,6 +300,29 @@ model Employee {
   @@index([positionId])
   @@index([teamId])
   @@index([partId])
+}
+
+/**
+ * 프로필 사진.
+ *
+ * Employee 와 나눠 둔 이유: 명함 한 장을 읽을 때마다 이미지 바이트까지 딸려 오면
+ * 안 됩니다. include 로 관계를 읽는 곳이 여럿이라, 같은 행에 두면 사진을 쓰지 않는
+ * 조회에도 수십 KB 가 붙습니다.
+ *
+ * 외부 저장소(UploadThing·S3)를 쓰지 않는 이유: 계정·토큰·비용이 새로 생기는데,
+ * 512px 로 줄인 사진은 한 장에 수십 KB 라 직원 50명이면 2MB 입니다. Neon 무료
+ * 한도(0.5GB)의 0.4% 이고, 개발 환경에서도 설정 없이 그대로 동작합니다.
+ */
+model EmployeePhoto {
+  employeeId String   @id
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  /// 리사이즈·변환을 마친 최종 바이트. 올린 원본은 보관하지 않습니다.
+  data     Bytes
+  mimeType String
+
+  /// 캐시 무효화에 씁니다 — 공개 주소 뒤에 이 시각을 붙여 옛 사진이 남지 않게 합니다.
+  updatedAt DateTime @updatedAt
 }
 
 model ProfileView {
