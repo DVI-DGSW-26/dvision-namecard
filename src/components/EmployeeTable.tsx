@@ -116,6 +116,17 @@ export function EmployeeTable() {
   const [bulkConfirm, setBulkConfirm] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isActing, setIsActing] = useState(false);
+  /**
+   * 방금 발급한 초기 비밀번호. 응답에 한 번만 실려 오므로 화면에 붙들어 둡니다.
+   *
+   * 목록 데이터에 섞지 않는 이유: 목록은 새로고침될 때마다 서버 값으로 덮이는데,
+   * 이 값은 서버에 남지 않아서 그 순간 사라집니다.
+   */
+  const [issued, setIssued] = useState<{
+    nameKo: string;
+    email: string;
+    password: string;
+  } | null>(null);
 
   // 직원을 추가한 뒤 같은 조회 조건 그대로 목록을 다시 받기 위한 값입니다.
   // URL 파라미터가 아니라 fetch effect 의 의존성으로만 씁니다.
@@ -262,10 +273,49 @@ export function EmployeeTable() {
       runAction(`/api/employees/${row.id}/admin`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        // 주소는 그대로 두고 상태만 바꿉니다. 스키마가 두 값을 함께 받습니다.
-        body: JSON.stringify({ status: next, slug: row.slug }),
+        // 주소·권한은 그대로 두고 상태만 바꿉니다. 스키마가 세 값을 함께 받습니다.
+        body: JSON.stringify({ status: next, slug: row.slug, role: row.role }),
       }),
     [runAction],
+  );
+
+  const changeRowRole = useCallback(
+    (row: EmployeeListItem, next: "MEMBER" | "ADMIN") =>
+      runAction(`/api/employees/${row.id}/admin`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: row.status, slug: row.slug, role: next }),
+      }),
+    [runAction],
+  );
+
+  /**
+   * 초기 비밀번호 발급·재발급.
+   *
+   * 만들어진 값은 응답에 한 번만 실려 옵니다. 저장되는 건 해시라 이 화면을 닫으면
+   * 다시 볼 수 없고, 그때는 또 발급하면 됩니다. 그래서 모달로 띄워 관리자가
+   * 복사해 전달할 때까지 남겨 둡니다.
+   */
+  const issuePassword = useCallback(
+    async (row: EmployeeListItem) => {
+      setIsActing(true);
+      setActionError(null);
+      try {
+        const response = await fetch(`/api/employees/${row.id}/password`, { method: "POST" });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          setActionError(payload?.error ?? "발급하지 못했습니다.");
+          return;
+        }
+        setIssued({ nameKo: row.nameKo, email: payload.email, password: payload.password });
+        refresh();
+      } catch {
+        setActionError("네트워크 오류로 발급하지 못했습니다.");
+      } finally {
+        setIsActing(false);
+      }
+    },
+    [refresh],
   );
 
   const deleteRow = useCallback(
@@ -574,7 +624,27 @@ export function EmployeeTable() {
                   <p className="truncate text-caption text-sub-text">{row.email ?? "—"}</p>
                   <p className="text-caption text-sub-text">{formatDate(row.updatedAt)}</p>
 
-                  <div className="mt-tight flex gap-tight">
+                  {/* 좁은 화면에서도 권한을 바꿀 수 있어야 합니다 — 관리자가 자리에 없을 때 폰으로 처리합니다. */}
+                  <select
+                    value={row.role}
+                    disabled={isActing}
+                    onChange={(event) => changeRowRole(row, event.target.value as "MEMBER" | "ADMIN")}
+                    aria-label={`${row.nameKo} 권한`}
+                    className="mt-tight h-9 w-full rounded-card border border-border bg-bg px-sibling text-caption focus:border-text focus:outline-none disabled:text-sub-text"
+                  >
+                    <option value="MEMBER">직원</option>
+                    <option value="ADMIN">관리자</option>
+                  </select>
+
+                  <div className="mt-tight flex flex-wrap gap-tight">
+                    <button
+                      type="button"
+                      onClick={() => issuePassword(row)}
+                      disabled={isActing}
+                      className="h-9 rounded-card border border-border px-group text-caption text-text"
+                    >
+                      {row.hasPassword ? "비번 재발급" : "비번 발급"}
+                    </button>
                     <button
                       type="button"
                       onClick={() => setSlugTarget(row)}
@@ -611,7 +681,7 @@ export function EmployeeTable() {
                   className="h-4 w-4 accent-primary"
                 />
               </th>
-              {["이름", "부서", "직위", "이메일", "수정일", "상태", "관리"].map((label) => (
+              {["이름", "부서", "직위", "이메일", "수정일", "상태", "권한", "관리"].map((label) => (
                 <th
                   key={label}
                   scope="col"
@@ -625,13 +695,13 @@ export function EmployeeTable() {
           <tbody>
             {isLoading && items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-group py-block text-center text-body text-sub-text">
+                <td colSpan={9} className="px-group py-block text-center text-body text-sub-text">
                   불러오는 중…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-group py-block text-center text-body text-sub-text">
+                <td colSpan={9} className="px-group py-block text-center text-body text-sub-text">
                   조건에 맞는 직원이 없습니다.
                 </td>
               </tr>
@@ -689,7 +759,40 @@ export function EmployeeTable() {
                     </select>
                   </td>
                   <td className="px-group py-sibling">
+                    {/*
+                      권한도 상태와 같은 선택 상자입니다. 예전에는 어떤 공용 비밀번호로
+                      들어왔느냐로 갈려서, 권한을 옮기려면 비밀번호를 알려줘야 했습니다.
+                      마지막 관리자의 권한을 내리는 건 서버가 막습니다.
+                    */}
+                    <select
+                      value={row.role}
+                      disabled={isActing}
+                      onChange={(event) =>
+                        changeRowRole(row, event.target.value as "MEMBER" | "ADMIN")
+                      }
+                      aria-label={`${row.nameKo} 권한`}
+                      className="h-9 rounded-card border border-border bg-bg px-sibling text-caption whitespace-nowrap focus:border-text focus:outline-none disabled:text-sub-text"
+                    >
+                      <option value="MEMBER">직원</option>
+                      <option value="ADMIN">관리자</option>
+                    </select>
+                  </td>
+                  <td className="px-group py-sibling">
                     <div className="flex gap-tight whitespace-nowrap">
+                      {/*
+                        비밀번호를 발급해야 로그인할 수 있습니다. 아직 못 받은 사람은
+                        버튼 이름으로 구분됩니다 — 목록을 훑다가 바로 알아채야 합니다.
+                      */}
+                      <button
+                        type="button"
+                        onClick={() => issuePassword(row)}
+                        disabled={isActing}
+                        className={`h-9 rounded-card border px-sibling text-caption hover:border-text ${
+                          row.hasPassword ? "border-border text-text" : "border-text text-text"
+                        }`}
+                      >
+                        {row.hasPassword ? "비번 재발급" : "비번 발급"}
+                      </button>
                       <button
                         type="button"
                         onClick={() => setSlugTarget(row)}
@@ -717,6 +820,48 @@ export function EmployeeTable() {
         한 명 삭제 확인. 별도 모달을 띄우지 않고 표 아래 띠로 보여 줍니다 —
         모달을 열면 지우려는 행이 가려져서 누구를 지우는지 확인할 수 없습니다.
       */}
+      {/*
+        방금 발급한 초기 비밀번호.
+
+        서버에는 해시만 남으므로 이 화면을 닫으면 다시 볼 수 없습니다. 그래서 닫기를
+        누르기 전까지 남겨 두고, 다시 필요하면 재발급하면 된다는 것도 함께 적습니다.
+        메일로 자동 발송하지 않는 이유: 메일함은 지워지지 않는 기록이라, 초기 비밀번호가
+        평문으로 계속 남습니다. 전달 방법은 관리자가 정하는 편이 낫습니다.
+      */}
+      {issued ? (
+        <div className="rounded-card border border-text px-group py-group">
+          <p className="text-caption-bold text-text">
+            {issued.nameKo} 님의 초기 비밀번호를 발급했습니다
+          </p>
+          <p className="mt-tight text-caption text-sub-text">
+            이 창을 닫으면 다시 볼 수 없습니다. 본인에게 전달하고, 놓쳤으면 다시 발급하세요.
+            받은 사람은 첫 로그인에서 비밀번호를 바꾸게 됩니다.
+          </p>
+          <div className="mt-group flex flex-wrap items-center gap-group">
+            <code className="rounded-card bg-sub-bg px-group py-sibling text-body-bold text-text">
+              {issued.password}
+            </code>
+            <span className="text-caption text-sub-text">{issued.email}</span>
+            <div className="ml-auto flex gap-sibling">
+              <button
+                type="button"
+                onClick={() => navigator.clipboard?.writeText(issued.password)}
+                className="h-10 rounded-card border border-border px-group text-caption-bold text-text"
+              >
+                복사
+              </button>
+              <button
+                type="button"
+                onClick={() => setIssued(null)}
+                className="h-10 rounded-card bg-primary px-group text-caption-bold text-white"
+              >
+                전달 완료
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {deleteTarget ? (
         <div className="flex flex-wrap items-center gap-sibling rounded-card border border-border px-group py-sibling">
           <p className="text-caption text-text">

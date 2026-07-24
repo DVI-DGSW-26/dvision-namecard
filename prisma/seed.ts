@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "../src/generated/prisma/client";
+import { hashPassword } from "../src/lib/password";
 
 /**
  * 개발용 시드. `pnpm db:seed` 로 실행합니다.
@@ -310,9 +311,28 @@ async function main() {
     },
   ];
 
+  /*
+    개발용 로그인 비밀번호.
+
+    시드는 개발·테스트 환경을 세우는 도구라, 여기서 만든 계정으로 바로 들어갈 수
+    있어야 합니다. 값이 코드에 적혀 있으므로 **배포 DB 에는 시드를 돌리지 마세요** —
+    scripts/guard-prod-db.mjs 가 db:seed 를 막고 있는 것도 같은 이유입니다.
+
+    실제 운영에서는 관리자가 임직원 관리에서 한 명씩 발급합니다.
+  */
+  const DEV_PASSWORD = "dvision-dev-1234";
+  const devHash = await hashPassword(DEV_PASSWORD);
+
   for (const { rank, executiveTitle, position, team, part, ...rest } of employees) {
     const create: Prisma.EmployeeCreateInput = {
       ...rest,
+      passwordHash: devHash,
+      // 시드 계정은 바꾸라고 막지 않습니다. 개발 중에 매번 변경 화면을 지나가면
+      // 로그인할 때마다 손이 한 번씩 더 갑니다.
+      mustChangePassword: false,
+      // 첫 사람만 관리자입니다. 전원 관리자로 두면 회원 화면을 볼 수 없어
+      // 권한별 동작을 개발 중에 확인할 수 없습니다.
+      role: rest.slug === "hong" ? "ADMIN" : "MEMBER",
       // 관계를 connect 로 잇는 순간 companyId 같은 raw 외래키는 같이 못 씁니다.
       company: { connect: { id: company.id } },
     };
@@ -328,7 +348,8 @@ async function main() {
     await prisma.employee.upsert({ where: { slug: rest.slug }, update: {}, create });
   }
 
-  console.log(`시드 완료 — 회사 1곳, 직원 ${employees.length}명 (전부 테스트용 가짜 데이터)`);
+  console.log(`시드 완료 — 회사 1곳, 직원 ${employees.length}명 (전부 테스트용 가짜 데이터)
+로그인: hong@dvi-ind.com(관리자) · 비밀번호 ${DEV_PASSWORD}`);
 }
 
 main()

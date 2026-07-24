@@ -37,6 +37,15 @@ export type EmployeeListItem = {
   rank: string | null;
   email: string | null;
   status: Status;
+  /** 권한. 관리자가 목록에서 켜고 끕니다. */
+  role: "MEMBER" | "ADMIN";
+  /**
+   * 초기 비밀번호를 발급받았는지. 해시 자체는 절대 내려보내지 않습니다.
+   *
+   * false 면 아직 로그인할 수 없는 사람이라, 관리자가 목록에서 바로 알아보고
+   * 발급해 줄 수 있어야 합니다.
+   */
+  hasPassword: boolean;
   updatedAt: string;
 };
 

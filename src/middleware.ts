@@ -20,8 +20,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(gate);
   }
 
-  // 회사 정보 수정은 관리자 비밀번호로 들어온 세션만 허용합니다.
-  if (request.nextUrl.pathname.startsWith("/admin") && session.role !== "admin") {
+  /*
+    관리자가 발급한 초기 비밀번호로 들어온 사람은 비밀번호부터 바꿉니다.
+
+    관리자도 아는 비밀번호를 계속 쓰면 그 사람으로 남긴 흔적과 본인의 흔적을
+    구분할 수 없습니다. 바꾸는 화면 자체는 막지 않아야 하므로 그 경로만 통과시킵니다.
+  */
+  const { pathname } = request.nextUrl;
+  if (session.mustChangePassword && pathname !== "/edit/password") {
+    return NextResponse.redirect(new URL("/edit/password", request.url));
+  }
+
+  // 관리자 화면은 ADMIN 권한을 가진 계정만 들어갑니다.
+  if (pathname.startsWith("/admin") && session.role !== "admin") {
     return NextResponse.redirect(new URL("/edit", request.url));
   }
 

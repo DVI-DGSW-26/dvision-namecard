@@ -26,6 +26,18 @@ enum Status {
 }
 
 /**
+ * 로그인 권한. 예전에는 공용 비밀번호 두 개(직원용·관리자용)로 갈랐습니다.
+ *
+ * 비밀번호가 곧 역할이면 권한을 옮기는 일이 곧 비밀번호를 알려주는 일이 되고,
+ * 한 명에게서 회수하려면 전원이 새 비밀번호를 외워야 합니다. 그래서 역할을
+ * 사람에게 붙입니다 — 관리자가 목록에서 켜고 끕니다.
+ */
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+/**
  * 조직 목록 3종 — 직위 · 임원 직책 · 직책.
  *
  * enum 이 아니라 테이블인 이유: 관리자가 /admin/org 에서 직접 추가·수정·삭제합니다.
@@ -197,12 +209,33 @@ model Company {
   employees Employee[]
 }
 
-// 개인 계정이 없는 구조입니다. 인증은 공용 비밀번호 1개 + httpOnly 쿠키로만 이뤄지므로
-// Employee 에는 비밀번호/역할 컬럼을 두지 않습니다. (lib/auth.ts 참고)
+// 직원마다 계정을 갖습니다. 로그인은 이메일 + 본인 비밀번호이고, 세션은 자체 발급한
+// JWT 쿠키입니다. (lib/auth.ts · lib/password.ts 참고)
 model Employee {
   id    String @id @default(cuid())
   slug  String @unique
   email String @unique
+
+  /**
+   * 로그인 비밀번호 해시(scrypt).
+   *
+   * null 이면 아직 발급받지 못한 사람이라 로그인할 수 없습니다. 관리자가 임직원
+   * 관리에서 초기 비밀번호를 발급하면 채워집니다. 비워 두는 것이 곧 계정 잠금이라,
+   * 퇴사자를 지우지 않고 막아 두는 데도 씁니다.
+   */
+  passwordHash String?
+
+  /**
+   * 발급받은 초기 비밀번호를 아직 안 바꿨는지.
+   *
+   * true 면 로그인 직후 변경 화면으로 보냅니다 — 관리자가 정해 준 비밀번호를
+   * 관리자도 아는 채로 계속 쓰면, 그 사람으로 로그인한 흔적과 본인의 흔적을
+   * 구분할 수 없습니다.
+   */
+  mustChangePassword Boolean @default(false)
+
+  /// 권한. 관리자가 임직원 관리에서 켜고 끕니다.
+  role Role @default(MEMBER)
 
   // vCard N 필드(`류;영균;;;`)를 정확히 만들기 위해 성/이름을 분리 저장한다. 합치지 말 것.
   nameKo     String
