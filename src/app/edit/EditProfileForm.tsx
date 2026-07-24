@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CompanyFields, certLine, type CompanyFormValues } from "@/components/CompanyFields";
-import { Field, FieldRow, Input, SectionHeader, Select } from "@/components/form";
+import { Checkbox, Field, FieldRow, Input, SectionHeader, Select } from "@/components/form";
 import { ProfileCard, type ProfileCardData } from "@/components/ProfileCard";
 import { ArrowRightIcon, ChevronDownIcon, UserIcon } from "@/components/icons";
 import { officeLines, type OrgLists } from "@/lib/org";
@@ -11,6 +11,7 @@ import {
   employeeProfileSchema,
   fieldErrors,
   formatPhone,
+  fullNameKo,
 } from "@/lib/validation";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
@@ -22,9 +23,15 @@ import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
  * 카드 마크업을 새로 만들면 두 화면이 즉시 어긋납니다.
  */
 
-/** 폼 state 는 전부 문자열입니다. 숫자 변환은 zod 스키마가 담당합니다. */
+/** 폼 state 는 체크박스 하나(mobilePublic)를 빼면 전부 문자열입니다. */
 type EmployeeForm = {
-  nameKo: string;
+  /*
+    성·이름을 나눠 들고 있습니다. 표시용 합본(nameKo)은 서버가 만듭니다 —
+    화면에서 붙여 보내면 붙이는 규칙이 두 곳이 되고, 그러면 vCard 의 N 필드가
+    실제 이름과 갈라지는 예전 문제로 돌아갑니다.
+  */
+  familyName: string;
+  givenName: string;
   nameEn: string;
   /** 직위·직책·부서는 목록에서 고른 항목의 id 입니다. 비어 있으면 "없음". */
   rankId: string;
@@ -36,6 +43,8 @@ type EmployeeForm = {
   credentialEn: string;
   telWork: string;
   telMobile: string;
+  /** 휴대폰을 명함에 내보낼지. 유일한 불리언이라 setEmpField 대신 setEmpFlag 로 바꿉니다. */
+  mobilePublic: boolean;
   email: string;
 };
 
@@ -63,7 +72,8 @@ export function EditProfileForm({
 
   const initialEmployee = useMemo<EmployeeForm>(
     () => ({
-      nameKo: employee.nameKo,
+      familyName: employee.familyName,
+      givenName: employee.givenName,
       nameEn: str(employee.nameEn),
       rankId: str(employee.rankId),
       executiveTitleId: str(employee.executiveTitleId),
@@ -74,6 +84,7 @@ export function EditProfileForm({
       credentialEn: str(employee.credentialEn),
       telWork: str(employee.telWork),
       telMobile: str(employee.telMobile),
+      mobilePublic: employee.mobilePublic,
       email: employee.email,
     }),
     [employee],
@@ -116,6 +127,11 @@ export function EditProfileForm({
 
   const setEmpField = useCallback(
     (key: keyof EmployeeForm, value: string) => setEmp((prev) => ({ ...prev, [key]: value })),
+    [],
+  );
+  /** 체크박스용. 문자열 칸과 섞으면 setEmpField 의 타입이 넓어져 오타를 못 잡습니다. */
+  const setEmpFlag = useCallback(
+    (key: "mobilePublic", value: boolean) => setEmp((prev) => ({ ...prev, [key]: value })),
     [],
   );
   const setCoField = useCallback(
@@ -250,14 +266,16 @@ export function EditProfileForm({
       // /c/[slug]/en 에서 확인합니다 — 폼 하나에 미리보기 둘을 붙이면
       // 좁은 화면에서 편집할 자리가 남지 않습니다.
       lang: "ko",
-      nameKo: emp.nameKo,
+      // 서버가 저장할 값과 같은 규칙으로 붙입니다. 미리보기와 실제 카드가 갈리지 않도록.
+      nameKo: fullNameKo(emp.familyName, emp.givenName),
       nameEn: emp.nameEn,
       roles: previewRoles,
       credential: emp.credential,
       photoUrl: employee.photoUrl,
       telWork: emp.telWork,
       telMobile: emp.telMobile,
-      mobilePublic: employee.mobilePublic,
+      // 체크를 끄면 미리보기에서도 그 자리에서 휴대폰 줄이 사라집니다.
+      mobilePublic: emp.mobilePublic,
       email: emp.email,
       company: {
         nameKo: co.nameKo,
@@ -286,7 +304,6 @@ export function EditProfileForm({
       previewRoles,
       employee.slug,
       employee.photoUrl,
-      employee.mobilePublic,
       company.offices,
     ],
   );
@@ -389,16 +406,38 @@ export function EditProfileForm({
             </div>
 
             <div className="flex flex-1 flex-col gap-group">
+              {/*
+                이름을 성·이름 두 칸으로 받습니다. 한 칸으로 받아 서버에서 쪼개면
+                두 글자 성(남궁·선우·제갈)에서 반드시 틀리고, 그 값이 연락처 저장
+                파일(vCard)의 이름 칸에 그대로 들어갑니다.
+              */}
               <FieldRow>
-                <Field label="이름" htmlFor="nameKo" error={err("nameKo")}>
+                <Field
+                  label="성"
+                  htmlFor="familyName"
+                  error={err("familyName")}
+                  hint="남궁·선우처럼 두 글자 성은 성 칸에 함께 적습니다."
+                >
                   <Input
-                    id="nameKo"
-                    value={emp.nameKo}
-                    maxLength={20}
-                    invalid={Boolean(err("nameKo"))}
-                    onChange={(e) => setEmpField("nameKo", e.target.value)}
+                    id="familyName"
+                    value={emp.familyName}
+                    maxLength={10}
+                    invalid={Boolean(err("familyName"))}
+                    onChange={(e) => setEmpField("familyName", e.target.value)}
                   />
                 </Field>
+                <Field label="이름" htmlFor="givenName" error={err("givenName")}>
+                  <Input
+                    id="givenName"
+                    value={emp.givenName}
+                    maxLength={10}
+                    invalid={Boolean(err("givenName"))}
+                    onChange={(e) => setEmpField("givenName", e.target.value)}
+                  />
+                </Field>
+              </FieldRow>
+
+              <FieldRow>
                 {/*
                   선택 입력이 아닙니다. 안 적으면 영문 명함(/c/[slug]/en)이 만들어지지
                   않습니다 — 예전처럼 한글 이름으로 채우지 않기 때문입니다.
@@ -568,6 +607,28 @@ export function EditProfileForm({
                 />
               </Field>
             </FieldRow>
+
+            {/*
+              휴대폰 공개 여부. 번호를 적어도 이걸 켜지 않으면 어디에도 안 나갑니다 —
+              명함·명함 이미지·이메일 서명·연락처 파일 네 곳이 전부 이 값을 봅니다.
+              번호 칸 바로 아래에 두어야 "적었는데 왜 안 나오지" 가 생기지 않습니다.
+
+              번호를 안 적었으면 켤 것이 없으므로 잠급니다. 켜 두고 번호를 지우면
+              체크만 남아 공개 중인 것처럼 보입니다.
+            */}
+            <Checkbox
+              id="mobilePublic"
+              label="휴대전화를 명함에 공개"
+              hint={
+                emp.telMobile.trim()
+                  ? "끄면 번호가 저장돼 있어도 명함·서명·연락처 파일 어디에도 나가지 않습니다."
+                  : "휴대전화 번호를 먼저 입력해 주세요."
+              }
+              checked={emp.mobilePublic}
+              disabled={!emp.telMobile.trim()}
+              onChange={(checked) => setEmpFlag("mobilePublic", checked)}
+            />
+
             <Field label="이메일" htmlFor="email" error={err("email")}>
               <Input
                 id="email"

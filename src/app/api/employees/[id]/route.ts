@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { cardTag } from "@/lib/card-cache";
 import { prisma } from "@/lib/prisma";
-import { employeeProfileSchema, fieldErrors } from "@/lib/validation";
+import { employeeProfileSchema, fieldErrors, fullNameKo } from "@/lib/validation";
 
 type Context = {
   params: Promise<{ id: string }>;
@@ -51,7 +51,12 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     // slug 는 캐시를 비우는 데 씁니다. 이 엔드포인트로는 못 바꾸는 값이라 저장 전후가 같습니다.
     const employee = await prisma.employee.update({
       where: { id },
-      data: parsed.data,
+      data: {
+        ...parsed.data,
+        // 표시용 합본은 성·이름에서 다시 만듭니다. 여기서 안 만들면 이름을 고쳐도
+        // vCard 의 N 필드가 등록 당시 이름으로 남습니다.
+        nameKo: fullNameKo(parsed.data.familyName, parsed.data.givenName),
+      },
       select: { slug: true },
     });
 
