@@ -93,15 +93,16 @@ const OFFICES = [
     name: "본사",
     postalCode: "43011",
     address: "대구시 달성군 구지면 국가산단대로33길 237",
-    // 영문 주소는 아직 회사에서 받지 못했습니다. 비워 두면 영문 명함에서 이 줄이
-    // 빠집니다 — /admin/org 사업장 탭에서 채우면 그때부터 나옵니다.
-    addressEn: null as string | null,
+    // 영문 주소는 회사에서 받은 표기 그대로입니다. 국문처럼 우편번호를 앞에
+    // 붙이지 않고 이 줄이 영문 명함에 통째로 나갑니다.
+    addressEn:
+      "237, Gukgasandan-daero 33-gil, Guji-myeon, Dalseong-gun, Daegu, 43011, Republic of Korea",
   },
   {
     name: "R&D센터",
     postalCode: "41585",
-    address: "대구 북구 홈암로 51",
-    addressEn: null as string | null,
+    address: "대구 북구 호암로 51",
+    addressEn: "51, Hoam-ro, Buk-gu, Daegu, 41585, Republic of Korea",
   },
 ];
 
@@ -192,6 +193,7 @@ async function main() {
       brandColor: "#931B82",
       // 공개 카드 아래 아이콘 줄. 전부 회사가 실제로 쓰는 주소입니다.
       homepageUrl: "dvi-ind.com",
+      homepageUrlEn: "https://dvi-ind.com/en/",
       linkedinUrl: "https://www.linkedin.com/company/dvi-ind/",
       // 채널이 아니라 회사 소개 영상입니다. 국문 카드와 영문 카드가 각자 겁니다.
       youtubeUrl: "https://youtu.be/9NsSwkFx0PM?si=0HVz7H5LVhw5rJgG",
@@ -201,6 +203,10 @@ async function main() {
       industry: "알루미늄 압출 · 정밀가공",
       tagline: "자동차 경량 부품 전문",
       certifications: ["IATF 16949", "ISO 9001"],
+      // 이 회사의 인증은 둘 다 국제 규격 이름이라 국문·영문이 같습니다. 그래도
+      // 칸을 나눠 둡니다 — 한글 인증명이 하나 늘어날 때 영문 카드가 따라가지
+      // 않으려면 목록이 처음부터 갈라져 있어야 합니다.
+      certificationsEn: ["IATF 16949", "ISO 9001"],
     },
   });
 

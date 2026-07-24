@@ -49,7 +49,21 @@ export const employeeProfileSchema = z.object({
     .trim()
     .min(1, "이름을 입력해 주세요.")
     .max(20, "이름은 20자 이내로 입력해 주세요."),
-  nameEn: optionalText(60, "영문명"),
+  /**
+   * 영문명은 필수입니다.
+   *
+   * 선택 입력이던 시절에는 안 적은 사람의 영문 카드가 한글 이름으로 떨어졌습니다.
+   * 그 폴백을 없앤 지금은 안 적으면 영문 카드가 아예 404 라, 여기서 받아 두지
+   * 않으면 "영문 카드가 없는 사람" 이 계속 생깁니다.
+   *
+   * 컬럼은 여전히 nullable 입니다 — 이미 비어 있는 직원들이 있고, 그들은 다음에
+   * 프로필을 저장할 때 채우게 됩니다. 그 전까지는 국문 카드만 열립니다.
+   */
+  nameEn: z
+    .string()
+    .trim()
+    .min(1, "영문명을 입력해 주세요. 영문 명함에 쓰입니다.")
+    .max(60, "영문명은 60자 이내로 입력해 주세요."),
   // 직위 · 임원 직책 · 직책은 전부 목록에서 고릅니다. 셋 다 비워 둘 수 있습니다 —
   // 관리자가 목록에서 항목을 지우면 그 칸이 비는데, 그 상태로도 저장은 돼야 합니다.
   rankId: orgRef,
@@ -141,6 +155,24 @@ export const employeeBulkSchema = z.discriminatedUnion("action", [
 ]);
 export type EmployeeCreateValues = z.output<typeof employeeCreateSchema>;
 
+/**
+ * 인증 뱃지 한 줄 → 문자열 배열. 국문·영문 칸이 같은 규칙을 씁니다.
+ *
+ * 두 칸에 각자 적어 두면 한쪽만 고치는 순간 개수 제한이나 길이 제한이 갈립니다.
+ */
+const certificationList = z.preprocess(
+  (value) =>
+    typeof value === "string"
+      ? value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : value,
+  z
+    .array(z.string().max(30, "인증 이름은 30자 이내로 입력해 주세요."))
+    .max(6, "인증은 6개까지 넣을 수 있습니다."),
+);
+
 export const companyProfileSchema = z.object({
   nameKo: z.string().trim().min(1, "회사명을 입력해 주세요.").max(60, "회사명이 너무 깁니다."),
   nameEn: z.string().trim().min(1, "영문 회사명을 입력해 주세요.").max(80, "영문 회사명이 너무 깁니다."),
@@ -160,18 +192,15 @@ export const companyProfileSchema = z.object({
    * DB 는 Json 컬럼이라 무엇이든 들어갑니다. 카드는 문자열만 그리므로
    * 여기서 문자열 배열로 좁혀서 저장합니다.
    */
-  certifications: z.preprocess(
-    (value) =>
-      typeof value === "string"
-        ? value
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean)
-        : value,
-    z
-      .array(z.string().max(30, "인증 이름은 30자 이내로 입력해 주세요."))
-      .max(6, "인증은 6개까지 넣을 수 있습니다."),
-  ),
+  certifications: certificationList,
+  /**
+   * 영문 인증 뱃지. 영문 카드가 이 값만 씁니다.
+   *
+   * 국문 값으로 떨어지지 않습니다. "IATF 16949" 처럼 원래 영문인 항목이 대부분이라
+   * 그냥 써도 될 것 같지만, "품질경영시스템 인증" 한 줄이 추가되는 순간 영문
+   * 명함에 한글이 박힙니다. 다른 영문 칸과 같은 규칙 — 비면 그 줄이 빠집니다.
+   */
+  certificationsEn: certificationList,
   // 주소는 여기 없습니다 — 사업장이 여러 곳(본사·R&D센터)이라 Office 표로 빠졌고,
   // /admin/org 의 '사업장' 탭에서 관리합니다.
   /**
@@ -191,6 +220,8 @@ export const companyProfileSchema = z.object({
   fax: phone,
   // 공개 카드 아래 아이콘 줄. 스킴 없이 넣어도 카드가 https 를 붙여 엽니다.
   homepageUrl: optionalText(120, "홈페이지"),
+  // 영문 홈페이지. 비우면 영문 카드도 국문 홈페이지를 겁니다.
+  homepageUrlEn: optionalText(120, "홈페이지 영문"),
   linkedinUrl: optionalText(200, "링크드인"),
   // 채널이 아니라 회사 소개 영상 주소입니다. 공유 링크(youtu.be/…)가 그대로 들어옵니다.
   youtubeUrl: optionalText(200, "유튜브"),

@@ -151,8 +151,10 @@ model Company {
    *
    * 스킴 없이 "dvi-ind.com" 처럼 저장돼도 됩니다. 카드가 붙여서 엽니다.
    */
-  homepageUrl  String?
-  linkedinUrl  String?
+  homepageUrl String?
+  /// 영문 홈페이지. 비어 있으면 영문 카드도 국문 홈페이지를 겁니다.
+  homepageUrlEn String?
+  linkedinUrl   String?
   /// 채널이 아니라 회사 소개 영상입니다. 국문 카드가 씁니다.
   youtubeUrl   String?
   /// 영문 소개 영상. 비어 있으면 영문 카드도 국문 영상을 겁니다.
@@ -162,6 +164,15 @@ model Company {
   brandColor     String   @default("#931B82")
   tagline        String?
   certifications Json
+
+  /**
+   * 영문 인증 뱃지. 영문 카드가 이 값만 씁니다.
+   * 국문 값으로 떨어지지 않습니다 — "IATF 16949" 처럼 원래 영문인 항목이 많아
+   * 그냥 써도 되어 보이지만, 관리자가 "품질경영시스템 인증" 을 한 줄 추가하는
+   * 순간 영문 명함에 한글이 박힙니다. 다른 영문 칸과 같은 규칙으로 둡니다.
+   * 비어 있으면 영문 카드에서 뱃지 줄이 통째로 빠집니다.
+   */
+  certificationsEn Json @default("[]")
 
   industry String? // 사업 분야: "알루미늄 압출 · 정밀가공"
 

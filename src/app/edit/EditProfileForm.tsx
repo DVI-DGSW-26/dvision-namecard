@@ -47,9 +47,12 @@ type CompanyForm = {
   taglineEn: string;
   /** 쉼표로 구분한 한 줄. 저장할 때 스키마가 배열로 바꿉니다. */
   certifications: string;
+  /** 영문 카드가 쓰는 인증 목록. 국문 목록으로 떨어지지 않습니다. */
+  certificationsEn: string;
   tel: string;
   fax: string;
   homepageUrl: string;
+  homepageUrlEn: string;
   linkedinUrl: string;
   youtubeUrl: string;
   youtubeUrlEn: string;
@@ -57,6 +60,14 @@ type CompanyForm = {
 };
 
 const str = (value: string | null | undefined) => value ?? "";
+
+/**
+ * Json 인증 목록 → 쉼표 한 줄. 국문·영문 두 칸이 같은 규칙을 씁니다.
+ *
+ * Json 컬럼이라 타입이 보장되지 않아 문자열만 골라 붙입니다.
+ */
+const certLine = (value: unknown) =>
+  Array.isArray(value) ? value.filter((c): c is string => typeof c === "string").join(", ") : "";
 
 export function EditProfileForm({
   role,
@@ -99,12 +110,12 @@ export function EditProfileForm({
       industryEn: str(company.industryEn),
       taglineEn: str(company.taglineEn),
       // Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 골라 한 줄로 붙입니다.
-      certifications: Array.isArray(company.certifications)
-        ? company.certifications.filter((c): c is string => typeof c === "string").join(", ")
-        : "",
+      certifications: certLine(company.certifications),
+      certificationsEn: certLine(company.certificationsEn),
       tel: company.tel,
       fax: str(company.fax),
       homepageUrl: str(company.homepageUrl),
+      homepageUrlEn: str(company.homepageUrlEn),
       linkedinUrl: str(company.linkedinUrl),
       youtubeUrl: str(company.youtubeUrl),
       youtubeUrlEn: str(company.youtubeUrlEn),
@@ -410,10 +421,16 @@ export function EditProfileForm({
                     onChange={(e) => setEmpField("nameKo", e.target.value)}
                   />
                 </Field>
-                <Field label="영문명 (선택)" htmlFor="nameEn" error={err("nameEn")}>
+                {/*
+                  선택 입력이 아닙니다. 안 적으면 영문 명함(/c/[slug]/en)이 만들어지지
+                  않습니다 — 예전처럼 한글 이름으로 채우지 않기 때문입니다.
+                */}
+                <Field label="영문명" htmlFor="nameEn" error={err("nameEn")}>
                   <Input
                     id="nameEn"
                     value={emp.nameEn}
+                    maxLength={60}
+                    placeholder="Gil-dong Hong"
                     invalid={Boolean(err("nameEn"))}
                     onChange={(e) => setEmpField("nameEn", e.target.value)}
                   />
@@ -685,20 +702,41 @@ export function EditProfileForm({
               </Field>
             </FieldRow>
 
-            <Field
-              label="인증 (선택)"
-              htmlFor="co-certifications"
-              error={err("company.certifications")}
-              hint="쉼표로 구분해 적습니다. 명함에 뱃지로 하나씩 나옵니다."
-            >
-              <Input
-                id="co-certifications"
-                value={co.certifications}
-                placeholder="IATF 16949, ISO 9001"
-                invalid={Boolean(err("company.certifications"))}
-                onChange={(e) => setCoField("certifications", e.target.value)}
-              />
-            </Field>
+            <FieldRow>
+              <Field
+                label="인증 (선택)"
+                htmlFor="co-certifications"
+                error={err("company.certifications")}
+                hint="쉼표로 구분해 적습니다. 명함에 뱃지로 하나씩 나옵니다."
+              >
+                <Input
+                  id="co-certifications"
+                  value={co.certifications}
+                  placeholder="IATF 16949, ISO 9001"
+                  invalid={Boolean(err("company.certifications"))}
+                  onChange={(e) => setCoField("certifications", e.target.value)}
+                />
+              </Field>
+              {/*
+                국문 칸을 그대로 복사해 쓰는 자리가 아닙니다. 규격 이름이라 대개
+                같은 값이 들어가지만, 한글 인증명을 국문 칸에만 추가하는 날
+                영문 명함이 따라가지 않도록 목록을 갈라 둡니다.
+              */}
+              <Field
+                label="인증 영문 (선택)"
+                htmlFor="co-certificationsEn"
+                error={err("company.certificationsEn")}
+                hint="비우면 영문 명함에서 뱃지 줄이 빠집니다."
+              >
+                <Input
+                  id="co-certificationsEn"
+                  value={co.certificationsEn}
+                  placeholder="IATF 16949, ISO 9001"
+                  invalid={Boolean(err("company.certificationsEn"))}
+                  onChange={(e) => setCoField("certificationsEn", e.target.value)}
+                />
+              </Field>
+            </FieldRow>
 
             <FieldRow>
               {/*
@@ -744,6 +782,20 @@ export function EditProfileForm({
                   placeholder="dvi-ind.com"
                   invalid={Boolean(err("company.homepageUrl"))}
                   onChange={(e) => setCoField("homepageUrl", e.target.value)}
+                />
+              </Field>
+              <Field
+                label="홈페이지 영문 (선택)"
+                htmlFor="co-homepageUrlEn"
+                error={err("company.homepageUrlEn")}
+                hint="비우면 영문 명함도 국문 홈페이지를 겁니다."
+              >
+                <Input
+                  id="co-homepageUrlEn"
+                  value={co.homepageUrlEn}
+                  placeholder="dvi-ind.com/en/"
+                  invalid={Boolean(err("company.homepageUrlEn"))}
+                  onChange={(e) => setCoField("homepageUrlEn", e.target.value)}
                 />
               </Field>
               <Field label="링크드인 (선택)" htmlFor="co-linkedinUrl" error={err("company.linkedinUrl")}>

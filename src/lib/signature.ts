@@ -1,4 +1,4 @@
-import { CARD_TEXT, cardPath, type Lang } from "@/lib/lang";
+import { CARD_TEXT, cardPath, requireCardName, type Lang } from "@/lib/lang";
 import { officeLines, roleParts } from "@/lib/org";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
@@ -53,9 +53,9 @@ function baseUrl(): string {
 function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices, lang: Lang) {
   const en = lang === "en";
   return {
-    // 영문 서명은 영문명을 씁니다. 안 적었으면 한글 이름으로 떨어집니다 —
-    // 이름 없는 서명은 서명이 아닙니다.
-    nameKo: en ? present(employee.nameEn) ?? employee.nameKo : employee.nameKo,
+    // 영문 서명은 영문명을 씁니다. 안 적었으면 만들지 않습니다 — 한글로 떨어뜨리면
+    // 영문 메일에 한글 이름이 붙어 나가고, 서명은 한 번 넣으면 계속 나갑니다.
+    nameKo: requireCardName(employee, lang),
     // 직위 · 임원 직책 · 직책 · 자격을 한 줄로. 없는 항목은 통째로 빠지고
     // 구분자가 혼자 남지 않도록 조립합니다.
     roleText: [
@@ -95,8 +95,7 @@ export function renderSignature(
   const cardUrl = `${base}${cardPath(employee.slug, lang, "card.png")}`;
   const profileUrl = `${base}${cardPath(employee.slug, lang)}`;
   // 이미지를 막은 수신자가 보는 글자입니다. 영문 서명이면 영문 이름으로 나갑니다.
-  const altName =
-    lang === "en" ? present(employee.nameEn) ?? employee.nameKo : employee.nameKo;
+  const altName = requireCardName(employee, lang);
 
   return (
     `<a href="${escapeHtml(profileUrl)}" style="display:inline-block;text-decoration:none;">` +

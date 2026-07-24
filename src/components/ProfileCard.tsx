@@ -7,7 +7,7 @@ import {
   YouTubeIcon,
 } from "./icons";
 import { brand } from "@/config/brand";
-import { CARD_TEXT, cardPath, type Lang } from "@/lib/lang";
+import { CARD_TEXT, cardPath, requireCardName, type Lang } from "@/lib/lang";
 import { officeLines, roleParts } from "@/lib/org";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
@@ -102,14 +102,24 @@ function externalHref(raw: string): string {
 }
 
 /**
+ * Json 컬럼 → 문자열 배열.
+ *
+ * 인증 목록은 Json 이라 타입이 보장되지 않습니다(직접 UPDATE 한 값, 예전 형식).
+ * 카드는 문자열만 그리므로 여기서 좁혀서 넘깁니다.
+ */
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+/**
  * DB 레코드 → 카드 데이터. /c/[slug] 와 /c/[slug]/en 이 함께 씁니다.
  *
  * 언어별로 값을 고르는 규칙이 전부 여기 모여 있습니다. 화면 컴포넌트는 이미
  * 고른 값을 받기만 하므로, 국문·영문 카드가 서로 다른 규칙으로 갈라지지 않습니다.
  *
  * 영문 값이 비면 그 줄을 뺍니다. 한글로 대신 채우지 않습니다 — 영문 명함에
- * 한글이 섞이면 안 만든 것만 못합니다. 이름만 예외로, 영문명이 없으면 한글
- * 이름으로 떨어집니다. 이름 없는 명함은 명함이 아닙니다.
+ * 한글이 섞이면 안 만든 것만 못합니다. 이름도 예외가 아닙니다: 영문명이 없으면
+ * 그 사람의 영문 카드는 아직 없는 것이고, 페이지가 먼저 404 로 막습니다.
  */
 export function toProfileCardData(
   employee: EmployeeWithOrg,
@@ -123,7 +133,9 @@ export function toProfileCardData(
   return {
     slug: employee.slug,
     lang,
-    nameKo: en ? pick(employee.nameEn) ?? employee.nameKo : employee.nameKo,
+    // 영문 카드인데 영문명이 없으면 던집니다. 여기까지 왔다는 건 라우트의 404
+    // 가드가 빠졌다는 뜻이라, 한글 이름으로 덮고 넘어가면 안 됩니다.
+    nameKo: requireCardName(employee, lang),
     // 국문 카드는 한글 이름 아래 영문명을 함께 보여 줍니다. 영문 카드에서는
     // 위에서 이미 영문명을 이름 자리에 올렸으므로 같은 값을 두 번 찍지 않습니다.
     nameEn: en ? null : employee.nameEn,
@@ -140,7 +152,9 @@ export function toProfileCardData(
       nameEn: company.nameEn,
       industry: en ? pick(company.industryEn) : company.industry,
       tagline: en ? pick(company.taglineEn) : company.tagline,
-      homepageUrl: company.homepageUrl,
+      // 영문 홈페이지가 따로 있으면 그쪽으로 보냅니다. 없으면 국문이라도 겁니다 —
+      // 회사 사이트로 가는 길이 아예 사라지는 것보다 낫습니다.
+      homepageUrl: en ? company.homepageUrlEn?.trim() || company.homepageUrl : company.homepageUrl,
       linkedinUrl: company.linkedinUrl,
       // 영문 소개 영상이 따로 있으면 그걸 걸고, 없으면 국문 영상이라도 겁니다 —
       // 영상은 말이 안 통해도 볼 거리가 되므로 링크를 없애는 것보다 낫습니다.
@@ -149,10 +163,10 @@ export function toProfileCardData(
       addresses: officeLines(company.offices, lang),
       tel: company.tel,
       fax: company.fax,
-      // certifications 는 Json 컬럼이라 타입이 보장되지 않습니다. 문자열만 통과시킵니다.
-      certifications: Array.isArray(company.certifications)
-        ? company.certifications.filter((c): c is string => typeof c === "string")
-        : [],
+      // 영문 카드는 영문 인증 목록만 씁니다. 비면 뱃지 줄이 통째로 빠집니다 —
+      // "IATF 16949" 처럼 원래 영문인 항목이 많다고 국문 목록을 그대로 쓰면,
+      // 한글 인증명이 하나 추가되는 날 영문 명함에 그대로 나갑니다.
+      certifications: stringList(en ? company.certificationsEn : company.certifications),
     },
   };
 }
@@ -164,12 +178,16 @@ export function toProfileCardData(
  * 받아 두면 파일명이 그 사람을 가리켜야 나중에 찾을 수 있는데, slug 는 성만
  * 로마자로 줄인 값이라(홍길동·홍민지 → hong·hong2) 누구 명함인지 알아볼 수 없습니다.
  *
+ * "명함" 이라는 말도 카드 언어를 따릅니다 — 영문 카드를 받은 외국 거래처의
+ * 내려받기 폴더에 한글 파일명이 떨어지면 읽지도, 검색하지도 못합니다.
+ * 문구는 서명 이미지의 alt 와 같은 CARD_TEXT.cardOf 한 곳에서 옵니다.
+ *
  * 이름은 자유 입력이라 파일명에 못 쓰는 글자가 섞일 수 있어 걷어냅니다.
  * 걷어내고 나면 빈 문자열이 되는 경우(이름이 전부 특수문자)를 대비해 slug 로 떨어집니다.
  */
-function downloadName(nameKo: string, slug: string): string {
-  const safe = nameKo.replace(/[\\/:*?"<>|]/g, "").trim();
-  return `${safe || slug} 명함.png`;
+function downloadName(name: string, slug: string, lang: Lang): string {
+  const safe = name.replace(/[\\/:*?"<>|]/g, "").trim();
+  return `${CARD_TEXT[lang].cardOf(safe || slug)}.png`;
 }
 
 /** 회사 워드마크. 로고 이미지가 아직 없어 텍스트로 그립니다. D 만 primary. */
@@ -331,12 +349,10 @@ export function ProfileCard({
         */
         <a
           href={cardPath(data.slug, data.lang, "card.png")}
-          // 영문 카드는 영문 이름으로 저장됩니다. 영문명을 안 적었으면 한글 이름으로
-          // 떨어집니다 — 파일명이 비면 브라우저가 slug 를 그대로 씁니다.
-          download={downloadName(
-            data.lang === "en" ? data.nameEn?.trim() || data.nameKo : data.nameKo,
-            data.slug,
-          )}
+          // nameKo 에는 이미 카드 언어에 맞는 이름이 들어 있습니다 —
+          // toProfileCardData 가 골라 담습니다. 여기서 언어를 다시 따지면
+          // 고르는 규칙이 두 곳으로 갈라집니다.
+          download={downloadName(data.nameKo, data.slug, data.lang)}
           aria-label={t.saveCard}
           className={`${identityClassName} transition-colors hover:bg-sub-bg`}
         >
