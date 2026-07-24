@@ -326,7 +326,7 @@ export function ProfileCard({
       </p>
 
       {/* 누르는 자리라는 표시가 없으면 아무도 안 누릅니다. */}
-      <span className="mt-group inline-flex items-center gap-tight text-caption text-sub-text">
+      <span className="mt-group inline-flex items-center gap-tight text-caption text-primary">
         <DownloadIcon className="h-4 w-4" />
         {t.saveCard}
       </span>
