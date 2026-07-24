@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { escapeHtml, renderSignature, renderSignatureText } from "./signature";
+import { CARD_TEXT } from "@/lib/lang";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 // baseUrl() 은 모듈 로드 시점이 아니라 호출 시점에 env 를 읽으므로,
@@ -127,6 +128,27 @@ describe("renderSignature", () => {
 
     assert.match(html, /alt="홍길동 &amp; 김철수 명함"/);
     assert.ok(!/alt="홍길동 & 김/.test(html), "원본 & 가 그대로 남으면 안 된다");
+  });
+
+  /*
+   * 아래 두 테스트는 문구를 여기 적지 않고 CARD_TEXT 에서 읽어옵니다.
+   * 버튼 문구는 자주 손보는 값이라, 테스트가 문구를 따로 적어 두면 고칠 때마다
+   * 깨지거나 — 더 나쁘게는 옛 문구를 찾는 채로 통과해서 아무것도 못 지킵니다.
+   * 여기서 지키려는 건 문구가 아니라 "버튼이 붙어 있고, 언어가 안 섞인다" 입니다.
+   */
+  it("이미지 아래에 같은 곳으로 가는 클릭 유도 버튼을 단다", () => {
+    const html = renderSignature(emp(), co());
+
+    assert.ok(html.includes(CARD_TEXT.ko.signatureCta), "버튼 문구가 들어가야 한다");
+    // 버튼과 이미지가 서로 다른 곳으로 가면 어느 쪽을 눌렀느냐로 결과가 갈립니다.
+    assert.equal(html.match(/href="https:\/\/dvi-ind\.com\/c\/hong"/g)?.length, 2);
+  });
+
+  it("영문 서명의 버튼 문구는 영문이다", () => {
+    const html = renderSignature(emp({ nameEn: "Gildong Hong" }), co(), "en");
+
+    assert.ok(html.includes(CARD_TEXT.en.signatureCta));
+    assert.ok(!html.includes(CARD_TEXT.ko.signatureCta), "영문 서명에 한글 버튼이 섞이면 안 된다");
   });
 
   it("이름에 태그가 들어와도 alt 가 마크업으로 해석되지 않는다", () => {
