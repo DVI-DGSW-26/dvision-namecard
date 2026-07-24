@@ -6,7 +6,7 @@ import { departmentText } from "@/lib/org";
 import { defaultPositionId } from "@/lib/org-store";
 import { prisma } from "@/lib/prisma";
 import { buildSlug } from "@/lib/slug";
-import { employeeCreateSchema, fieldErrors } from "@/lib/validation";
+import { employeeCreateSchema, fieldErrors, fullNameKo } from "@/lib/validation";
 import type { Prisma } from "@/generated/prisma/client";
 
 /**
@@ -186,8 +186,9 @@ export async function POST(request: NextRequest) {
       data: {
         slug: finalSlug,
         email,
-        // vCard 를 위해 성·이름은 나눠서도 보관합니다. nameKo 는 표시용 합본입니다.
-        nameKo: `${familyName}${givenName}`,
+        // vCard 를 위해 성·이름은 나눠서도 보관합니다. nameKo 는 표시용 합본이고,
+        // 붙이는 규칙은 프로필 수정과 같은 fullNameKo 하나만 씁니다.
+        nameKo: fullNameKo(familyName, givenName),
         familyName,
         givenName,
         rankId,

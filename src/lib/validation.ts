@@ -43,12 +43,35 @@ const phone = z.preprocess(
     .nullable(),
 );
 
+/**
+ * 표시용 합본 이름. 성·이름을 붙인 값입니다.
+ *
+ * 직원 추가와 프로필 수정 두 경로가 같은 규칙을 쓰도록 여기 한 곳에 둡니다.
+ * 예전에는 추가할 때만 붙여 만들고 수정할 때는 nameKo 를 직접 받았습니다. 그래서
+ * 이름을 고쳐도 familyName/givenName 은 등록 당시 값 그대로 남았고, 그 둘로 만드는
+ * vCard 의 N 필드가 실제 이름과 갈라졌습니다. (홍박사인데 주소록에는 홍길동)
+ */
+export function fullNameKo(familyName: string, givenName: string): string {
+  return `${familyName}${givenName}`;
+}
+
 export const employeeProfileSchema = z.object({
-  nameKo: z
+  /*
+   * 이름은 성·이름을 나눠 받습니다. nameKo 는 서버가 fullNameKo 로 만듭니다.
+   *
+   * 합쳐 받은 뒤 서버에서 쪼개면 두 글자 성(남궁·선우·제갈)에서 반드시 틀리고,
+   * 나눠 저장한 값을 안 고치면 vCard 이름이 옛날 이름으로 남습니다.
+   */
+  familyName: z
+    .string()
+    .trim()
+    .min(1, "성을 입력해 주세요.")
+    .max(10, "성이 너무 깁니다."),
+  givenName: z
     .string()
     .trim()
     .min(1, "이름을 입력해 주세요.")
-    .max(20, "이름은 20자 이내로 입력해 주세요."),
+    .max(10, "이름이 너무 깁니다."),
   /**
    * 영문명은 필수입니다.
    *
@@ -75,6 +98,14 @@ export const employeeProfileSchema = z.object({
   credentialEn: optionalText(40, "자격 · 학위 영문"),
   telWork: phone,
   telMobile: phone,
+  /**
+   * 휴대폰을 명함에 내보낼지. 본인이 정합니다.
+   *
+   * 명함·이메일 서명·명함 이미지·vCard 네 곳이 전부 이 값으로 노출을 결정하는데
+   * 정작 바꿀 칸이 어디에도 없어서, 번호를 적어도 아무 데도 안 나오고 본인도
+   * 관리자도 켤 수 없었습니다. 기본값은 스키마와 같은 false 입니다.
+   */
+  mobilePublic: z.boolean(),
   email: z.preprocess(
     emptyToNull,
     z.email({ message: "이메일 형식이 올바르지 않습니다." }),

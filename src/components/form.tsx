@@ -146,3 +146,43 @@ export function Select({
 export function FieldRow({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 gap-group sm:grid-cols-2">{children}</div>;
 }
+
+/**
+ * 체크박스 한 줄 — 라벨과 보조 설명을 함께 답니다.
+ *
+ * Field 를 쓰지 않는 이유: Field 는 라벨이 칸 위에 놓이는 구조인데, 체크박스는
+ * 네모 옆에 라벨이 붙어야 무엇을 켜는지 읽힙니다. 줄 전체가 label 이라 설명
+ * 문구를 눌러도 켜집니다 — 네모(20px)만 노리게 하면 손가락으로 누르기 어렵습니다.
+ */
+export function Checkbox({
+  label,
+  hint,
+  checked,
+  onChange,
+  disabled,
+  id,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  id: string;
+}) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-sibling py-tight">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-tight h-5 w-5 shrink-0 accent-primary"
+      />
+      <span>
+        <span className="text-body text-text">{label}</span>
+        {hint ? <span className="mt-tight block text-caption text-sub-text">{hint}</span> : null}
+      </span>
+    </label>
+  );
+}
