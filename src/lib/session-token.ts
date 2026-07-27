@@ -4,7 +4,7 @@ import { SignJWT, jwtVerify } from "jose";
  * 세션 토큰의 서명/검증만 담당합니다.
  *
  * 이 파일은 jose 만 import 합니다 — node:crypto 나 next/headers 를 절대 넣지 마세요.
- * middleware(Edge 런타임)가 여기서 import 하기 때문에, Node 전용 모듈이 하나라도
+ * proxy(Edge 런타임)가 여기서 import 하기 때문에, Node 전용 모듈이 하나라도
  * 딸려 들어오면 빌드가 깨집니다. 쿠키 조작과 비밀번호 검증은 lib/auth.ts 에 있습니다.
  */
 
@@ -29,7 +29,7 @@ export type Session = {
   /**
    * 관리자가 발급한 초기 비밀번호를 아직 안 바꿨는지.
    *
-   * DB 가 아니라 토큰에 담는 이유: 이 값을 보고 막는 곳이 middleware 인데, 거기는
+   * DB 가 아니라 토큰에 담는 이유: 이 값을 보고 막는 곳이 proxy 인데, 거기는
    * Edge 런타임이라 prisma 를 부를 수 없습니다. 비밀번호를 바꾸면 세션을 다시
    * 발급해 false 로 덮습니다.
    */

@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     화면이 비밀번호 변경으로 보내야 하므로 이 사실만 알려 줍니다. 여기서 막지
     않는 이유: 세션은 이미 본인이 맞다는 증명이고, 못 바꾸게 하면 바꿀 화면에도
-    못 들어갑니다. 강제는 화면(/edit/password)과 middleware 가 맡습니다.
+    못 들어갑니다. 강제는 화면(/edit/password)과 proxy 가 맡습니다.
   */
   return NextResponse.json({ ok: true, mustChangePassword: auth.mustChangePassword });
 }
