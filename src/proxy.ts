@@ -9,7 +9,7 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/session-token";
  *
  * /c/[slug] 는 공개 경로라 matcher 에 넣지 않습니다.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await verifySessionToken(token) : null;
 
