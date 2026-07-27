@@ -12,7 +12,7 @@ import type { Prisma } from "@/generated/prisma/client";
 /**
  * 직원 목록.
  *
- * middleware 는 /api/* 를 지나가지 않으므로 여기서 직접 세션을 확인합니다.
+ * proxy 는 /api/* 를 지나가지 않으므로 여기서 직접 세션을 확인합니다.
  * - admin: /admin 임직원 관리 표. RESIGNED 포함, email 포함.
  * - member: /edit 의 본인 선택용. RESIGNED 제외, email 은 내려주지 않습니다.
  */
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
 /**
  * 직원 추가. (admin 전용)
  *
- * middleware 는 /api/* 를 지나가지 않으므로 여기서 직접 권한을 확인합니다.
+ * proxy 는 /api/* 를 지나가지 않으므로 여기서 직접 권한을 확인합니다.
  * 새 직원은 PENDING(초대중)으로 만듭니다. 본인이 /edit 에서 정보를 채우기 전까지
  * 공개 프로필에 완성된 명함이 뜨면 안 되기 때문입니다.
  */

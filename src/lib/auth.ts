@@ -19,7 +19,7 @@ import {
  * 한 사람에게서 권한을 회수하려면 전원이 새 비밀번호를 외워야 했습니다.
  *
  * prisma 와 node:crypto 를 쓰므로 이 파일은 Node 런타임 전용입니다.
- * middleware(Edge)에서는 lib/session-token.ts 를 직접 import 하세요.
+ * proxy(Edge)에서는 lib/session-token.ts 를 직접 import 하세요.
  */
 
 export { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, SESSION_REMEMBER_MAX_AGE_SECONDS };

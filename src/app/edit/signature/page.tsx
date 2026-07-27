@@ -7,7 +7,7 @@ import { TopNav } from "@/components/TopNav";
 import { SignaturePanel } from "./SignaturePanel";
 
 /**
- * 이메일 서명 복사 + 설치 안내. (쿠키 필요 — middleware 가 보호)
+ * 이메일 서명 복사 + 설치 안내. (쿠키 필요 — proxy 가 보호)
  *
  * 서명 HTML 은 서버에서 만듭니다. renderSignature() 가 NEXT_PUBLIC_BASE_URL 로
  * 절대 URL 을 만들고 사용자 입력을 이스케이프하는데, 이걸 클라이언트로 옮기면

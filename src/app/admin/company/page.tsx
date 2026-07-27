@@ -7,9 +7,9 @@ import { companyOfficesInclude } from "@/types";
 import { CompanyEditor } from "./CompanyEditor";
 
 /**
- * 회사 정보 관리. (admin 세션 필요 — middleware 가 보호)
+ * 회사 정보 관리. (admin 세션 필요 — proxy 가 보호)
  *
- * middleware 가 이미 막아주지만 세션을 여기서 다시 읽고 role 도 확인합니다.
+ * proxy 가 이미 막아주지만 세션을 여기서 다시 읽고 role 도 확인합니다.
  * matcher 를 손대다 /admin 이 빠지는 사고가 나도 페이지가 열리지 않게 하기 위함입니다.
  * (임직원 관리·조직 관리와 같은 방식)
  */

@@ -7,7 +7,7 @@ import { TopNav } from "@/components/TopNav";
 import { EditProfileForm } from "./EditProfileForm";
 
 /**
- * 프로필 편집. (쿠키 필요 — middleware 가 보호)
+ * 프로필 편집. (쿠키 필요 — proxy 가 보호)
  *
  * 대상은 게이트에서 사내 이메일로 확인한 본인입니다. 관리자만 ?e=<slug> 로
  * 다른 사람을 열 수 있습니다. (lib/current-employee.ts)

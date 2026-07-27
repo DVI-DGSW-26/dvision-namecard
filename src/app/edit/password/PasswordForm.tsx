@@ -7,7 +7,7 @@ import { fieldErrors, passwordChangeSchema } from "@/lib/validation";
 /**
  * 비밀번호 변경 폼.
  *
- * 초기 비밀번호로 처음 들어온 사람은 middleware 가 이 화면으로 보냅니다. 그래서
+ * 초기 비밀번호로 처음 들어온 사람은 proxy 가 이 화면으로 보냅니다. 그래서
  * 안내 문구가 두 갈래입니다 — 처음 온 사람에게는 왜 여기 있는지, 그냥 바꾸러 온
  * 사람에게는 무엇을 하는 화면인지.
  */

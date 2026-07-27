@@ -5,9 +5,9 @@ import { getSession } from "@/lib/auth";
 import { PasswordForm } from "./PasswordForm";
 
 /**
- * 비밀번호 변경. (로그인 필요 — middleware 가 보호)
+ * 비밀번호 변경. (로그인 필요 — proxy 가 보호)
  *
- * 초기 비밀번호로 들어온 사람은 middleware 가 여기로 보냅니다. 그 경우에는 위아래
+ * 초기 비밀번호로 들어온 사람은 proxy 가 여기로 보냅니다. 그 경우에는 위아래
  * 메뉴를 그리지 않습니다 — 다른 화면으로 갈 수 있는 것처럼 보이는데 눌러 봐야
  * 다시 여기로 튕기면, 앱이 고장 난 것처럼 읽힙니다.
  */

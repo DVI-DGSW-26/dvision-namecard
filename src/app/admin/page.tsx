@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
  * 없었습니다. 관리자가 실제로 쓰는 화면은 /admin/employees 하나뿐이므로 그리로
  * 넘깁니다. 관리자 화면이 여럿이 되면 그때 목차를 두세요.
  *
- * 세션·권한은 middleware(matcher 에 /admin/:path*)가 이미 확인합니다.
+ * 세션·권한은 proxy(matcher 에 /admin/:path*)가 이미 확인합니다.
  * 여기서 다시 보지 않는 건 검증 지점을 둘로 두지 않기 위해서입니다.
  */
 export default function AdminPage() {

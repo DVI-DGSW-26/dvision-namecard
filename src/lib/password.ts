@@ -12,7 +12,7 @@ import {
  * 데가 다릅니다. scrypt 는 Node 에 내장이고 메모리 강도(N)를 직접 정할 수 있어,
  * 사내 도구 규모에서는 이걸로 충분합니다.
  *
- * node:crypto 를 쓰므로 이 파일은 Node 런타임 전용입니다 — middleware(Edge)에서
+ * node:crypto 를 쓰므로 이 파일은 Node 런타임 전용입니다 — proxy(Edge)에서
  * import 하지 마세요. 거기서 필요한 건 lib/session-token.ts 뿐입니다.
  */
 
