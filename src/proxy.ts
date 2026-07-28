@@ -21,18 +21,16 @@ export async function proxy(request: NextRequest) {
   }
 
   /*
-    관리자가 발급한 초기 비밀번호로 들어온 사람은 비밀번호부터 바꿉니다.
+    초기 비밀번호 강제 변경 게이트는 없앴습니다.
 
-    관리자도 아는 비밀번호를 계속 쓰면 그 사람으로 남긴 흔적과 본인의 흔적을
-    구분할 수 없습니다. 바꾸는 화면 자체는 막지 않아야 하므로 그 경로만 통과시킵니다.
+    예전에는 mustChangePassword=true 인 사람을 /edit/password 한 곳에만 가둬
+    놓았는데, 그 화면에는 로그아웃도 메뉴도 없어서 옛 쿠키(값이 true 로 박힌)를
+    든 사람이 영영 빠져나오지 못했습니다. 강제 변경 자체를 없애기로 했으므로
+    이 게이트도 제거합니다 — 이제 어떤 토큰 값이든 여기서 갇히지 않습니다.
   */
-  const { pathname } = request.nextUrl;
-  if (session.mustChangePassword && pathname !== "/edit/password") {
-    return NextResponse.redirect(new URL("/edit/password", request.url));
-  }
 
   // 관리자 화면은 ADMIN 권한을 가진 계정만 들어갑니다.
-  if (pathname.startsWith("/admin") && session.role !== "admin") {
+  if (request.nextUrl.pathname.startsWith("/admin") && session.role !== "admin") {
     return NextResponse.redirect(new URL("/edit", request.url));
   }
 

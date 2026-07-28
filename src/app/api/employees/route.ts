@@ -18,15 +18,15 @@ import type { Prisma } from "@/generated/prisma/client";
  * 만드는 2단계였는데, 그 한 단계를 건너뛰면 로그인이 안 돼서 "추가했는데 왜 안
  * 되냐" 가 반복됐습니다.
  *
- * 트레이드오프(알고 쓰는 것):
- *   - 전원이 같은 초기 비번을 갖습니다. 한 명 것이 새면 아직 안 바꾼 전원이 노출됩니다.
- *   - 값이 소스(=git 이력)에 남습니다. 진짜 비밀로 두려면 env 로 빼야 합니다.
- * 그래서 mustChangePassword=true 로 두어, 첫 로그인에서 반드시 본인 비번으로
- * 바꾸게 합니다 — 공용 비번이 그대로 눌러앉지 않도록 하는 최소한의 방어입니다.
+ * 강제 변경(mustChangePassword)은 켜지 않습니다 — 운영자가 이 공용 비번을 그대로
+ * 쓰기로 결정했습니다. 첫 로그인에서 변경 화면을 띄우지 않습니다.
  *
- * 개인별로 새로 발급하려면 임직원 관리의 '비번 재발급' 이 그대로 동작합니다.
+ * 트레이드오프(알고 쓰는 것):
+ *   - 전원이 같은 비번을 그대로 씁니다. 한 명 것이 새면 전원이 노출됩니다.
+ *   - 값이 소스(=git 이력)에 남습니다. 진짜 비밀로 두려면 env 로 빼야 합니다.
+ * 개인별로 바꾸려면 임직원 관리의 '비번 재발급' 이 그대로 동작합니다.
  */
-const DEFAULT_EMPLOYEE_PASSWORD = "dvision2026";
+const DEFAULT_EMPLOYEE_PASSWORD = "0706";
 
 /**
  * 직원 목록.
@@ -221,11 +221,12 @@ export async function POST(request: NextRequest) {
         partId,
         // 새 직원은 '팀원' 으로 시작합니다. 관리자가 목록에서 그 항목을 지웠으면 비워 둡니다.
         positionId: await defaultPositionId(),
-        status: "PENDING",
-        // 추가 즉시 로그인할 수 있도록 공용 초기 비번을 심습니다. 첫 로그인에서 본인
-        // 비번으로 바꾸게 강제합니다(위 DEFAULT_EMPLOYEE_PASSWORD 주석 참고).
+        // 상태 구분(초대중/활성)은 없앴습니다 — 추가하면 바로 '사용중(ACTIVE)'.
+        status: "ACTIVE",
+        // 추가 즉시 로그인할 수 있도록 공용 초기 비번을 심습니다. 강제 변경은 켜지
+        // 않습니다(위 DEFAULT_EMPLOYEE_PASSWORD 주석 참고).
         passwordHash: await hashPassword(DEFAULT_EMPLOYEE_PASSWORD),
-        mustChangePassword: true,
+        mustChangePassword: false,
         companyId: company.id,
       },
       select: { id: true, slug: true, nameKo: true },
