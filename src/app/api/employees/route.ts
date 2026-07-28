@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
+import { DEFAULT_EMPLOYEE_PASSWORD, getSession } from "@/lib/auth";
 import { listQuerySchema, type EmployeeListResponse } from "@/lib/employee-list";
 import { departmentText } from "@/lib/org";
 import { defaultPositionId } from "@/lib/org-store";
@@ -10,23 +10,16 @@ import { buildSlug } from "@/lib/slug";
 import { employeeCreateSchema, fieldErrors, fullNameKo } from "@/lib/validation";
 import type { Prisma } from "@/generated/prisma/client";
 
-/**
- * 새 직원에게 자동으로 심는 공용 초기 비밀번호.
- *
- * 이걸 두는 이유: 관리자가 직원을 추가하면 곧바로 로그인할 수 있어야 한다는 요구가
- * 있었습니다. 원래는 추가 후 관리자가 '비번 발급' 을 따로 눌러 개인별 초기 비번을
- * 만드는 2단계였는데, 그 한 단계를 건너뛰면 로그인이 안 돼서 "추가했는데 왜 안
- * 되냐" 가 반복됐습니다.
- *
- * 강제 변경(mustChangePassword)은 켜지 않습니다 — 운영자가 이 공용 비번을 그대로
- * 쓰기로 결정했습니다. 첫 로그인에서 변경 화면을 띄우지 않습니다.
- *
- * 트레이드오프(알고 쓰는 것):
- *   - 전원이 같은 비번을 그대로 씁니다. 한 명 것이 새면 전원이 노출됩니다.
- *   - 값이 소스(=git 이력)에 남습니다. 진짜 비밀로 두려면 env 로 빼야 합니다.
- * 개인별로 바꾸려면 임직원 관리의 '비번 재발급' 이 그대로 동작합니다.
- */
-const DEFAULT_EMPLOYEE_PASSWORD = "0706";
+/*
+  새 직원에게는 lib/auth 의 공용 비밀번호를 그대로 심습니다.
+
+  값을 여기 따로 두지 않는 이유: 로그인 쪽(lib/auth)도 같은 값을 받아 주므로,
+  두 군데에 적어 두면 한쪽만 고쳤을 때 "추가한 직원이 로그인은 안 되는" 상태가
+  조용히 생깁니다.
+
+  강제 변경(mustChangePassword)은 켜지 않습니다 — 운영자가 이 공용 비번을 그대로
+  쓰기로 결정했습니다. 첫 로그인에서 변경 화면을 띄우지 않습니다.
+*/
 
 /**
  * 직원 목록.
@@ -223,8 +216,8 @@ export async function POST(request: NextRequest) {
         positionId: await defaultPositionId(),
         // 상태 구분(초대중/활성)은 없앴습니다 — 추가하면 바로 '사용중(ACTIVE)'.
         status: "ACTIVE",
-        // 추가 즉시 로그인할 수 있도록 공용 초기 비번을 심습니다. 강제 변경은 켜지
-        // 않습니다(위 DEFAULT_EMPLOYEE_PASSWORD 주석 참고).
+        // 추가 즉시 로그인할 수 있도록 공용 비번을 심습니다. 강제 변경은 켜지
+        // 않습니다(위 주석 참고).
         passwordHash: await hashPassword(DEFAULT_EMPLOYEE_PASSWORD),
         mustChangePassword: false,
         companyId: company.id,
