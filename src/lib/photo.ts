@@ -8,16 +8,20 @@ import sharp from "sharp";
  * 그 용량을 내려받습니다.
  *
  * sharp 는 네이티브 모듈이라 Node 런타임 전용입니다 — Edge 에서 부르지 마세요.
+ *
+ * package.json 의 sharp 는 0.34.x 에 묶여 있습니다. 0.35.3 을 Vercel(Next 16 ·
+ * Turbopack)에 올리면 네이티브 바이너리가 libvips-cpp.so 를 못 찾아
+ * (ERR_DLOPEN_FAILED) 이 파일을 import 하는 라우트가 통째로 죽습니다. 그러면
+ * 요청 방식과 상관없이 HTML 500 이 나가고, 화면에는 이유 없는 실패만 뜹니다.
+ * 올릴 때는 배포에서 사진 업로드가 실제로 되는지 먼저 확인하세요.
+ * (lovell/sharp#4567)
+ *
+ * 상한·허용 형식은 lib/photo-limits.ts 에 있습니다 — 화면과 서버가 같은 값을
+ * 봐야 하는데, 이 파일은 sharp 때문에 클라이언트가 import 할 수 없습니다.
  */
 
 /** 저장할 한 변의 길이. 명함에서는 96px, 편집 미리보기에서도 96px 이라 2배수로 충분합니다. */
 const SIZE = 512;
-
-/** 업로드 상한. 폰 원본 사진이 대개 8MB 아래라 그보다 넉넉히 잡습니다. */
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-
-/** 받아들이는 형식. sharp 가 열 수 있고 브라우저가 흔히 올리는 것들입니다. */
-const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 /**
  * 저장할 형태.
@@ -26,10 +30,6 @@ const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/
  * 요구하는데, Buffer 의 backing buffer 타입이 더 넓어서 그대로는 들어가지 않습니다.
  */
 export type ProcessedPhoto = { data: Uint8Array<ArrayBuffer>; mimeType: string };
-
-export function isAcceptedType(mimeType: string): boolean {
-  return ACCEPTED.includes(mimeType.toLowerCase());
-}
 
 /**
  * 정사각형 webp 한 장으로 만듭니다. 열 수 없는 파일이면 null.

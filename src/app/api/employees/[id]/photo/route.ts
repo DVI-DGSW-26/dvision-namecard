@@ -2,7 +2,8 @@ import { revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { cardTag } from "@/lib/card-cache";
-import { MAX_UPLOAD_BYTES, isAcceptedType, photoUrlFor, processPhoto } from "@/lib/photo";
+import { photoUrlFor, processPhoto } from "@/lib/photo";
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, isAcceptedType } from "@/lib/photo-limits";
 import { prisma } from "@/lib/prisma";
 
 type Context = { params: Promise<{ id: string }> };
@@ -56,13 +57,13 @@ export async function POST(request: NextRequest, { params }: Context) {
   // 크기를 먼저 봅니다. 큰 파일을 sharp 에 넘긴 뒤 거절하면 그만큼 메모리를 씁니다.
   if (file.size > MAX_UPLOAD_BYTES) {
     return NextResponse.json(
-      { errors: { photo: "사진은 10MB 이하만 올릴 수 있습니다." } },
+      { errors: { photo: `사진은 ${MAX_UPLOAD_LABEL} 이하만 올릴 수 있습니다.` } },
       { status: 422 },
     );
   }
   if (!isAcceptedType(file.type)) {
     return NextResponse.json(
-      { errors: { photo: "JPG · PNG · WebP · HEIC 만 올릴 수 있습니다." } },
+      { errors: { photo: "JPG · PNG · WebP 만 올릴 수 있습니다." } },
       { status: 422 },
     );
   }
