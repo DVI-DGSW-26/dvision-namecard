@@ -4,10 +4,29 @@ import { getSession } from "@/lib/auth";
 import { listQuerySchema, type EmployeeListResponse } from "@/lib/employee-list";
 import { departmentText } from "@/lib/org";
 import { defaultPositionId } from "@/lib/org-store";
+import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { buildSlug } from "@/lib/slug";
 import { employeeCreateSchema, fieldErrors, fullNameKo } from "@/lib/validation";
 import type { Prisma } from "@/generated/prisma/client";
+
+/**
+ * 새 직원에게 자동으로 심는 공용 초기 비밀번호.
+ *
+ * 이걸 두는 이유: 관리자가 직원을 추가하면 곧바로 로그인할 수 있어야 한다는 요구가
+ * 있었습니다. 원래는 추가 후 관리자가 '비번 발급' 을 따로 눌러 개인별 초기 비번을
+ * 만드는 2단계였는데, 그 한 단계를 건너뛰면 로그인이 안 돼서 "추가했는데 왜 안
+ * 되냐" 가 반복됐습니다.
+ *
+ * 트레이드오프(알고 쓰는 것):
+ *   - 전원이 같은 초기 비번을 갖습니다. 한 명 것이 새면 아직 안 바꾼 전원이 노출됩니다.
+ *   - 값이 소스(=git 이력)에 남습니다. 진짜 비밀로 두려면 env 로 빼야 합니다.
+ * 그래서 mustChangePassword=true 로 두어, 첫 로그인에서 반드시 본인 비번으로
+ * 바꾸게 합니다 — 공용 비번이 그대로 눌러앉지 않도록 하는 최소한의 방어입니다.
+ *
+ * 개인별로 새로 발급하려면 임직원 관리의 '비번 재발급' 이 그대로 동작합니다.
+ */
+const DEFAULT_EMPLOYEE_PASSWORD = "dvision2026";
 
 /**
  * 직원 목록.
@@ -203,6 +222,10 @@ export async function POST(request: NextRequest) {
         // 새 직원은 '팀원' 으로 시작합니다. 관리자가 목록에서 그 항목을 지웠으면 비워 둡니다.
         positionId: await defaultPositionId(),
         status: "PENDING",
+        // 추가 즉시 로그인할 수 있도록 공용 초기 비번을 심습니다. 첫 로그인에서 본인
+        // 비번으로 바꾸게 강제합니다(위 DEFAULT_EMPLOYEE_PASSWORD 주석 참고).
+        passwordHash: await hashPassword(DEFAULT_EMPLOYEE_PASSWORD),
+        mustChangePassword: true,
         companyId: company.id,
       },
       select: { id: true, slug: true, nameKo: true },
