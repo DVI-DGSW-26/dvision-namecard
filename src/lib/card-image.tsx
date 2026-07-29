@@ -81,7 +81,7 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
   const brand = safeColor(company.brandColor);
   const INK = "#212121";
   const SUB = "#6B6B6B";
-  const LINE = "#E5E7EB";
+  const LINE = "#D1D5DB";
 
   /*
     이름 자리.
