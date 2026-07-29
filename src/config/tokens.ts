@@ -23,7 +23,7 @@ export const tokens = {
     /** 보조 정보. 직급, 캡션, 힌트 */
     subText: "#6B6B6B",
     /** 구분선, 인풋 테두리, 배지 테두리 */
-    border: "#E5E7EB",
+    border: "#D1D5DB",
     /** 프로필 사진 placeholder, 아바타 */
     subBg: "#F5F5F5",
     /** 기본 배경. 절대 바꾸지 않음 */
