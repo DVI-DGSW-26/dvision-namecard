@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Field, Input } from "@/components/form";
-import { EyeIcon, EyeOffIcon } from "@/components/icons";
+import { EyeIcon, EyeOffIcon, SpinnerIcon } from "@/components/icons";
 
 /**
  * 공용 비밀번호 입력 폼.
@@ -20,11 +20,28 @@ export function GateForm({ next }: { next: string }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+
+  /*
+    로그인은 두 단계이고, 둘 다 기다리는 시간입니다.
+
+      1. 확인   — /api/gate 에 묻고 세션 쿠키를 받습니다. (checking)
+      2. 들어가기 — 목적지(/edit·/admin)를 서버에서 그려 옵니다. (navigating)
+
+    예전에는 1번만 표시했습니다. 2번이 시작되면 버튼이 원래대로 돌아오는데 화면은
+    아직 로그인 폼이라, 누른 사람 눈에는 "로딩이 되다가 만" 것으로 보였습니다.
+    2번이 더 긴 쪽인데(목적지가 DB 를 여러 번 왕복합니다) 그 구간이 통째로 표시
+    밖에 있었던 셈입니다.
+
+    그래서 2번을 transition 으로 감쌉니다 — 이동이 실제로 끝날 때까지 navigating
+    이 켜져 있어서, 표시가 화면 전환까지 이어집니다.
+  */
+  const [checking, setChecking] = useState(false);
+  const [navigating, startNavigation] = useTransition();
+  const busy = checking || navigating;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setSubmitting(true);
+    setChecking(true);
     setError(null);
 
     try {
@@ -37,12 +54,9 @@ export function GateForm({ next }: { next: string }) {
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
         setError(payload?.error ?? "로그인하지 못했습니다.");
+        setChecking(false);
         return;
       }
-
-      const payload = await response.json().catch(() => null);
-      // 직원이 아직 없는 상태로 들어온 관리자는 "내 명함" 이 없습니다.
-      const destination = payload?.bootstrap ? "/admin/employees" : next;
 
       /*
        * 세션 쿠키가 생겼으니 서버 컴포넌트를 다시 그려야 합니다.
@@ -52,12 +66,16 @@ export function GateForm({ next }: { next: string }) {
        * 여러 번 왕복하는 화면이라 로그인 체감 시간이 그대로 두 배가 됐습니다.
        * 목적지(/edit·/admin)는 전부 동적 라우트라 클라이언트 캐시에 재사용될
        * 항목이 남지 않습니다. 정적 페이지를 목적지로 추가하게 되면 그때 다시 보세요.
+       *
+       * checking 을 여기서 끄지 않습니다. 껐다가 navigating 이 켜지는 사이에 한 틱이
+       * 비면 버튼이 "들어가기" 로 깜빡였다가 다시 잠깁니다.
        */
-      router.replace(destination);
+      startNavigation(() => {
+        router.replace(next);
+      });
     } catch {
       setError("네트워크 오류로 로그인하지 못했습니다.");
-    } finally {
-      setSubmitting(false);
+      setChecking(false);
     }
   }
 
@@ -124,13 +142,36 @@ export function GateForm({ next }: { next: string }) {
         로그인 유지 (30일)
       </label>
 
+      {/*
+        누르는 동안 버튼이 하는 말.
+
+        글자만 바꾸면(들어가기 → 확인 중…) 멈춘 화면인지 도는 중인지 구분이 안 되고,
+        두 단계를 같은 문구로 두면 "확인 중" 이 몇 초씩 머물러 멈춘 것처럼 보입니다.
+        그래서 도는 고리를 같이 두고 문구도 단계마다 바꿉니다 — 문구가 한 번 바뀌는
+        것만으로 "진행 중" 이 전달됩니다.
+
+        aria-busy 와 아래 live 영역은 화면 낭독기 몫입니다. 버튼 안 글자가 바뀌어도
+        포커스가 버튼에 있으면 다시 읽어 주지 않습니다.
+      */}
       <button
         type="submit"
-        disabled={!email || !password || submitting}
-        className="h-12 w-full rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text"
+        disabled={!email || !password || busy}
+        aria-busy={busy}
+        className="flex h-12 w-full items-center justify-center gap-sibling rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text"
       >
-        {submitting ? "확인 중…" : "들어가기"}
+        {busy ? (
+          <>
+            <SpinnerIcon className="h-5 w-5 animate-spin" />
+            {navigating ? "들어가는 중…" : "확인 중…"}
+          </>
+        ) : (
+          "들어가기"
+        )}
       </button>
+
+      <p role="status" aria-live="polite" className="sr-only">
+        {navigating ? "로그인 확인됨. 화면을 여는 중입니다." : checking ? "로그인 확인 중입니다." : ""}
+      </p>
     </form>
   );
 }
