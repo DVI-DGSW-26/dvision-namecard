@@ -146,6 +146,25 @@ export function EditProfileForm({
     (key: "mobilePublic", value: boolean) => setEmp((prev) => ({ ...prev, [key]: value })),
     [],
   );
+
+  /**
+   * 휴대전화 칸 — 빈 칸에 번호를 적으면 공개를 같이 켭니다.
+   *
+   * 적어 놓고 체크를 못 봐서 명함에 안 나오는 일이 실제로 많았습니다. 번호를 적는
+   * 행동 자체가 "명함에 넣겠다" 는 뜻이라, 그걸 기본값으로 둡니다.
+   *
+   * 빈 칸 → 값이 생기는 순간에만 켭니다. 이미 적어 둔 번호를 고치는 중이라면
+   * 본인이 일부러 꺼 둔 체크를 되살리지 않습니다.
+   */
+  const setMobile = useCallback(
+    (value: string) =>
+      setEmp((prev) => ({
+        ...prev,
+        telMobile: value,
+        mobilePublic: !prev.telMobile.trim() && value.trim() ? true : prev.mobilePublic,
+      })),
+    [],
+  );
   const setCoField = useCallback(
     (key: keyof CompanyForm, value: string) => setCo((prev) => ({ ...prev, [key]: value })),
     [],
@@ -649,18 +668,18 @@ export function EditProfileForm({
                   inputMode="tel"
                   value={emp.telMobile}
                   invalid={Boolean(err("telMobile"))}
-                  onChange={(e) => setEmpField("telMobile", formatPhone(e.target.value))}
+                  onChange={(e) => setMobile(formatPhone(e.target.value))}
                 />
               </Field>
             </FieldRow>
 
             {/*
-              휴대폰 공개 여부. 번호를 적어도 이걸 켜지 않으면 어디에도 안 나갑니다 —
-              명함·명함 이미지·이메일 서명·연락처 파일 네 곳이 전부 이 값을 봅니다.
-              번호 칸 바로 아래에 두어야 "적었는데 왜 안 나오지" 가 생기지 않습니다.
+              휴대폰 공개 여부. 명함·명함 이미지·이메일 서명·연락처 파일 네 곳이 전부
+              이 값을 봅니다. 번호 칸 바로 아래에 두어야 "적었는데 왜 안 나오지" 가
+              생기지 않습니다.
 
-              번호를 안 적었으면 켤 것이 없으므로 잠급니다. 켜 두고 번호를 지우면
-              체크만 남아 공개 중인 것처럼 보입니다.
+              번호를 새로 적으면 setMobile 이 이걸 켭니다 — 기본은 공개이고, 감추고
+              싶은 사람이 끄는 자리입니다. 번호를 안 적었으면 켤 것이 없으므로 잠급니다.
             */}
             <Checkbox
               id="mobilePublic"
@@ -668,7 +687,7 @@ export function EditProfileForm({
               hint={
                 emp.telMobile.trim()
                   ? "끄면 번호가 저장돼 있어도 명함·서명·연락처 파일 어디에도 나가지 않습니다."
-                  : "휴대전화 번호를 먼저 입력해 주세요."
+                  : "번호를 적으면 켜집니다. 감추고 싶으면 그때 끄세요."
               }
               checked={emp.mobilePublic}
               disabled={!emp.telMobile.trim()}
