@@ -9,8 +9,10 @@ import type {
   EmployeeModel,
   ExecutiveTitleModel,
   OfficeModel,
+  PartModel,
   PositionModel,
   RankModel,
+  TeamModel,
 } from "@/generated/prisma/models";
 
 export type {
@@ -18,8 +20,10 @@ export type {
   OfficeModel as Office,
   EmployeeModel as Employee,
   ExecutiveTitleModel as ExecutiveTitle,
+  PartModel as Part,
   PositionModel as Position,
   RankModel as Rank,
+  TeamModel as Team,
   ProfileViewModel as ProfileView,
 } from "@/generated/prisma/models";
 
@@ -28,14 +32,16 @@ export type { Status } from "@/generated/prisma/enums";
 /**
  * 조직 목록까지 붙여서 읽은 직원.
  *
- * 명함·서명·vCard 는 직위와 직책의 "이름" 을 찍습니다. Employee 만으로는 rankId
- * 같은 id 밖에 없어서, 이 세 관계를 include 해서 읽어야 합니다. 렌더 쪽 함수들이
+ * 명함·서명·vCard 는 직위·직책·부서의 "이름" 을 찍습니다. Employee 만으로는 rankId
+ * 같은 id 밖에 없어서, 이 관계들을 include 해서 읽어야 합니다. 렌더 쪽 함수들이
  * 전부 이 타입을 받으므로, include 를 빠뜨리면 컴파일에서 걸립니다.
  */
 export type EmployeeWithOrg = EmployeeModel & {
   rank: RankModel | null;
   executiveTitle: ExecutiveTitleModel | null;
   position: PositionModel | null;
+  team: TeamModel | null;
+  part: PartModel | null;
 };
 
 /** 위 타입을 얻기 위한 Prisma include. 조회하는 쪽마다 다시 적지 않도록 모아 둡니다. */
@@ -43,6 +49,8 @@ export const employeeOrgInclude = {
   rank: true,
   executiveTitle: true,
   position: true,
+  team: true,
+  part: true,
 } as const;
 
 /**

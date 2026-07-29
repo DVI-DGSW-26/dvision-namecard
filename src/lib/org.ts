@@ -159,12 +159,23 @@ export function officeLines(
   return offices.map((office) => officeLine(office, lang)).filter(Boolean);
 }
 
-/** 부서 표기 — "경영관리 · 회계/재무". 팀만 있으면 팀만 나옵니다. */
-export function departmentText(employee: {
-  team?: { name: string } | null;
-  part?: { name: string } | null;
-}): string {
-  return [employee.team?.name, employee.part?.name]
+/**
+ * 부서 표기 — "경영관리 · 회계/재무". 팀만 있으면 팀만 나옵니다.
+ *
+ * 영문 표기를 안 채운 단계는 그 조각만 빠집니다 — roleParts 와 같은 규칙입니다.
+ * 한글로 대신 채우면 "Technical Support · 기술지원" 처럼 섞인 줄이 나옵니다.
+ */
+export function departmentText(
+  employee: {
+    team?: { name: string; nameEn?: string } | null;
+    part?: { name: string; nameEn?: string } | null;
+  },
+  lang: Lang = "ko",
+): string {
+  const pick = (item?: { name: string; nameEn?: string } | null) =>
+    lang === "en" ? item?.nameEn : item?.name;
+
+  return [pick(employee.team), pick(employee.part)]
     .map((value) => value?.trim())
     .filter(Boolean)
     .join(" · ");
