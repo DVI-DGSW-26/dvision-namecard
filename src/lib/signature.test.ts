@@ -112,7 +112,8 @@ describe("renderSignature", () => {
     const html = renderSignature(emp(), co());
 
     // 이미지 본체 — 절대경로 card.png (Gmail 프록시가 불러올 수 있어야 하므로 https 절대경로)
-    assert.match(html, /<img src="https:\/\/dvi-ind\.com\/c\/hong\/card\.png"/);
+    // 뒤의 ?v= 는 프록시 캐시를 피하는 판 번호입니다. (아래 전용 테스트에서 지킵니다)
+    assert.match(html, /<img src="https:\/\/dvi-ind\.com\/c\/hong\/card\.png\?v=[0-9a-z]+"/);
     // 이미지 전체가 프로필로 연결
     assert.match(html, /<a href="https:\/\/dvi-ind\.com\/c\/hong"/);
     // 이미지를 막은 수신자를 위한 alt
@@ -124,7 +125,30 @@ describe("renderSignature", () => {
     const html = renderSignature(emp({ slug: "yeonghui" }), co());
 
     assert.match(html, /href="https:\/\/dvi-ind\.com\/c\/yeonghui"/);
-    assert.match(html, /src="https:\/\/dvi-ind\.com\/c\/yeonghui\/card\.png"/);
+    assert.match(html, /src="https:\/\/dvi-ind\.com\/c\/yeonghui\/card\.png\?v=/);
+  });
+
+  /*
+   * 이 두 테스트가 지키는 것: 프로필을 고친 뒤 다시 복사한 서명은 이미지 주소가
+   * 달라져야 합니다. 주소가 같으면 Gmail 프록시가 담아 둔 옛 명함을 계속 내놓아,
+   * 휴대폰 공개를 켜도 서명에는 반영되지 않습니다.
+   */
+  it("이미지 주소에 저장 시각을 붙인다", () => {
+    const html = renderSignature(emp({ updatedAt: new Date("2026-07-30T07:46:20.506Z") }), co());
+
+    assert.match(html, /card\.png\?v=[0-9a-z]+"/);
+    // 링크(=프로필 주소)에는 붙지 않습니다. 사람이 눌러 보는 주소라 깔끔해야 합니다.
+    assert.match(html, /<a href="https:\/\/dvi-ind\.com\/c\/hong"/);
+  });
+
+  it("프로필을 고치면 이미지 주소가 달라진다", () => {
+    const src = (html: string) => html.match(/<img src="([^"]+)"/)?.[1];
+
+    const before = src(renderSignature(emp({ updatedAt: new Date("2026-07-01") }), co()));
+    const after = src(renderSignature(emp({ updatedAt: new Date("2026-07-30") }), co()));
+
+    assert.ok(before && after);
+    assert.notEqual(before, after);
   });
 
   it("alt 의 이름에 든 & 를 이스케이프한다", () => {
