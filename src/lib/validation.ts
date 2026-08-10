@@ -125,6 +125,16 @@ export const employeeProfileSchema = z.object({
   rankId: orgRef,
   executiveTitleId: orgRef,
   positionId: orgRef,
+  /*
+    부서(팀 · 파트)도 여기서 받습니다.
+
+    폼에는 처음부터 팀·파트 칸이 있었는데 이 스키마에만 없었습니다. zod 는 모르는
+    키를 조용히 버리므로 저장 요청은 200 으로 끝나고 부서만 옛 값으로 남았습니다 —
+    화면에서는 "저장했는데 안 바뀐다" 로만 보입니다. 폼에 있는 칸은 전부 여기 있어야
+    합니다. (직원 추가는 employeeCreateSchema 가 같은 값을 받습니다)
+  */
+  teamId: orgRef,
+  partId: orgRef,
   // 자격은 선택 입력입니다. 비우면 null 로 저장되고 카드·서명에서 통째로 빠집니다.
   credential: optionalText(40, "자격 · 학위"),
   // 영문 카드(/c/[slug]/en)가 쓰는 값. 비우면 영문 카드에서만 빠집니다.
@@ -149,7 +159,16 @@ export const employeeProfileSchema = z.object({
     emptyToNull,
     z.email({ message: "이메일 형식이 올바르지 않습니다." }),
   ),
-});
+})
+  /*
+    파트만 고르고 팀을 비우는 건 막습니다. 파트는 팀 아래에만 있어서 팀 없는 파트는
+    명함에 "· OO파트" 로 앞이 빈 채 찍힙니다. 폼은 팀을 바꾸면 파트를 비우므로 여기
+    걸릴 일이 없지만, API 는 직접 호출됩니다.
+  */
+  .refine((v) => !(v.partId && !v.teamId), {
+    path: ["partId"],
+    message: "파트를 고르려면 팀을 먼저 골라 주세요.",
+  });
 
 /**
  * 직원 추가(관리자 전용).
