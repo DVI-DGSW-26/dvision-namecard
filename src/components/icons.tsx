@@ -221,3 +221,21 @@ export function EyeOffIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/**
+ * 도는 고리 — 처리 중 표시.
+ *
+ * 글자만 바꾸면(들어가기 → 확인 중…) 멈춘 화면인지 도는 중인지 구분이 안 됩니다.
+ * 움직이는 것이 하나 있어야 "죽지 않았다" 가 전달됩니다.
+ *
+ * 회전은 CSS(animate-spin)가 하고, 여기서는 한쪽만 진한 고리를 그립니다 —
+ * 전체가 같은 농도면 돌아도 도는 것처럼 보이지 않습니다.
+ */
+export function SpinnerIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="9" opacity="0.3" />
+      <path d="M21 12a9 9 0 0 0-9-9" />
+    </svg>
+  );
+}

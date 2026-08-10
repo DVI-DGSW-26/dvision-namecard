@@ -22,11 +22,17 @@ import type { Status } from "@/types";
  * 색이 아니라 굵기와 테두리로 만듭니다 — 토큰 정의서의 "위계는 크기·굵기·여백으로만".
  */
 
-/** 상태 배지. Status enum 과 화면 문구는 1:1 이 아니라서 여기서 한 번만 매핑합니다. */
+/**
+ * 상태 배지. Status enum 과 화면 문구는 1:1 이 아니라서 여기서 한 번만 매핑합니다.
+ *
+ * 활성/초대중 구분은 없앴습니다 — 실제로 막는 건 '중지(RESIGNED)' 하나뿐이라,
+ * 화면에는 사용중 / 중지 두 개만 둡니다. PENDING 은 더 만들지 않지만(추가하면
+ * ACTIVE), enum 에는 남아 있어 옛 데이터가 있어도 '사용중' 으로 보이게 둡니다.
+ */
 const STATUS_LABEL: Record<Status, string> = {
-  ACTIVE: "활성",
-  PENDING: "초대중",
-  RESIGNED: "비활성",
+  ACTIVE: "사용중",
+  PENDING: "사용중",
+  RESIGNED: "중지",
 };
 
 /**
@@ -40,7 +46,8 @@ const STATUS_STYLE: Record<Status, string> = {
   RESIGNED: "text-caption text-sub-text",
 };
 
-const STATUS_OPTIONS: Status[] = ["ACTIVE", "PENDING", "RESIGNED"];
+// 사용중(ACTIVE) / 중지(RESIGNED) 두 개만. 초대중(PENDING)은 목록에서 뺍니다.
+const STATUS_OPTIONS: Status[] = ["ACTIVE", "RESIGNED"];
 
 /**
  * YYYY-MM-DD (KST).
@@ -867,7 +874,7 @@ export function EmployeeTable() {
           <p className="text-caption text-text">
             <strong className="text-caption-bold">{deleteTarget.nameKo}</strong> 님을 완전히
             지웁니다. 명함 주소(/c/{deleteTarget.slug})가 사라지고 이미 보낸 서명의 링크도
-            깨집니다. 퇴사 처리라면 상태를 &lsquo;비활성&rsquo;으로 바꾸세요.
+            깨집니다. 퇴사 처리라면 상태를 &lsquo;중지&rsquo;로 바꾸세요.
           </p>
           <div className="ml-auto flex gap-sibling">
             <button

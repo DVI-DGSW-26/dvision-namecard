@@ -31,7 +31,6 @@ export const brand = {
 
   /**
    * DVISION 가로형 로고(심볼 + 워드마크 잠금). 203x45 (4.51:1).
-   * 명함 이미지(card.png) 우상단이 씁니다. 세로형 logo 는 이 자리에 안 맞습니다.
    *
    * 예전엔 symbol.png 옆에 "D"+"VISION" 을 텍스트로 조판해 흉내 냈는데,
    * 자간·굵기가 공식 로고와 미묘하게 달라 이 파일로 대체했습니다.
@@ -39,6 +38,16 @@ export const brand = {
   logoWordmark: "/brand/logo-wordmark.png",
   logoWordmarkWidth: 203,
   logoWordmarkHeight: 45,
+
+  /**
+   * 워드마크만(심볼 없음). 600x120 (5:1). logo.png 아랫단을 잘라낸 것입니다.
+   *
+   * 명함 이미지(card.png) 우상단이 씁니다. 그 시안은 심볼을 왼쪽 위에 따로 두므로,
+   * 심볼이 붙은 logoWordmark 를 쓰면 카드 한 장에 심볼이 두 번 나옵니다.
+   */
+  wordmark: "/brand/wordmark.png",
+  wordmarkWidth: 600,
+  wordmarkHeight: 120,
 
   /**
    * dingdong 서비스 로고. 심볼 + 워드마크 가로형 잠금입니다.

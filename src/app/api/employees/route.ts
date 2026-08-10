@@ -1,13 +1,25 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth";
+import { DEFAULT_EMPLOYEE_PASSWORD, getSession } from "@/lib/auth";
 import { listQuerySchema, type EmployeeListResponse } from "@/lib/employee-list";
 import { departmentText } from "@/lib/org";
 import { defaultPositionId } from "@/lib/org-store";
+import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { buildSlug } from "@/lib/slug";
 import { employeeCreateSchema, fieldErrors, fullNameKo } from "@/lib/validation";
 import type { Prisma } from "@/generated/prisma/client";
+
+/*
+  새 직원에게는 lib/auth 의 공용 비밀번호를 그대로 심습니다.
+
+  값을 여기 따로 두지 않는 이유: 로그인 쪽(lib/auth)도 같은 값을 받아 주므로,
+  두 군데에 적어 두면 한쪽만 고쳤을 때 "추가한 직원이 로그인은 안 되는" 상태가
+  조용히 생깁니다.
+
+  강제 변경(mustChangePassword)은 켜지 않습니다 — 운영자가 이 공용 비번을 그대로
+  쓰기로 결정했습니다. 첫 로그인에서 변경 화면을 띄우지 않습니다.
+*/
 
 /**
  * 직원 목록.
@@ -202,7 +214,12 @@ export async function POST(request: NextRequest) {
         partId,
         // 새 직원은 '팀원' 으로 시작합니다. 관리자가 목록에서 그 항목을 지웠으면 비워 둡니다.
         positionId: await defaultPositionId(),
-        status: "PENDING",
+        // 상태 구분(초대중/활성)은 없앴습니다 — 추가하면 바로 '사용중(ACTIVE)'.
+        status: "ACTIVE",
+        // 추가 즉시 로그인할 수 있도록 공용 비번을 심습니다. 강제 변경은 켜지
+        // 않습니다(위 주석 참고).
+        passwordHash: await hashPassword(DEFAULT_EMPLOYEE_PASSWORD),
+        mustChangePassword: false,
         companyId: company.id,
       },
       select: { id: true, slug: true, nameKo: true },

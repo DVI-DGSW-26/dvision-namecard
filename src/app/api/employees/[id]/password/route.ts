@@ -12,9 +12,8 @@ type Context = { params: Promise<{ id: string }> };
  * 놓치면 다시 볼 수 없고, 그때는 또 발급하면 됩니다. 관리자가 값을 정하게 두지 않는
  * 이유는 password.ts 의 generatePassword 주석에 적어 두었습니다.
  *
- * 받은 사람은 첫 로그인에서 곧바로 변경 화면으로 갑니다(mustChangePassword).
- * 관리자도 아는 비밀번호를 계속 쓰면, 그 사람으로 남은 흔적과 본인의 흔적을
- * 구분할 수 없습니다.
+ * 첫 로그인 강제 변경(mustChangePassword)은 켜지 않습니다 — 운영자가 변경 화면을
+ * 없애기로 했습니다. 발급받은 비번이 곧 그 사람 비번입니다.
  */
 export async function POST(_request: NextRequest, { params }: Context) {
   const session = await getSession();
@@ -48,7 +47,9 @@ export async function POST(_request: NextRequest, { params }: Context) {
   try {
     await prisma.employee.update({
       where: { id },
-      data: { passwordHash: await hashPassword(password), mustChangePassword: true },
+      // 강제 변경(mustChangePassword)은 켜지 않습니다 — 운영자가 변경 화면 자체를
+      // 없애기로 했습니다. 발급받은 비번이 곧 그 사람 비번입니다.
+      data: { passwordHash: await hashPassword(password), mustChangePassword: false },
     });
   } catch {
     return NextResponse.json({ error: "발급하지 못했습니다." }, { status: 500 });

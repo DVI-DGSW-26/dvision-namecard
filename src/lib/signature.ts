@@ -6,10 +6,10 @@ import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 /**
  * 이메일 서명 생성.
  *
- * 서명 본체는 명함을 통째로 구운 PNG 한 장입니다(/c/[slug]/card.png). Gmail 이 CSS
- * 배경 이미지를 지우고 요소 겹침도 지원하지 않아, 디자인의 "글자 뒤 워터마크" 를 HTML
- * 로는 못 만듭니다. 카드 전체를 이미지로 두면 워터마크까지 디자인 그대로, 어느 메일
- * 클라이언트에서든 동일하게 보입니다.
+ * 서명 본체는 명함을 통째로 구운 PNG 한 장입니다(/c/[slug]/card.png). 인쇄 명함 시안의
+ * 넓은 자간과 좌우 두 단 격자를 메일 클라이언트(특히 Gmail·Outlook)의 HTML 로는 못
+ * 만듭니다. 카드 전체를 이미지로 두면 종이 명함과 같은 한 장이 어느 클라이언트에서든
+ * 동일하게 보입니다.
  *
  * 대가: 이미지라 안의 글자·번호는 눌리지 않습니다. 그래서 이미지 전체를 명함 프로필
  * 링크로 감쌉니다(클릭 → /c/[slug], 거기서 전화·저장 등 실제 동작). 이미지를 막은
@@ -80,6 +80,31 @@ function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices, l
 }
 
 /**
+ * 명함 이미지 주소 뒤에 붙는 판(版) 번호.
+ *
+ * 왜 필요한가: 서명 본체는 /c/[slug]/card.png 한 장인데 주소가 언제나 같습니다.
+ * 서버는 `max-age=0, must-revalidate` 로 내주지만 메일 쪽은 그 말을 안 듣습니다 —
+ * Gmail 은 이미지를 자기 프록시(googleusercontent)로 옮겨 담고 주소가 같으면
+ * 담아 둔 그림을 계속 내놓습니다. 그래서 프로필에서 휴대폰 공개를 켠 뒤 서명을
+ * 다시 복사해도 붙는 그림은 켜기 전 명함입니다. (실제로 이렇게 신고됐습니다:
+ * 웹 명함에는 휴대폰이 뜨는데 서명에는 안 뜬다)
+ *
+ * 저장 시각을 붙이면 프로필을 고칠 때마다 주소가 달라져, 다시 복사한 서명은
+ * 프록시가 한 번도 본 적 없는 주소를 받습니다. 사진 주소(/c/[slug]/photo?v=)가
+ * 이미 쓰는 방식과 같습니다.
+ *
+ * 회사 값(대표번호·팩스·주소)만 바뀐 경우는 이 번호가 그대로입니다 — Company 에
+ * 저장 시각 컬럼이 없습니다. 회사 값이 바뀌면 전 직원이 서명을 다시 넣어야 하는
+ * 일이라, 그때는 안내로 처리합니다.
+ *
+ * 라우트는 이 값을 읽지 않습니다(쿼리는 무시하고 slug·언어로만 굽습니다). 주소를
+ * 다르게 만드는 것 자체가 목적입니다.
+ */
+function cardVersion(employee: EmployeeWithOrg): string {
+  return employee.updatedAt.getTime().toString(36);
+}
+
+/**
  * 메일에서도 버티는 글꼴 지정.
  *
  * 웹폰트는 못 씁니다(Gmail 이 @font-face 를 지웁니다). 받는 사람 기기에 이미 있는
@@ -136,7 +161,7 @@ export function renderSignature(
   // _company 는 renderSignatureText 와 시그니처를 맞추려고 받습니다. 카드의 실제 값은
   // 이미지 라우트가 DB 에서 직접 읽으므로 여기서는 slug·이름만 있으면 됩니다.
   const base = baseUrl();
-  const cardUrl = `${base}${cardPath(employee.slug, lang, "card.png")}`;
+  const cardUrl = `${base}${cardPath(employee.slug, lang, "card.png")}?v=${cardVersion(employee)}`;
   const profileUrl = `${base}${cardPath(employee.slug, lang)}`;
   // 이미지를 막은 수신자가 보는 글자입니다. 영문 서명이면 영문 이름으로 나갑니다.
   const altName = requireCardName(employee, lang);
