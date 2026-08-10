@@ -6,7 +6,7 @@ import { companyProfileSchema, fieldErrors } from "@/lib/validation";
 import type { CompanyWithOffices } from "@/types";
 
 /**
- * 회사 정보 편집. (admin 전용 — 페이지와 middleware 가 이미 막습니다)
+ * 회사 정보 편집. (admin 전용 — 페이지와 proxy 가 이미 막습니다)
  *
  * /edit 의 회사 정보 섹션과 같은 칸(CompanyFields)을 씁니다. 다른 건 저장 범위뿐이라
  * — 저기는 직원 정보와 함께, 여기는 회사만 — 칸 자체를 다시 만들지 않습니다.

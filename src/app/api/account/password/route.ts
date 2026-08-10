@@ -64,7 +64,7 @@ export async function PATCH(request: NextRequest) {
   /*
     세션을 다시 발급합니다.
 
-    mustChangePassword 는 토큰 안에 있어서(middleware 가 Edge 라 DB 를 못 봅니다)
+    mustChangePassword 는 토큰 안에 있어서(proxy 가 Edge 라 DB 를 못 봅니다)
     DB 만 고치면 쿠키에는 여전히 true 가 남아, 바꾸고 나서도 변경 화면에 갇힙니다.
   */
   await createSession({

@@ -31,7 +31,7 @@ const NAV_ITEMS: NavItem[] = [
 /**
  * 해당 역할이 볼 수 있는 항목만 남깁니다.
  *
- * `임직원 관리` 는 /admin 아래라 middleware 가 이미 막고 있지만, 회원에게
+ * `임직원 관리` 는 /admin 아래라 proxy 가 이미 막고 있지만, 회원에게
  * 보여주고 눌렀을 때 튕기는 것보다 아예 안 보이는 편이 낫습니다.
  */
 export function navItemsFor(role: Role): NavItem[] {
