@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CompanyFields, certLine, type CompanyFormValues } from "@/components/CompanyFields";
 import { Checkbox, Field, FieldRow, Input, SectionHeader, Select } from "@/components/form";
 import { PhotoPicker } from "@/components/PhotoPicker";
@@ -172,10 +172,26 @@ export function EditProfileForm({
 
   /* 저장하지 않고 이탈 방지 -------------------------------------------------- */
 
+  /**
+   * 저장이 끝나고 우리가 직접 새로고침하는 중인지.
+   *
+   * 이게 없으면 저장 성공 직후의 reload 를 아래 이탈 방지 가드가 자기 자신을
+   * 막습니다 — 그 순간 emp 는 아직 저장 전 기준값과 다르므로 dirty 가 true 입니다.
+   * 사용자가 경고창에서 "취소" 를 누르면 새로고침만 끊기고 화면에는 "저장하지 않은
+   * 변경사항" 이 그대로 남아, 서버에는 들어간 값이 저장 실패로 보입니다.
+   *
+   * state 가 아니라 ref 인 이유: 값을 바꾼 다음 다시 그려질 틈 없이 그 자리에서
+   * reload 를 부르기 때문입니다.
+   */
+  const reloadingRef = useRef(false);
+
   // 새로고침·탭 닫기·외부 링크. 브라우저 기본 다이얼로그가 뜹니다.
   useEffect(() => {
     if (!dirty) return;
-    const handler = (event: BeforeUnloadEvent) => event.preventDefault();
+    const handler = (event: BeforeUnloadEvent) => {
+      if (reloadingRef.current) return;
+      event.preventDefault();
+    };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
@@ -257,6 +273,8 @@ export function EditProfileForm({
       }
 
       // 저장 성공 — 서버 값을 다시 읽어 dirty 기준을 갱신합니다.
+      // 이탈 방지 경고를 끄고 나갑니다. 방금 저장한 내용이라 잃을 변경이 없습니다.
+      reloadingRef.current = true;
       window.location.reload();
     } catch {
       setSaveError("네트워크 오류로 저장하지 못했습니다.");
