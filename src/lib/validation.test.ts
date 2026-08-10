@@ -12,6 +12,11 @@ import { employeeProfileSchema, fullNameKo } from "./validation";
  *    N 필드는 등록 당시 이름으로 남습니다. (홍박사인데 주소록에는 홍길동)
  * 2) mobilePublic 이 저장 대상이다. 스키마에서 빠지면 화면에서 체크를 켜도
  *    서버가 그 값을 버려서, 번호가 여전히 아무 데도 안 나갑니다.
+ * 3) 부서(팀 · 파트)도 저장 대상이다. 2)와 같은 사고가 실제로 났습니다 — 폼에는
+ *    칸이 있는데 스키마에 없어서, 저장은 200 인데 부서만 옛 값으로 남았습니다.
+ *
+ * 셋 다 "폼에 있는 칸이 스키마에 없으면 조용히 버려진다" 는 한 가지 사고입니다.
+ * 칸을 늘릴 때 여기에도 한 줄 늘려 두면 다음번에는 테스트가 먼저 잡습니다.
  */
 
 const valid = {
@@ -21,6 +26,8 @@ const valid = {
   rankId: "",
   executiveTitleId: "",
   positionId: "",
+  teamId: "",
+  partId: "",
   credential: "",
   credentialEn: "",
   telWork: "",
@@ -85,6 +92,33 @@ describe("employeeProfileSchema", () => {
 
   it("영문명은 여전히 필수다", () => {
     const parsed = employeeProfileSchema.safeParse({ ...valid, nameEn: "" });
+
+    assert.equal(parsed.success, false);
+  });
+
+  it("팀 · 파트를 저장 대상으로 통과시킨다", () => {
+    // 이 스키마에 팀·파트가 없던 동안, 폼에서 부서를 바꿔 저장하면 200 이 오는데도
+    // 값은 그대로였습니다. zod 가 모르는 키를 버린 자리입니다.
+    const parsed = employeeProfileSchema.safeParse({
+      ...valid,
+      teamId: "team-1",
+      partId: "part-1",
+    });
+
+    assert.equal(parsed.data?.teamId, "team-1");
+    assert.equal(parsed.data?.partId, "part-1");
+  });
+
+  it("부서를 비우면 null 로 통과시킨다", () => {
+    // 관리자가 목록에서 팀을 지우면 그 칸이 빕니다. 그 상태로도 저장은 돼야 합니다.
+    const parsed = employeeProfileSchema.safeParse(valid);
+
+    assert.equal(parsed.data?.teamId, null);
+    assert.equal(parsed.data?.partId, null);
+  });
+
+  it("팀 없이 파트만 고르면 거부한다", () => {
+    const parsed = employeeProfileSchema.safeParse({ ...valid, partId: "part-1" });
 
     assert.equal(parsed.success, false);
   });
