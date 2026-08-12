@@ -27,8 +27,14 @@ import { companyOfficesInclude, employeeOrgInclude } from "@/types";
 /**
  * 캔버스 — 인쇄 명함과 같은 9:5(90x50mm) 입니다.
  *
- * 서명 HTML 은 이 이미지를 600px 로 줄여서 답니다. 600 으로 구우면 고해상도 화면에서
- * 글자가 뭉개지므로 1.5배로 굽고 줄입니다. 시안 좌표는 전부 이 캔버스 기준입니다.
+ * 서명 HTML 은 이 이미지를 400px 로 줄여서 답니다(signature.ts 의 CARD_DISPLAY_WIDTH).
+ * 표시 폭 그대로 구우면 고해상도 화면에서 글자가 뭉개지므로 2.25배로 굽고 줄입니다.
+ * 좌표는 전부 이 캔버스 기준입니다.
+ *
+ * 글자 크기를 정할 때는 0.44 를 곱해 보세요 — 그게 서명에서 실제로 읽히는 크기입니다.
+ * 인쇄 시안의 글자 크기를 그대로 옮기면 안 됩니다. 종이는 300dpi 라 작은 글자가 읽히지만
+ * 400px 로 줄어든 화면에서는 시안 20px 짜리 주소가 8.9px 이 되어 안 읽힙니다.
+ * 배치는 시안을 따르되 글자 크기는 이 0.44 를 통과하는 값으로 둡니다.
  */
 const W = 900;
 const H = 500;
@@ -207,13 +213,34 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
     .map((office) => ({ label: en ? null : present(office.name), line: officeLine(office, lang) }))
     .filter((office) => office.line);
 
-  // 라벨(100)이 붙는 국문 카드는 그만큼 주소가 쓸 폭이 줄어듭니다.
-  const officeLabelWidth = 100;
+  // 라벨이 붙는 국문 카드는 그만큼 주소가 쓸 폭이 줄어듭니다.
+  // 125 는 제일 긴 라벨("R&D센터" — 27px 에서 약 99px)과 주소 사이가 붙지 않는 폭입니다.
+  const officeLabelWidth = 125;
+  const officeWidth = W - 45 - 40 - (en ? 0 : officeLabelWidth);
+
+  /*
+    주소 크기 — 한 줄이 아니라 "두 줄까지 접히는 것" 을 전제로 정합니다.
+
+    한 줄에 욱여넣으려 들면 영문 주소가 무너집니다. 영문은 우편번호와 Republic of Korea
+    까지 한 줄이라 48em 가까이 되는데, 이걸 815 폭 한 줄에 맞추면 16px(서명에서 7.1px)이
+    되어 안 읽힙니다. 그래서 폭 예산을 두 줄치로 주고, 넘치는 줄은 접습니다.
+
+    접기는 아래 주소 div 의 width 가 합니다 — satori 는 폭이 정해진 칸 안에서만 줄을
+    바꿉니다. width 를 빼면 접히는 대신 카드 밖으로 그냥 나갑니다. 같이 움직이는 값입니다.
+
+    국문은 한 줄이 25.4em 이라 이 예산 안에서 base(27) 그대로 한 줄에 들어갑니다.
+  */
   const officeSize = fitLines(
     offices.map((office) => office.line),
-    W - 45 - 40 - (en ? 0 : officeLabelWidth),
+    officeWidth * 2,
+    27,
     20,
-    15,
+  );
+
+  /** 접힌 줄까지 센 주소 줄 수 — 주소 블록이 위로 얼마나 자라는지 알아야 연락처가 비킵니다. */
+  const officeLineCount = offices.reduce(
+    (count, office) => count + Math.max(1, Math.ceil((widthEm(office.line) * officeSize) / officeWidth)),
+    0,
   );
 
   const certifications = stringList(en ? company.certificationsEn : company.certifications);
@@ -237,15 +264,68 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
   ]
     .map((column) => column.filter(([, value]) => value) as [string, string][])
     // 한 단 안에서는 두 줄이 같은 크기여야 합니다. 라벨 폭(62)을 뺀 자리에 맞춥니다.
+    // 36 은 왼쪽 단(378)에 메일 주소가 들어가는 최대값이고, 바닥 24 는 로컬파트가
+    // 16 자인 메일(@dvi-ind.com 포함 28 자)까지 단 밖으로 안 나가는 선입니다.
     .map((rows, index) => ({
       rows,
       size: fitLines(
         rows.map(([, value]) => value),
         (index === 0 ? 440 : W - 486 - 40) - 62,
-        26,
-        19,
+        36,
+        24,
       ),
     }));
+
+  /*
+    오른쪽 단의 세로 쌓기 — 로고·인증 아래로 역할 줄, 그 아래로 연락처가 섭니다.
+
+    예전에는 셋 다 시안 좌표로 고정이었습니다(역할 147, 연락처 275). 인증이 둘일 때는
+    맞았지만 셋이 되는 순간 인증 블록이 역할 줄 자리까지 내려와 두 줄이 맞닿았습니다.
+    인증 개수는 회사가 관리 화면에서 늘리는 값이라 고정 좌표로는 못 버팁니다.
+
+    그래서 블록 높이를 실제로 재서 쌓아 내려갑니다. 값이 짧으면 예전 좌표 그대로고,
+    길어질 때만 아래 블록이 그만큼 내려갑니다.
+  */
+  const LINE = 1.2; // satori 기본 줄 높이
+
+  /*
+    인증은 한 줄에 눕힙니다. ("IATF 16949 · ISO 14001 · ISO 45001")
+
+    한 줄에 하나씩 쌓으면 셋부터 자리가 없습니다 — 인증 3줄 + 역할 2줄 + 연락처 2줄 +
+    주소 2줄을 시안 여백대로 쌓으면 511px 이라 카드(500)를 11px 넘깁니다. 그래서 셋째
+    인증이 역할 줄과 맞닿았습니다. 눕히면 높이가 한 줄이라 아래 블록이 안 밀립니다.
+
+    폭은 왼쪽 심볼(x 112)에 닿지 않는 선까지 씁니다. 인증이 아주 많으면 줄어듭니다.
+  */
+  const certLine = certifications.join(" · ");
+  const certSize = fitSize(widthEm(certLine), 860 - 130, 24, 14);
+  const certBlockBottom = 33 + 25 + (certLine ? 14 + certSize * LINE : 0);
+
+  const roleMainSize = roleSize(role, 36);
+  const roleSubSize = roleSize(roleSub, 32);
+  const roleGap = 16;
+  const roleTop = Math.max(147, certBlockBottom + 14);
+  const roleHeight =
+    (role.length > 0 ? roleMainSize * LINE : 0) + (roleSub.length > 0 ? roleGap + roleSubSize * LINE : 0);
+
+  /*
+    연락처는 역할 줄 아래에 서되, 카드 바닥에 붙어 있는 주소 블록을 밟으면 안 됩니다.
+    위아래 양쪽에서 눌리는 자리입니다.
+
+    시안 자리는 275 지만, 주소가 접혀서 블록이 위로 자라면 그만큼 올라갑니다(영문 카드가
+    그렇습니다 — 대신 영문에는 역할 영문 줄이 없어서 위가 비어 있습니다). 올라가더라도
+    역할 줄 밑으로는 못 올라옵니다.
+  */
+  // 사업장 사이는 6 을 띄웁니다 — 주소가 접히면 둘째 줄과 다음 사업장이 붙어 한 덩어리로 읽힙니다.
+  const officeGap = 6;
+  const officesTop =
+    H - 27 - (officeLineCount * officeSize * LINE + Math.max(0, offices.length - 1) * officeGap);
+  const contactsHeight = Math.max(...columns.map((column) => column.rows.length * (column.size * LINE + 12)));
+  const contactsFloor = roleTop + roleHeight + 16;
+  const contactsTop = Math.max(
+    contactsFloor,
+    Math.min(Math.max(275, contactsFloor), officesTop - contactsHeight - 12),
+  );
 
   const [regular, semibold] = await loadFonts();
 
@@ -316,11 +396,11 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
           글자 크기가 서로 달라(44 vs 26) flex 로는 두 단의 첫 줄이 안 맞습니다.
           satori 에 baseline 정렬이 없어서 시안 좌표를 그대로 씁니다.
         */}
-        <div style={{ position: "absolute", left: 486, top: 147, display: "flex", flexDirection: "column" }}>
-          {role.length > 0 ? <RoleLine parts={role} size={roleSize(role, 28)} color={INK} /> : null}
+        <div style={{ position: "absolute", left: 486, top: roleTop, display: "flex", flexDirection: "column" }}>
+          {role.length > 0 ? <RoleLine parts={role} size={roleMainSize} color={INK} /> : null}
           {roleSub.length > 0 ? (
-            <div style={{ display: "flex", marginTop: 22 }}>
-              <RoleLine parts={roleSub} size={roleSize(roleSub, 26)} color={INK} />
+            <div style={{ display: "flex", marginTop: roleGap }}>
+              <RoleLine parts={roleSub} size={roleSubSize} color={INK} />
             </div>
           ) : null}
         </div>
@@ -343,19 +423,15 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
           */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`${base}/brand/wordmark.png`} width={125} height={25} alt="" />
-          {certifications.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginTop: 16 }}>
-              {certifications.map((cert) => (
-                <div key={cert} style={{ marginTop: 3, fontSize: 19, fontWeight: 600, color: brand }}>
-                  {cert}
-                </div>
-              ))}
+          {certLine ? (
+            <div style={{ display: "flex", marginTop: 14, fontSize: certSize, fontWeight: 600, color: brand }}>
+              {certLine}
             </div>
           ) : null}
         </div>
 
         {/* 연락처 두 단 */}
-        <div style={{ position: "absolute", left: 48, top: 275, display: "flex" }}>
+        <div style={{ position: "absolute", left: 48, top: contactsTop, display: "flex" }}>
           {columns.map((column, index) => (
             // 왼쪽 단은 값이 짧아도 폭을 지켜야 오른쪽 단이 시안 자리에 섭니다.
             // (오른쪽 단에는 width 키 자체를 주지 않습니다 — satori 는 undefined 값을 만나면 터집니다)
@@ -381,8 +457,8 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
         */}
         {offices.length > 0 ? (
           <div style={{ position: "absolute", left: 45, bottom: 27, display: "flex", flexDirection: "column" }}>
-            {offices.map((office) => (
-              <div key={office.line} style={{ display: "flex", marginTop: 1 }}>
+            {offices.map((office, index) => (
+              <div key={office.line} style={{ display: "flex", marginTop: index === 0 ? 0 : officeGap }}>
                 {office.label ? (
                   // 라벨 폭을 고정해야 사업장이 둘 이상일 때 주소 시작점이 한 줄로 섭니다.
                   <div
@@ -397,7 +473,10 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
                     {office.label}
                   </div>
                 ) : null}
-                <div style={{ display: "flex", fontSize: officeSize, color: INK }}>{office.line}</div>
+                {/* width 가 있어야 긴 주소(영문)가 카드 밖으로 나가지 않고 접힙니다. */}
+                <div style={{ display: "flex", width: officeWidth, fontSize: officeSize, color: INK }}>
+                  {office.line}
+                </div>
               </div>
             ))}
           </div>
