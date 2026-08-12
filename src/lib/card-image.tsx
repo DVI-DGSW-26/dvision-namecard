@@ -228,12 +228,12 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
     접기는 아래 주소 div 의 width 가 합니다 — satori 는 폭이 정해진 칸 안에서만 줄을
     바꿉니다. width 를 빼면 접히는 대신 카드 밖으로 그냥 나갑니다. 같이 움직이는 값입니다.
 
-    국문은 한 줄이 25.4em 이라 이 예산 안에서 base(27) 그대로 한 줄에 들어갑니다.
+    국문은 한 줄이 25.4em 이라 이 예산 안에서 base(25) 그대로 한 줄에 들어갑니다.
   */
   const officeSize = fitLines(
     offices.map((office) => office.line),
     officeWidth * 2,
-    27,
+    25,
     20,
   );
 
@@ -271,8 +271,8 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
       size: fitLines(
         rows.map(([, value]) => value),
         (index === 0 ? 440 : W - 486 - 40) - 62,
-        36,
-        24,
+        30,
+        22,
       ),
     }));
 
@@ -298,11 +298,11 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
     폭은 왼쪽 심볼(x 112)에 닿지 않는 선까지 씁니다. 인증이 아주 많으면 줄어듭니다.
   */
   const certLine = certifications.join(" · ");
-  const certSize = fitSize(widthEm(certLine), 860 - 130, 24, 14);
+  const certSize = fitSize(widthEm(certLine), 860 - 130, 22, 14);
   const certBlockBottom = 33 + 25 + (certLine ? 14 + certSize * LINE : 0);
 
-  const roleMainSize = roleSize(role, 36);
-  const roleSubSize = roleSize(roleSub, 32);
+  const roleMainSize = roleSize(role, 32);
+  const roleSubSize = roleSize(roleSub, 28);
   const roleGap = 16;
   const roleTop = Math.max(147, certBlockBottom + 14);
   const roleHeight =
