@@ -115,7 +115,11 @@ describe("renderSignature", () => {
     assert.match(html, /<a href="https:\/\/dvi-ind\.com\/c\/hong"/);
     // 이미지를 막은 수신자를 위한 alt
     assert.match(html, /alt="홍길동 명함"/);
-    assert.match(html, /width="600"/);
+    // 원본 PNG 는 600 이지만 서명에는 400 으로 줄여 붙입니다 — 600 이면 메일 본문 폭을
+    // 서명 하나가 꽉 채웁니다. 속성과 style 이 어긋나면 클라이언트마다 크기가 달라집니다.
+    assert.match(html, /width="400"/);
+    assert.match(html, /width:400px/);
+    assert.ok(!/width[=:]"?600/.test(html), "원본 크기(600)가 표시 폭으로 새어 나오면 안 된다");
   });
 
   it("이미지 주소·링크가 어긋나지 않는다 (card.png 는 프로필 경로 + /card.png)", () => {

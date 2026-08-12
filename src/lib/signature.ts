@@ -120,6 +120,22 @@ function renderCta(profileUrl: string, lang: Lang): string {
 }
 
 /**
+ * 서명에 박히는 명함 이미지의 표시 폭.
+ *
+ * 원본 PNG 는 600x340 입니다. 그대로 600 으로 넣으면 메일 본문 폭(보통 600~700px)을
+ * 서명 하나가 꽉 채워서, 본문보다 서명이 더 커 보입니다. 400 으로 줄여 붙입니다.
+ *
+ * 더 줄이지는 마세요. 카드가 이미지라 안의 글자도 같이 줄어듭니다 — 화면에 찍히는
+ * 크기는 원본 글자 크기 x (표시폭/600) 이라, 400 에서 연락처 글자(원본 14px)가 이미
+ * 9.3px 입니다. 이미지라 드래그 복사도 안 되니 이 아래로는 이메일 주소를 눈으로
+ * 읽어 옮겨 적기 어려워집니다.
+ *
+ * 원본을 400 으로 다시 굽지 않는 이유: 600 짜리를 400 에 넣으면 1.5 배로 눌려 들어가
+ * 고해상도 화면(맥·최신 노트북)에서 오히려 더 또렷합니다. 파일 크기도 수십 KB 그대로입니다.
+ */
+const CARD_DISPLAY_WIDTH = 400;
+
+/**
  * 서명 HTML — 명함 이미지 한 장을 프로필 링크로 감싸고, 그 아래 버튼을 답니다.
  *
  * 카드의 실제 모양(이름·역할·로고·주소·연락처·워터마크)과 값 노출 규칙은 이미지 라우트
@@ -145,7 +161,9 @@ export function renderSignature(
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">` +
     `<tr><td style="padding:0;">` +
     `<a href="${escapeHtml(profileUrl)}" style="display:inline-block;text-decoration:none;">` +
-    `<img src="${escapeHtml(cardUrl)}" alt="${escapeHtml(CARD_TEXT[lang].cardOf(altName))}" width="600" style="display:block;border:0;width:600px;max-width:100%;height:auto;" />` +
+    // width 속성과 style 을 같이 적습니다 — Outlook 데스크톱은 style 의 width 를 무시하고
+    // 속성만 봅니다. 둘 중 하나만 두면 클라이언트마다 크기가 달라집니다.
+    `<img src="${escapeHtml(cardUrl)}" alt="${escapeHtml(CARD_TEXT[lang].cardOf(altName))}" width="${CARD_DISPLAY_WIDTH}" style="display:block;border:0;width:${CARD_DISPLAY_WIDTH}px;max-width:100%;height:auto;" />` +
     `</a>` +
     `</td></tr>` +
     // 카드와 버튼이 한 덩어리로 보이도록 8px 만 띄웁니다. 더 벌리면 서명에 딸린 별개 링크처럼 읽힙니다.
