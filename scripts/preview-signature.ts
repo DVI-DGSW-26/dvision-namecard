@@ -53,6 +53,9 @@ const employee = {
   photoUrl: null,
   status: "ACTIVE",
   companyId: "dvision",
+  // 서명이 이미지 주소에 저장 시각을 판 번호로 끼워 넣습니다(cardVersion).
+  // 없으면 미리보기가 그 자리에서 터집니다. 고정값이라 뽑을 때마다 같은 주소가 나옵니다.
+  updatedAt: new Date("2026-01-01"),
 } as unknown as EmployeeWithOrg;
 
 const signature = renderSignature(employee, company);

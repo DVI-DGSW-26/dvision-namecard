@@ -112,8 +112,8 @@ describe("renderSignature", () => {
     const html = renderSignature(emp(), co());
 
     // 이미지 본체 — 절대경로 card.png (Gmail 프록시가 불러올 수 있어야 하므로 https 절대경로)
-    // 뒤의 ?v= 는 프록시 캐시를 피하는 판 번호입니다. (아래 전용 테스트에서 지킵니다)
-    assert.match(html, /<img src="https:\/\/dvi-ind\.com\/c\/hong\/card\.png\?v=[0-9a-z]+"/);
+    // 경로 가운데의 /v/<번호>/ 는 프록시 캐시를 피하는 판 번호입니다. (아래 전용 테스트)
+    assert.match(html, /<img src="https:\/\/dvi-ind\.com\/c\/hong\/v\/[0-9a-z]+\/card\.png"/);
     // 이미지 전체가 프로필로 연결
     assert.match(html, /<a href="https:\/\/dvi-ind\.com\/c\/hong"/);
     // 이미지를 막은 수신자를 위한 alt
@@ -125,11 +125,11 @@ describe("renderSignature", () => {
     assert.ok(!/width[=:]"?600/.test(html), "원본 크기(600)가 표시 폭으로 새어 나오면 안 된다");
   });
 
-  it("이미지 주소·링크가 어긋나지 않는다 (card.png 는 프로필 경로 + /card.png)", () => {
+  it("이미지 주소·링크가 어긋나지 않는다 (card.png 는 프로필 경로 + /v/<번호>/card.png)", () => {
     const html = renderSignature(emp({ slug: "yeonghui" }), co());
 
     assert.match(html, /href="https:\/\/dvi-ind\.com\/c\/yeonghui"/);
-    assert.match(html, /src="https:\/\/dvi-ind\.com\/c\/yeonghui\/card\.png\?v=/);
+    assert.match(html, /src="https:\/\/dvi-ind\.com\/c\/yeonghui\/v\/[0-9a-z]+\/card\.png"/);
   });
 
   /*
@@ -140,9 +140,21 @@ describe("renderSignature", () => {
   it("이미지 주소에 저장 시각을 붙인다", () => {
     const html = renderSignature(emp({ updatedAt: new Date("2026-07-30T07:46:20.506Z") }), co());
 
-    assert.match(html, /card\.png\?v=[0-9a-z]+"/);
+    assert.match(html, /\/v\/[0-9a-z]+\/card\.png"/);
     // 링크(=프로필 주소)에는 붙지 않습니다. 사람이 눌러 보는 주소라 깔끔해야 합니다.
     assert.match(html, /<a href="https:\/\/dvi-ind\.com\/c\/hong"/);
+  });
+
+  /*
+   * 판 번호는 쿼리가 아니라 경로에 있어야 합니다. "값이 매번 달라지는 쿼리가 달린
+   * 외부 이미지" 는 수신 추적 픽셀과 생김새가 같아서, 고객사 사내 메일 보안이
+   * 저희 메일을 통째로 격리했습니다. 되돌리면 그 격리가 다시 시작됩니다.
+   */
+  it("판 번호를 쿼리스트링으로 붙이지 않는다", () => {
+    const html = renderSignature(emp(), co());
+
+    assert.ok(!/card\.png\?/.test(html), "이미지 주소에 쿼리가 붙으면 안 된다");
+    assert.ok(!html.includes("?v="), "추적 픽셀처럼 보이는 ?v= 가 남으면 안 된다");
   });
 
   it("프로필을 고치면 이미지 주소가 달라진다", () => {
@@ -188,6 +200,61 @@ describe("renderSignature", () => {
 
     assert.ok(!html.includes("<script>"), "태그가 그대로 들어가면 안 된다");
     assert.match(html, /&lt;script&gt;/);
+  });
+
+  /*
+   * 아래 글자 블록 테스트가 지키는 것.
+   *
+   * 서명이 이미지 한 장뿐이면 (1) 사내 메일 보안이 피싱으로 세고 (2) 이미지를 막은
+   * 수신자는 alt 한 줄만 보고 (3) 번호를 드래그로 복사할 수 없습니다. 그래서 같은
+   * 연락처를 이미지 아래에 글자로 한 번 더 답니다. 이 줄들이 사라지면 셋 다 되돌아옵니다.
+   */
+  it("이미지 아래에 연락처를 글자로도 넣는다", () => {
+    const html = renderSignature(emp(), co());
+
+    assert.ok(html.includes("홍길동 수석매니저 · 공학박사"), "이름·직함이 글자로 있어야 한다");
+    assert.ok(html.includes("(43011) 대구광역시 달성군 구지면 국가산단대로33길 237"));
+    assert.ok(html.includes("TEL 053-710-1022"));
+    assert.ok(html.includes("FAX 053-715-2096"));
+    assert.ok(html.includes("MOBILE 010-1234-5678"));
+    assert.ok(html.includes("E-MAIL hong@dvi-ind.com"), "이미지를 막아도 메일 주소는 읽혀야 한다");
+  });
+
+  it("글자 블록은 링크를 늘리지 않는다", () => {
+    const html = renderSignature(emp(), co());
+
+    // 링크가 많을수록 보안 게이트웨이 점수가 올라갑니다. 글자 블록을 넣은 목적과
+    // 정반대라, 이메일도 mailto 로 걸지 않습니다. 링크는 이미지와 버튼 둘뿐입니다.
+    assert.equal(html.match(/<a /g)?.length, 2);
+    assert.ok(!html.includes("mailto:"));
+    assert.ok(!html.includes("tel:"));
+  });
+
+  it("글자 블록도 공개 규칙을 따른다 (mobilePublic false · fax 없음)", () => {
+    const html = renderSignature(emp({ mobilePublic: false }), co({ fax: null }));
+
+    assert.ok(!html.includes("010-1234-5678"), "비공개 번호가 글자로 새어 나가면 안 된다");
+    assert.ok(!html.includes("MOBILE"));
+    assert.ok(!html.includes("FAX"));
+    assert.ok(html.includes("TEL 053-710-1022"));
+  });
+
+  it("영문 서명의 글자 블록은 영문 주소만 낸다", () => {
+    const html = renderSignature(
+      emp({ nameEn: "Gildong Hong" }),
+      co({ offices: [office("본사", "41585", "대구 북구 홈암로 51", "51, Homam-ro, Buk-gu, Daegu")] }),
+      "en",
+    );
+
+    assert.ok(html.includes("51, Homam-ro, Buk-gu, Daegu"));
+    assert.ok(!html.includes("대구 북구 홈암로 51"), "영문 서명에 한글 주소가 섞이면 안 된다");
+  });
+
+  it("글자 블록의 값도 이스케이프한다", () => {
+    const html = renderSignature(emp({ credential: `<b>박사</b>` }), co());
+
+    assert.ok(!html.includes("<b>박사</b>"), "태그가 그대로 들어가면 안 된다");
+    assert.match(html, /&lt;b&gt;박사&lt;\/b&gt;/);
   });
 });
 
