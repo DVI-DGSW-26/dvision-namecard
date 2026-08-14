@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { resolveEditTarget } from "@/lib/current-employee";
 import { readOrgLists } from "@/lib/org-store";
 import { BottomTabBar } from "@/components/BottomTabBar";
+import { SignatureStaleBanner } from "@/components/SignatureStaleBanner";
 import { TopNav } from "@/components/TopNav";
 import { EditProfileForm } from "./EditProfileForm";
 
@@ -96,6 +97,17 @@ export default async function EditPage({ searchParams }: Props) {
   return (
     <>
       <TopNav role={role} email={employee.email} current="/edit" />
+      {/*
+        남의 명함을 보고 있을 때는 안 답니다 — 그 사람의 서명이 낡았는지는 여기서
+        판정할 수 없고(복사 기록은 그 사람 브라우저에 있습니다), 관리자가 대신
+        복사해 봐야 자기 클립보드에만 들어갑니다.
+      */}
+      {viewingOther ? null : (
+        <SignatureStaleBanner
+          employeeId={employee.id}
+          profileUpdatedAt={employee.updatedAt.toISOString()}
+        />
+      )}
       {/* 관리자가 남의 명함을 열었을 때, 본인 것으로 착각하고 고치는 일이 없도록 표시합니다. */}
       {viewingOther ? (
         <div className="border-b border-border bg-sub-bg">

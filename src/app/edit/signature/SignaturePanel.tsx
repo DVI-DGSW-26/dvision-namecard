@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { copyRichText } from "@/lib/clipboard";
+import { markSignatureCopied } from "@/lib/signature-freshness";
 
 /**
  * 서명 미리보기 + 복사 + 설치 안내.
@@ -73,7 +74,15 @@ const GUIDES = [
   },
 ] as const;
 
-export function SignaturePanel({ html, text }: { html: string; text: string }) {
+export function SignaturePanel({
+  employeeId,
+  html,
+  text,
+}: {
+  employeeId: string;
+  html: string;
+  text: string;
+}) {
   const [status, setStatus] = useState<"idle" | "ok" | "plain" | "error">("idle");
   // 사내 메일이 전부 Gmail 이라 Gmail 안내를 기본으로 펼칩니다. (GUIDES 첫 항목과 맞춤)
   const [openGuide, setOpenGuide] = useState<string>("gmail");
@@ -81,6 +90,15 @@ export function SignaturePanel({ html, text }: { html: string; text: string }) {
   async function handleCopy() {
     const result = await copyRichText(html, text);
     setStatus(result === "ok" ? "ok" : result === "unsupported" ? "plain" : "error");
+
+    /*
+      서식까지 제대로 들어간 경우에만 "복사했다" 고 기록합니다.
+
+      unsupported 는 평문만 들어간 것이라 서명으로 못 씁니다. 여기서 기록해 버리면
+      낡음 배너가 사라져서, 정작 서명이 깨진 사람에게 아무도 다시 하라고 말하지
+      않게 됩니다. (lib/signature-freshness.ts)
+    */
+    if (result === "ok") markSignatureCopied(employeeId);
   }
 
   const message = {
