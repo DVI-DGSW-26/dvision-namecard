@@ -1,5 +1,5 @@
 import { tokens } from "@/config/tokens";
-import { CARD_TEXT, cardPath, requireCardName, type Lang } from "@/lib/lang";
+import { CARD_TEXT, cardImagePath, cardPath, requireCardName, type Lang } from "@/lib/lang";
 import { officeLines, roleParts } from "@/lib/org";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
@@ -12,8 +12,11 @@ import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
  * 동일하게 보입니다.
  *
  * 대가: 이미지라 안의 글자·번호는 눌리지 않습니다. 그래서 이미지 전체를 명함 프로필
- * 링크로 감쌉니다(클릭 → /c/[slug], 거기서 전화·저장 등 실제 동작). 이미지를 막은
- * 수신자는 alt 텍스트를 보고, text/plain 만 읽는 클라이언트는 renderSignatureText 를 받습니다.
+ * 링크로 감쌉니다(클릭 → /c/[slug], 거기서 전화·저장 등 실제 동작). text/plain 만 읽는
+ * 클라이언트는 renderSignatureText 를 받습니다.
+ *
+ * 이미지 아래에는 같은 연락처를 글자로 한 번 더 답니다(renderContact). 이미지 한 장이
+ * 전부인 서명은 사내 메일 보안 게이트웨이가 피싱으로 셉니다 — 자세한 이유는 그쪽 주석에.
  *
  * 이미지 주소는 절대경로(NEXT_PUBLIC_BASE_URL)여야 합니다 — Gmail 은 이미지를 구글 프록시로
  * 불러오므로 공개된 https 주소가 아니면(로컬 localhost 등) 뜨지 않습니다.
@@ -80,7 +83,28 @@ function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices, l
 }
 
 /**
- * 명함 이미지 주소 뒤에 붙는 판(版) 번호.
+ * 서명에 찍히는 연락처 조각.
+ *
+ * HTML 글자 블록과 text/plain 폴백이 여기 한 곳에서 값을 받습니다. 두 곳이 각자
+ * 조립하면 한쪽만 고쳐서 같은 사람의 메일에 서로 다른 번호가 나가게 됩니다.
+ * 묶는 방식만 다릅니다 — HTML 은 연락처 넷을 한 줄로 모으고(넷을 세로로 늘어놓으면
+ * 글자 블록이 명함 이미지보다 길어집니다), 평문은 한 줄에 하나씩 둡니다.
+ */
+function contactParts(fields: ReturnType<typeof resolveFields>) {
+  return {
+    headline: [fields.nameKo, fields.roleText].filter(Boolean).join(" "),
+    addresses: fields.addresses,
+    contacts: [
+      fields.tel && `TEL ${fields.tel}`,
+      fields.fax && `FAX ${fields.fax}`,
+      fields.mobile && `MOBILE ${fields.mobile}`,
+      fields.email && `E-MAIL ${fields.email}`,
+    ].filter(Boolean) as string[],
+  };
+}
+
+/**
+ * 명함 이미지 주소에 끼워 넣는 판(版) 번호.
  *
  * 왜 필요한가: 서명 본체는 /c/[slug]/card.png 한 장인데 주소가 언제나 같습니다.
  * 서버는 `max-age=0, must-revalidate` 로 내주지만 메일 쪽은 그 말을 안 듣습니다 —
@@ -90,8 +114,11 @@ function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices, l
  * 웹 명함에는 휴대폰이 뜨는데 서명에는 안 뜬다)
  *
  * 저장 시각을 붙이면 프로필을 고칠 때마다 주소가 달라져, 다시 복사한 서명은
- * 프록시가 한 번도 본 적 없는 주소를 받습니다. 사진 주소(/c/[slug]/photo?v=)가
- * 이미 쓰는 방식과 같습니다.
+ * 프록시가 한 번도 본 적 없는 주소를 받습니다.
+ *
+ * 이 번호는 쿼리가 아니라 경로에 들어갑니다(/c/[slug]/v/<번호>/card.png). 이유는
+ * cardImagePath 주석에 있습니다 — 쿼리로 붙이면 메일 보안 게이트웨이가 추적 픽셀로
+ * 봅니다. 사진 주소(/c/[slug]/photo?v=)는 서명에 안 들어가므로 그대로 둡니다.
  *
  * 회사 값(대표번호·팩스·주소)만 바뀐 경우는 이 번호가 그대로입니다 — Company 에
  * 저장 시각 컬럼이 없습니다. 회사 값이 바뀌면 전 직원이 서명을 다시 넣어야 하는
@@ -161,6 +188,46 @@ function renderCta(profileUrl: string, lang: Lang): string {
 const CARD_DISPLAY_WIDTH = 400;
 
 /**
+ * 명함 이미지 아래에 붙는 글자 서명.
+ *
+ * 이미지에 이미 있는 값을 왜 또 글자로 적는가 — 세 가지 이유가 겹칩니다.
+ *
+ * 1) 사내 메일 보안 게이트웨이(APT·피싱 차단)는 "본문이 이미지 한 장뿐이고 그
+ *    이미지가 통째로 외부 링크" 인 메일을 피싱으로 셉니다. 가짜 로그인 화면을
+ *    이미지로 깔고 전체를 링크로 감싼 진짜 피싱이 정확히 그 모양이라, 필터 입장에서
+ *    구분할 방법이 없습니다. 실제로 한 고객사에서 저희 메일이 전부 격리됐습니다
+ *    (다른 수신처는 멀쩡했습니다 — 그 회사 게이트웨이만 그렇게 셉니다).
+ *    읽을 수 있는 글자가 본문에 있으면 그 패턴이 깨집니다.
+ * 2) 이미지를 기본으로 막는 클라이언트(아웃룩)에서는 alt 한 줄이 전부였습니다.
+ * 3) 이미지 안의 글자는 드래그가 안 됩니다. 받는 사람이 번호를 옮겨 적으려면
+ *    눈으로 보고 손으로 쳐야 했습니다.
+ *
+ * 카드 모양은 건드리지 않습니다 — 이미지 아래에 보조 색(subText)으로 작게 답니다.
+ * 카드가 계속 주인공이고 이 블록은 필터와 이미지 차단 수신자를 위한 보험입니다.
+ *
+ * 링크는 하나도 넣지 않습니다(이메일도 mailto 로 걸지 않음). 링크 수를 늘리는 건
+ * 이 블록을 넣는 목적과 정반대입니다.
+ */
+const CONTACT_STYLE =
+  `font-family:${CTA_FONT};font-size:${tokens.font.caption.size}px;` +
+  `font-weight:${tokens.font.caption.weight};line-height:${tokens.lineHeight};` +
+  `letter-spacing:${tokens.letterSpacing};color:${tokens.color.subText};`;
+
+function renderContact(parts: ReturnType<typeof contactParts>): string {
+  const lines = [
+    // 이름·직함만 본문 색으로 올립니다. 나머지는 보조 색이라 카드를 안 이깁니다.
+    parts.headline &&
+      `<span style="color:${tokens.color.text};font-weight:${tokens.font.captionBold.weight};">${escapeHtml(parts.headline)}</span>`,
+    ...parts.addresses.map(escapeHtml),
+    parts.contacts.map(escapeHtml).join(" · "),
+  ].filter(Boolean);
+
+  // <br /> 로 줄을 나눕니다. 줄마다 <p>·<div> 를 두면 아웃룩이 사이에 제멋대로
+  // 여백을 넣어, 줄 간격이 클라이언트마다 달라집니다.
+  return lines.join("<br />");
+}
+
+/**
  * 서명 HTML — 명함 이미지 한 장을 프로필 링크로 감싸고, 그 아래 버튼을 답니다.
  *
  * 카드의 실제 모양(이름·역할·로고·주소·연락처·워터마크)과 값 노출 규칙은 이미지 라우트
@@ -171,13 +238,13 @@ const CARD_DISPLAY_WIDTH = 400;
  */
 export function renderSignature(
   employee: EmployeeWithOrg,
-  _company: CompanyWithOffices,
+  company: CompanyWithOffices,
   lang: Lang = "ko",
 ): string {
-  // _company 는 renderSignatureText 와 시그니처를 맞추려고 받습니다. 카드의 실제 값은
-  // 이미지 라우트가 DB 에서 직접 읽으므로 여기서는 slug·이름만 있으면 됩니다.
+  // 카드 안의 값은 이미지 라우트가 DB 에서 직접 읽습니다. company 가 여기에도 필요한
+  // 건 이미지 아래 글자 블록 때문입니다 — 대표번호·팩스·주소가 회사 값입니다.
   const base = baseUrl();
-  const cardUrl = `${base}${cardPath(employee.slug, lang, "card.png")}?v=${cardVersion(employee)}`;
+  const cardUrl = `${base}${cardImagePath(employee.slug, lang, cardVersion(employee))}`;
   const profileUrl = `${base}${cardPath(employee.slug, lang)}`;
   // 이미지를 막은 수신자가 보는 글자입니다. 영문 서명이면 영문 이름으로 나갑니다.
   const altName = requireCardName(employee, lang);
@@ -193,6 +260,11 @@ export function renderSignature(
     `</td></tr>` +
     // 카드와 버튼이 한 덩어리로 보이도록 8px 만 띄웁니다. 더 벌리면 서명에 딸린 별개 링크처럼 읽힙니다.
     `<tr><td style="padding:${tokens.space.sibling}px 0 0;">${renderCta(profileUrl, lang)}</td></tr>` +
+    // 글자 블록은 카드 폭에 맞춰 가둡니다. width 속성을 같이 적는 건 이미지와 같은
+    // 이유입니다 — 아웃룩은 style 의 width 를 무시하고 속성만 봅니다.
+    `<tr><td width="${CARD_DISPLAY_WIDTH}" style="padding:${tokens.space.group}px 0 0;width:${CARD_DISPLAY_WIDTH}px;max-width:100%;${CONTACT_STYLE}">` +
+    renderContact(contactParts(resolveFields(employee, company, lang))) +
+    `</td></tr>` +
     `</table>`
   );
 }
@@ -208,16 +280,16 @@ export function renderSignatureText(
   lang: Lang = "ko",
 ): string {
   const f = resolveFields(employee, company, lang);
+  const parts = contactParts(f);
 
+  // 평문에서는 연락처를 한 줄에 하나씩 둡니다. 세로로 길어져도 상관없고,
+  // 오히려 그 편이 주소록에 옮겨 적기 쉽습니다. (HTML 은 한 줄로 모읍니다)
   const lines = [
-    [f.nameKo, f.roleText].filter(Boolean).join(" "),
-    ...f.addresses,
-    f.tel && `TEL ${f.tel}`,
-    f.fax && `FAX ${f.fax}`,
-    f.mobile && `MOBILE ${f.mobile}`,
-    f.email && `E-MAIL ${f.email}`,
+    parts.headline,
+    ...parts.addresses,
+    ...parts.contacts,
     `명함 보기: ${f.profileUrl}`,
-  ].filter(Boolean) as string[];
+  ].filter(Boolean);
 
   return lines.join("\n");
 }

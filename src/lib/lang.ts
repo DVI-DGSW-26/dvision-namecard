@@ -61,6 +61,21 @@ export function cardPath(slug: string, lang: Lang, suffix = ""): string {
   return suffix ? `${base}/${suffix}` : base;
 }
 
+/**
+ * 명함 이미지 주소. 판 번호는 쿼리(`?v=`)가 아니라 경로에 넣습니다.
+ *
+ * 쿼리로 붙이면 메일 보안 게이트웨이가 수신 추적 픽셀과 구분하지 못합니다 —
+ * "값이 매번 달라지는 쿼리가 달린 외부 이미지" 가 정확히 추적 픽셀의 생김새입니다.
+ * 실제로 한 고객사 사내 보안에서 저희 메일이 통째로 격리됐습니다. 경로로 옮기면
+ * 주소를 새로 만들어 캐시를 밀어내는 목적은 그대로 두고 그 생김새만 없앱니다.
+ *
+ * 번호를 안 주면 판 없는 주소가 나옵니다. 이미 나간 서명들이 그 주소를 쓰고 있어
+ * 두 형태 모두 살아 있어야 합니다 — 지우면 그동안 보낸 메일의 명함이 전부 깨집니다.
+ */
+export function cardImagePath(slug: string, lang: Lang, version?: string): string {
+  return cardPath(slug, lang, version ? `v/${encodeURIComponent(version)}/card.png` : "card.png");
+}
+
 /** 언어 토글에 보여 줄 이름. 각자 자기 언어로 적어야 못 읽는 쪽이 안 생깁니다. */
 export const LANG_LABEL: Record<Lang, string> = {
   ko: "한국어",
