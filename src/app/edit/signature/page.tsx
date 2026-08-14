@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { resolveEditTarget } from "@/lib/current-employee";
 import { renderSignature, renderSignatureText } from "@/lib/signature";
 import { BottomTabBar } from "@/components/BottomTabBar";
+import { SignatureStaleBanner } from "@/components/SignatureStaleBanner";
 import { TopNav } from "@/components/TopNav";
 import { SignaturePanel } from "./SignaturePanel";
 
@@ -82,6 +83,12 @@ export default async function SignaturePage({ searchParams }: Props) {
   return (
     <>
       <TopNav role={role} email={employee.email} current="/edit/signature" />
+      {/* 복사 버튼이 바로 아래에 있으므로 다른 화면으로 보내는 링크는 달지 않습니다. */}
+      <SignatureStaleBanner
+        employeeId={employee.id}
+        profileUpdatedAt={employee.updatedAt.toISOString()}
+        linkToSignature={false}
+      />
       <main className="mx-auto w-full max-w-[1000px] px-group py-section sm:px-section sm:py-block">
         <header>
           <p className="text-caption text-sub-text">내 명함</p>
@@ -99,7 +106,7 @@ export default async function SignaturePage({ searchParams }: Props) {
         </header>
 
         <div className="mt-block">
-          <SignaturePanel html={html} text={text} />
+          <SignaturePanel employeeId={employee.id} html={html} text={text} />
         </div>
       </main>
       <BottomTabBar role={role} current="/edit/signature" />
