@@ -116,7 +116,13 @@ export const CARD_TEXT = {
     fax: "FAX",
     email: "E-MAIL",
     saveCard: "Tap to save card image",
-    signatureCta: "Tap the card to save my contact →",
+    /*
+      국문(프로필 보러 가기)과 같은 곳으로 갑니다. 예전 문구는 "Tap the card to save
+      my contact" 였는데, 눌러서 도착하는 공개 카드에는 연락처 저장(vCard)이 없습니다 —
+      거기서 할 수 있는 건 홈페이지로 가기와 명함 이미지 저장뿐입니다. 없는 동작을
+      약속하는 버튼은 눌린 뒤에 신뢰를 깎습니다.
+    */
+    signatureCta: "View my profile →",
     homepage: "Company website",
     linkedin: "LinkedIn",
     youtube: "Company introduction video",
