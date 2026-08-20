@@ -125,7 +125,14 @@ export const CARD_TEXT = {
     email: "E-MAIL",
     saveCard: "Tap to save card image",
     saveContact: "Save contact",
-    signatureCta: "Tap the card to save my contact →",
+    /*
+      국문(프로필 보러 가기)과 같은 곳으로 갑니다. 예전 문구는 "Tap the card to save
+      my contact" 였는데, 서명을 누르면 연락처가 저장되는 게 아니라 공개 카드가 열립니다.
+      카드에 연락처 저장 버튼이 다시 생긴 지금도 그대로입니다 — 저장은 그 화면에서 한 번
+      더 눌러야 하는 일이라, 서명의 문구는 실제로 도착하는 곳을 말합니다. 없는 동작을
+      약속하는 버튼은 눌린 뒤에 신뢰를 깎습니다.
+    */
+    signatureCta: "View my profile →",
     homepage: "Company website",
     linkedin: "LinkedIn",
     youtube: "Company introduction video",

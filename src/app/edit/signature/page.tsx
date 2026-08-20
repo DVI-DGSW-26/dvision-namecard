@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveEditTarget } from "@/lib/current-employee";
+import { LANGS, cardName } from "@/lib/lang";
 import { renderSignature, renderSignatureText } from "@/lib/signature";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { SignatureStaleBanner } from "@/components/SignatureStaleBanner";
 import { TopNav } from "@/components/TopNav";
-import { SignaturePanel } from "./SignaturePanel";
+import { SignaturePanel, type SignatureVariant } from "./SignaturePanel";
 
 /**
  * 이메일 서명 복사 + 설치 안내. (쿠키 필요 — middleware 가 보호)
@@ -63,11 +64,21 @@ export default async function SignaturePage({ searchParams }: Props) {
 
   const { role, employee, company } = result;
 
-  let html: string;
-  let text: string;
+  /*
+    만들 수 있는 언어만 탭에 올립니다. 영문명을 안 채운 사람은 영문 서명을 아예
+    만들지 않습니다 — 공개 카드가 같은 이유로 404 를 내는 규칙과 한 벌입니다
+    (lib/lang.ts). 이름 자리에 한글이 박힌 영문 서명은 한 번 넣으면 그대로 거래처에
+    계속 나가서, 없는 것보다 나쁩니다.
+  */
+  const langs = LANGS.filter((lang) => cardName(employee, lang));
+
+  let variants: SignatureVariant[];
   try {
-    html = renderSignature(employee, company);
-    text = renderSignatureText(employee, company);
+    variants = langs.map((lang) => ({
+      lang,
+      html: renderSignature(employee, company, lang),
+      text: renderSignatureText(employee, company, lang),
+    }));
   } catch {
     // renderSignature 는 NEXT_PUBLIC_BASE_URL 이 없으면 던집니다. 메일에 localhost
     // 링크가 박혀 나가는 것보다 여기서 막히는 편이 낫습니다.
@@ -106,7 +117,7 @@ export default async function SignaturePage({ searchParams }: Props) {
         </header>
 
         <div className="mt-block">
-          <SignaturePanel employeeId={employee.id} html={html} text={text} />
+          <SignaturePanel employeeId={employee.id} variants={variants} />
         </div>
       </main>
       <BottomTabBar role={role} current="/edit/signature" />

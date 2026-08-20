@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { copyRichText } from "@/lib/clipboard";
+import type { Lang } from "@/lib/lang";
 import { markSignatureCopied } from "@/lib/signature-freshness";
 
 /**
@@ -10,7 +11,29 @@ import { markSignatureCopied } from "@/lib/signature-freshness";
  * html 은 서버에서 renderSignature() 로 만든 문자열입니다. 사용자 입력은 그 안에서
  * 이미 이스케이프됐고(lib/signature.ts), 클라이언트가 다시 조립하지 않습니다.
  * 여기서 문자열을 이어 붙이기 시작하면 이스케이프 책임이 두 곳으로 쪼개집니다.
+ *
+ * 국문·영문은 서명이 통째로 다릅니다(가리키는 명함 이미지도 /c/[slug]/card.png 와
+ * /c/[slug]/en/card.png 로 갈립니다). 그래서 한 벌을 받아 화면에서 바꿔치기하지
+ * 않고, 서버가 만들어 둔 완성본을 언어 수만큼 받아 그중 하나를 복사합니다.
  */
+
+export type SignatureVariant = {
+  lang: Lang;
+  html: string;
+  text: string;
+};
+
+/**
+ * 탭에 적는 말.
+ *
+ * lib/lang.ts 의 LANG_LABEL(한국어 · English)을 쓰지 않습니다. 저건 공개 카드에서
+ * 각자 자기 언어로 적어 못 읽는 쪽이 안 생기게 하려는 이름이고, 여기는 직원만 보는
+ * 한국어 화면입니다. "English 서명 복사" 보다 "영문 서명 복사" 가 읽힙니다.
+ */
+const TAB_LABEL: Record<Lang, string> = {
+  ko: "국문",
+  en: "영문",
+};
 
 /**
  * 메일 클라이언트별 설치 안내.
@@ -76,19 +99,23 @@ const GUIDES = [
 
 export function SignaturePanel({
   employeeId,
-  html,
-  text,
+  /** 만들 수 있는 언어만 순서대로. 국문이 항상 첫 번째입니다(lib/lang.ts 의 LANGS). */
+  variants,
 }: {
   employeeId: string;
-  html: string;
-  text: string;
+  variants: SignatureVariant[];
 }) {
   const [status, setStatus] = useState<"idle" | "ok" | "plain" | "error">("idle");
+  const [lang, setLang] = useState<Lang>(variants[0].lang);
   // 사내 메일이 전부 Gmail 이라 Gmail 안내를 기본으로 펼칩니다. (GUIDES 첫 항목과 맞춤)
   const [openGuide, setOpenGuide] = useState<string>("gmail");
 
+  // 영문명을 지운 뒤 남아 있던 화면에서 en 이 선택돼 있을 수 있어 첫 번째로 떨어뜨립니다.
+  const current = variants.find((variant) => variant.lang === lang) ?? variants[0];
+  const multi = variants.length > 1;
+
   async function handleCopy() {
-    const result = await copyRichText(html, text);
+    const result = await copyRichText(current.html, current.text);
     setStatus(result === "ok" ? "ok" : result === "unsupported" ? "plain" : "error");
 
     /*
@@ -97,6 +124,10 @@ export function SignaturePanel({
       unsupported 는 평문만 들어간 것이라 서명으로 못 씁니다. 여기서 기록해 버리면
       낡음 배너가 사라져서, 정작 서명이 깨진 사람에게 아무도 다시 하라고 말하지
       않게 됩니다. (lib/signature-freshness.ts)
+
+      국문·영문 중 어느 쪽을 복사해도 같은 자리에 기록합니다. 언어별로 나눠 세면
+      한쪽만 쓰는 사람(대부분입니다)이 평생 안 쓸 언어 때문에 배너를 달고 다닙니다.
+      대신 둘 다 넣어 둔 사람은 한쪽만 바꾸고 넘어갈 수 있어, 아래 안내로 짚습니다.
     */
     if (result === "ok") markSignatureCopied(employeeId);
   }
@@ -124,9 +155,50 @@ export function SignaturePanel({
             onClick={handleCopy}
             className="h-12 w-full rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover sm:w-auto"
           >
-            서명 복사
+            {multi ? `${TAB_LABEL[current.lang]} 서명 복사` : "서명 복사"}
           </button>
         </div>
+
+        {/*
+          고를 게 하나뿐이면 탭을 안 그립니다 — 안 눌리는 버튼 하나만 남는 것보다
+          왜 영문이 없는지 알려 주는 편이 낫습니다. 공개 카드의 언어 토글과 같은 규칙입니다.
+
+          role="tablist" 대신 눌림 상태(aria-pressed)를 쓰는 버튼입니다. 탭 역할을
+          제대로 쓰려면 좌우 화살표 이동까지 붙여야 하는데, 여기서 바뀌는 건 아래
+          미리보기와 복사 대상 하나뿐이라 그만한 장치가 필요 없습니다.
+        */}
+        {multi ? (
+          <div role="group" aria-label="서명 언어" className="mt-section flex flex-wrap gap-tight">
+            {variants.map((variant) => {
+              const active = variant.lang === current.lang;
+              return (
+                <button
+                  key={variant.lang}
+                  type="button"
+                  // 언어를 바꾸면 "복사했습니다" 는 방금 고른 서명 이야기가 아닙니다.
+                  onClick={() => {
+                    setLang(variant.lang);
+                    setStatus("idle");
+                  }}
+                  aria-pressed={active}
+                  // 활성 표시는 색이 아니라 굵기와 테두리로 냅니다. primary 예산은 복사 버튼 몫입니다.
+                  className={[
+                    "rounded-card border px-group py-tight text-caption transition-colors",
+                    active
+                      ? "border-text text-caption-bold text-text"
+                      : "border-border text-sub-text hover:text-text",
+                  ].join(" ")}
+                >
+                  {TAB_LABEL[variant.lang]} 서명
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="mt-section text-caption text-sub-text">
+            프로필 편집에서 영문명을 채우면 영문 서명 탭이 생깁니다.
+          </p>
+        )}
 
         <p className="mt-group text-caption text-sub-text">{message}</p>
 
@@ -138,7 +210,7 @@ export function SignaturePanel({
           div 안쪽 문자열이지 이 테두리가 아닙니다.
         */}
         <div className="mt-section overflow-x-auto rounded-card border border-border bg-bg p-group sm:p-section">
-          <div dangerouslySetInnerHTML={{ __html: html }} />
+          <div dangerouslySetInnerHTML={{ __html: current.html }} />
         </div>
       </section>
 
@@ -192,6 +264,14 @@ export function SignaturePanel({
             );
           })}
         </div>
+
+        {multi ? (
+          <p className="mt-section text-caption text-sub-text">
+            국문과 영문을 둘 다 쓰시려면 메일 프로그램에서 서명을 두 개 만들고, 위 탭을
+            바꿔 가며 각각 복사해 붙여넣으세요. 프로필을 고친 뒤에는 두 개 다 교체해야
+            합니다.
+          </p>
+        ) : null}
 
         <p className="mt-section text-caption text-sub-text">
           회신·전달할 때도 서명이 유지되는지 한 번 확인해 보세요. 메일 클라이언트가 서식을
