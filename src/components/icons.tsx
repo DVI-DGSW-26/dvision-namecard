@@ -27,6 +27,17 @@ export function UserIcon({ className }: IconProps) {
   );
 }
 
+/** 사람 + 더하기 — 공개 카드의 "연락처 저장". 주소록에 넣는다는 뜻입니다. */
+export function UserPlusIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="9.5" cy="8.5" r="3.75" />
+      <path d="M2.5 20c0-3.6 3.13-6 7-6 1.15 0 2.24.21 3.2.6" />
+      <path d="M17.5 14v6M14.5 17h6" />
+    </svg>
+  );
+}
+
 /** 여러 명 — 임직원 관리 탭. UserIcon 과 달리 뒤에 한 명이 더 서 있습니다. */
 export function UsersIcon({ className }: IconProps) {
   return (

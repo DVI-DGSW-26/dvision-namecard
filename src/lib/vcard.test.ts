@@ -135,7 +135,12 @@ describe("buildVCard", () => {
 
   it("값이 없는 항목은 줄째로 빠진다", () => {
     const vcf = unfold(
-      buildVCard(emp({ telWork: null, credential: null }), co({ fax: null, offices: [] })),
+      buildVCard(
+        emp({ telWork: null, credential: null }),
+        // 메모는 자격뿐 아니라 회사 소개도 담습니다. 회사 값이 남아 있으면
+        // credential 만 비워도 NOTE 가 남아서, 여기서는 둘 다 비웁니다.
+        co({ fax: null, offices: [], industry: null, tagline: null }),
+      ),
     );
 
     assert.ok(!vcf.includes("NOTE:"));
@@ -222,6 +227,39 @@ describe("buildVCard", () => {
     const vcf = unfold(buildVCard(emp(), co()));
 
     assert.match(vcf, /^URL:https:\/\/dvi-ind\.com\/c\/ryu$/m);
+  });
+
+  it("메모에 자격 · 소개 · 사업분야 · 태그라인을 쌓는다", () => {
+    const vcf = unfold(buildVCard(emp({ bio: "공정 자동화를 만듭니다" }), co()));
+
+    // 값 안의 줄바꿈은 역슬래시 n 두 글자로 적힙니다.
+    assert.match(
+      vcf,
+      /NOTE:공학박사\\n공정 자동화를 만듭니다\\n알루미늄 압출 · 정밀가공\\n자동차 경량 부품 전문/,
+    );
+  });
+
+  it("영문 메모는 영문 값만 담는다", () => {
+    const vcf = unfold(
+      buildVCard(
+        emp({ nameEn: "Young-gyun Ryu", credential: "공학박사", credentialEn: "Ph.D." }),
+        co({ industryEn: "Aluminum extrusion", taglineEn: null }),
+        "en",
+      ),
+    );
+
+    assert.match(vcf, /NOTE:Ph\.D\.\\nAluminum extrusion/);
+    assert.ok(!vcf.includes("공학박사"), "영문 메모에 한글이 섞이면 안 된다");
+  });
+
+  it("사진을 주면 PHOTO 를 JPEG 로 넣는다", () => {
+    const vcf = unfold(buildVCard(emp(), co(), "ko", "QUJD"));
+
+    assert.match(vcf, /^PHOTO;ENCODING=b;TYPE=JPEG:QUJD$/m);
+  });
+
+  it("사진이 없으면 PHOTO 줄이 통째로 빠진다", () => {
+    assert.ok(!buildVCard(emp(), co()).includes("PHOTO"));
   });
 
   it("영문 vCard 는 FN 에 영문명을 넣는다", () => {

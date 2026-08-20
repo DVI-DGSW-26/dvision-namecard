@@ -74,3 +74,21 @@ export async function processPhoto(input: Buffer): Promise<ProcessedPhoto | null
 export function photoUrlFor(slug: string, updatedAt: Date): string {
   return `/c/${encodeURIComponent(slug)}/photo?v=${updatedAt.getTime()}`;
 }
+
+/**
+ * vCard 에 넣을 사진 — JPEG 를 base64 로.
+ *
+ * 저장된 형식(webp)을 그대로 넣지 않는 이유: 아이폰·안드로이드 기본 연락처 앱이
+ * vCard 안의 webp 를 읽지 못합니다. 사진 칸만 비는 게 아니라 파일 전체를 거부하는
+ * 기종도 있습니다.
+ *
+ * 실패하면 null 입니다 — 사진 한 장 때문에 연락처 저장이 통째로 막히면 안 됩니다.
+ */
+export async function photoAsVCardJpeg(data: Uint8Array): Promise<string | null> {
+  try {
+    const jpeg = await sharp(Buffer.from(data)).jpeg({ quality: 80 }).toBuffer();
+    return jpeg.toString("base64");
+  } catch {
+    return null;
+  }
+}
