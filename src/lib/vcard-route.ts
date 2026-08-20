@@ -1,5 +1,6 @@
 import { cardName, type Lang } from "@/lib/lang";
 import { prisma } from "@/lib/prisma";
+import { photoAsVCardJpeg } from "@/lib/photo";
 import { buildVCard } from "@/lib/vcard";
 import { companyOfficesInclude, employeeOrgInclude } from "@/types";
 
@@ -12,7 +13,10 @@ import { companyOfficesInclude, employeeOrgInclude } from "@/types";
 export async function vcardResponse(slug: string, lang: Lang): Promise<Response | null> {
   const employee = await prisma.employee.findUnique({
     where: { slug },
-    include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
+    // 사진 바이트를 include 하는 곳은 여기뿐입니다. 명함 한 장을 읽는 다른
+    // 조회에 수십 KB 가 딸려 오지 않도록 표가 따로 나뉘어 있습니다.
+    // (schema.prisma 의 EmployeePhoto)
+    include: { company: { include: companyOfficesInclude }, photo: true, ...employeeOrgInclude },
     // 관계마다 SELECT 를 따로 보내지 않고 한 번에 조인합니다. (schema.prisma 의 relationJoins)
     relationLoadStrategy: "join",
   });
@@ -23,7 +27,11 @@ export async function vcardResponse(slug: string, lang: Lang): Promise<Response 
   // 받아지면, 한글 이름이 상대 주소록에 그대로 들어갑니다.
   if (!cardName(employee, lang)) return null;
 
-  const vcf = buildVCard(employee, employee.company, lang);
+  // 사진이 없거나 변환에 실패하면 사진 없는 연락처가 나갑니다. 얼굴 한 장 때문에
+  // 번호까지 못 받는 것이 더 나쁩니다.
+  const photo = employee.photo ? await photoAsVCardJpeg(employee.photo.data) : null;
+
+  const vcf = buildVCard(employee, employee.company, lang, photo);
 
   return new Response(vcf, {
     headers: {

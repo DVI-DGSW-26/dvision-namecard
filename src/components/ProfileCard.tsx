@@ -4,6 +4,7 @@ import {
   InstagramIcon,
   LinkedInIcon,
   UserIcon,
+  UserPlusIcon,
   YouTubeIcon,
 } from "./icons";
 import { brand } from "@/config/brand";
@@ -246,11 +247,15 @@ export function ProfileCard({
 }: {
   data: ProfileCardData;
   /**
-   * 신원 블록을 명함 이미지 다운로드 링크로 쓸지.
+   * 서버가 만들어 주는 파일(명함 이미지 · 연락처)로 가는 링크를 살릴지.
    *
-   * /edit 미리보기는 끕니다. card.png 는 **저장된** 값으로 서버에서 굽는 이미지라,
-   * 편집 중에 눌러 받으면 눈앞의 미리보기와 다른 명함이 내려옵니다. 미리보기의
-   * 약속은 "공개 카드와 똑같이 보인다" 이므로 모양은 그대로 두고 동작만 뗍니다.
+   * /edit 미리보기는 끕니다. card.png 도 .vcf 도 **저장된** 값으로 서버가 만드는
+   * 파일이라, 편집 중에 눌러 받으면 눈앞의 미리보기와 다른 것이 내려옵니다.
+   * 미리보기의 약속은 "공개 카드와 똑같이 보인다" 이므로 모양은 그대로 두고
+   * 동작만 뗍니다.
+   *
+   * 연락처 저장 버튼은 미리보기에서 아예 빠집니다 — 신원 블록은 링크를 떼도 카드
+   * 모양이 그대로지만, 버튼은 눌리지 않는 채로 남으면 그냥 고장으로 보입니다.
    */
   downloadable?: boolean;
 }) {
@@ -391,6 +396,30 @@ export function ProfileCard({
           <InfoRow label={t.fax} value={fax} />
           <InfoRow label={t.email} value={email} href={email ? `mailto:${email}` : undefined} />
         </ul>
+
+        {/*
+          연락처 저장 — 누르면 .vcf 가 내려오고, 폰이 연락처 앱을 열어 값이 채워진
+          화면을 보여 줍니다. 받은 사람은 "저장" 한 번만 누르면 됩니다.
+
+          웹에서 상대방 주소록에 곧바로 쓰는 방법은 없습니다. 브라우저에 그 권한이
+          없어서, 이 흐름이 가능한 최선입니다.
+
+          이 카드에서 유일하게 색을 쓰는 자리입니다. 명함을 받은 사람이 할 수 있는
+          일 중 가장 중요한 것이라, primary 예산을 여기에 씁니다.
+
+          download 속성을 달지 않습니다. /c/[slug]/vcard 가 이미
+          Content-Disposition: attachment 로 내려주므로, 여기에도 달면 파일 이름을
+          정하는 곳이 두 군데가 됩니다.
+        */}
+        {downloadable ? (
+          <a
+            href={cardPath(data.slug, data.lang, "vcard")}
+            className="mt-group flex h-12 items-center justify-center gap-tight rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover"
+          >
+            <UserPlusIcon className="h-5 w-5" />
+            {t.saveContact}
+          </a>
+        ) : null}
 
         {/*
           회사로 가는 통로 — 링크드인 · 유튜브 · 인스타그램 · 홈페이지.

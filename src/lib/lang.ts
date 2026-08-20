@@ -96,6 +96,14 @@ export const CARD_TEXT = {
     email: "이메일",
     saveCard: "눌러서 명함 이미지 저장",
     /**
+     * 연락처 저장(.vcf) 버튼 문구.
+     *
+     * saveCard 와 다른 일입니다. 저건 명함 사진 한 장을 앨범에 남기는 것이고,
+     * 이건 상대방 주소록에 번호·메일·주소가 들어가는 것입니다. 두 버튼이 한
+     * 화면에 있으므로 문구만으로 구분이 돼야 합니다.
+     */
+    saveContact: "연락처 저장",
+    /**
      * 이메일 서명에서 명함 이미지 아래에 붙는 버튼 문구.
      *
      * 서명 본체가 이미지 한 장이라 받는 사람은 그게 눌린다는 걸 모릅니다.
@@ -116,6 +124,7 @@ export const CARD_TEXT = {
     fax: "FAX",
     email: "E-MAIL",
     saveCard: "Tap to save card image",
+    saveContact: "Save contact",
     signatureCta: "Tap the card to save my contact →",
     homepage: "Company website",
     linkedin: "LinkedIn",

@@ -70,6 +70,14 @@ export function buildVCard(
   employee: EmployeeWithOrg,
   company: CompanyWithOffices,
   lang: Lang = "ko",
+  /**
+   * 연락처 사진 — JPEG 를 base64 로 적은 문자열.
+   *
+   * 바이트가 아니라 변환이 끝난 문자열을 받습니다. 변환에는 sharp 가 필요한데,
+   * 이 파일은 그것 없이 도는 순수 조립기라 테스트가 DB·네이티브 모듈 없이
+   * 돕니다. 만드는 쪽은 lib/photo.ts 의 photoAsVCardJpeg 입니다.
+   */
+  photoJpegBase64: string | null = null,
 ): string {
   const en = lang === "en";
 
@@ -79,6 +87,26 @@ export function buildVCard(
   // 직위(수석매니저) · 임원 직책(대표이사) · 직책(연구소장)은 각각 다른 값입니다.
   // 가진 것만 순서대로 이어 붙입니다.
   const title = roleParts(employee, lang).join(" ");
+
+  /*
+    메모 칸.
+
+    연락처 앱에는 이름·번호·주소 칸밖에 없습니다. 명함에는 있지만 들어갈 칸이
+    없는 값들이 여기로 모입니다 — 자격(공학박사) · 본인 소개 · 회사 사업분야 ·
+    태그라인. 이게 빠지면 "이 사람이 무슨 일을 하는지" 가 상대 주소록에 한 글자도
+    남지 않습니다.
+
+    영문 vCard 는 영문 값만 씁니다. 안 채운 항목은 통째로 빠집니다 — 다른 칸과
+    같은 규칙입니다.
+  */
+  const note = [
+    present(en ? employee.credentialEn : employee.credential),
+    present(en ? employee.bioEn : employee.bio),
+    present(en ? company.industryEn : company.industry),
+    present(en ? company.taglineEn : company.tagline),
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
 
   const lines: (string | null)[] = [
     "BEGIN:VCARD",
@@ -126,9 +154,16 @@ export function buildVCard(
 
     `URL:${escapeValue(`${baseUrl()}${cardPath(employee.slug, lang)}`)}`,
 
-    present(en ? employee.credentialEn : employee.credential)
-      ? `NOTE:${escapeValue((en ? employee.credentialEn : employee.credential)!)}`
-      : null,
+    note ? `NOTE:${escapeValue(note)}` : null,
+
+    /*
+      사진은 맨 끝입니다. base64 한 덩어리라 접히고 나면 수백 줄이 되는데, 위에
+      두면 파일을 열어 볼 때 이름·번호가 그 아래로 밀려 보이지 않습니다.
+
+      값은 이스케이프하지 않습니다 — base64 에는 세미콜론도 쉼표도 없고,
+      escapeValue 를 태우면 멀쩡한 값이 오히려 바뀝니다.
+    */
+    photoJpegBase64 ? `PHOTO;ENCODING=b;TYPE=JPEG:${photoJpegBase64}` : null,
 
     "END:VCARD",
   ];
