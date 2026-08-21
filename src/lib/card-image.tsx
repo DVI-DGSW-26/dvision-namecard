@@ -3,6 +3,7 @@ import { ImageResponse } from "next/og";
 import { CARDS_TAG, cardTag } from "@/lib/card-cache";
 import { cardName, type Lang } from "@/lib/lang";
 import { departmentText, officeLine, roleParts } from "@/lib/org";
+import { displayPhone } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { companyOfficesInclude, employeeOrgInclude } from "@/types";
 
@@ -197,9 +198,10 @@ async function renderCard(slug: string, lang: Lang): Promise<string | null> {
   const role = roleLine(lang);
   const roleSub = en ? [] : roleLine("en");
 
-  const tel = present(employee.telWork) ?? present(company.tel);
-  const mobile = employee.mobilePublic ? present(employee.telMobile) : null;
-  const fax = present(company.fax);
+  // 영문 카드의 번호는 +82 국제 표기입니다 — 이유는 lib/phone.ts 에.
+  const tel = displayPhone(present(employee.telWork) ?? present(company.tel), lang);
+  const mobile = employee.mobilePublic ? displayPhone(employee.telMobile, lang) : null;
+  const fax = displayPhone(company.fax, lang);
   const email = present(employee.email);
 
   /*

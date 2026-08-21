@@ -10,6 +10,7 @@ import {
 import { brand } from "@/config/brand";
 import { CARD_TEXT, cardPath, requireCardName, type Lang } from "@/lib/lang";
 import { officeLines, roleParts } from "@/lib/org";
+import { displayPhone } from "@/lib/phone";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 /**
@@ -270,10 +271,11 @@ export function ProfileCard({
 
   // 값 고르는 규칙은 lib/signature.ts 의 resolveFields 와 같아야 합니다.
   // 여기만 따로 정하면 카드에 보이는 번호와 서명·vCard 의 번호가 갈립니다.
-  const tel = data.telWork?.trim() || company.tel?.trim() || null;
+  // 영문 카드의 번호는 +82 국제 표기입니다 — 이유는 lib/phone.ts 에.
+  const tel = displayPhone(data.telWork?.trim() || company.tel, data.lang);
   // mobilePublic 이 false 면 번호가 있어도 공개하지 않습니다.
-  const mobile = data.mobilePublic ? data.telMobile?.trim() || null : null;
-  const fax = company.fax?.trim() || null;
+  const mobile = data.mobilePublic ? displayPhone(data.telMobile, data.lang) : null;
+  const fax = displayPhone(company.fax, data.lang);
   const email = data.email?.trim() || null;
   const addresses = company.addresses.filter((line) => line.trim());
 

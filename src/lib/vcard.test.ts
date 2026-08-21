@@ -262,6 +262,22 @@ describe("buildVCard", () => {
     assert.ok(!buildVCard(emp(), co()).includes("PHOTO"));
   });
 
+  it("영문 vCard 의 번호는 국가번호가 붙는다", () => {
+    // 해외 주소록에 앞자리 0 인 채로 저장된 번호는 그 폰에서 걸리지 않습니다.
+    const vcf = unfold(buildVCard(emp({ nameEn: "Young-gyun Ryu" }), co(), "en"));
+
+    assert.match(vcf, /^TEL;TYPE=WORK,VOICE:\+82-53-710-1022$/m);
+    assert.match(vcf, /^TEL;TYPE=CELL,VOICE:\+82-10-3131-6834$/m);
+    assert.match(vcf, /^TEL;TYPE=WORK,FAX:\+82-53-715-2096$/m);
+  });
+
+  it("국문 vCard 의 번호는 국내 표기 그대로다", () => {
+    const vcf = unfold(buildVCard(emp(), co()));
+
+    assert.match(vcf, /^TEL;TYPE=WORK,VOICE:053-710-1022$/m);
+    assert.ok(!vcf.includes("+82"));
+  });
+
   it("영문 vCard 는 FN 에 영문명을 넣는다", () => {
     const vcf = unfold(buildVCard(emp({ nameEn: "Young-gyun Ryu" }), co(), "en"));
 
