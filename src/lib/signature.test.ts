@@ -195,6 +195,24 @@ describe("renderSignature", () => {
     assert.ok(!html.includes(CARD_TEXT.ko.signatureCta), "영문 서명에 한글 버튼이 섞이면 안 된다");
   });
 
+  it("영문 서명의 번호는 국가번호가 붙는다", () => {
+    // 영문 서명을 받는 사람은 한국 밖에 있습니다 — 앞자리 0 인 국내 표기는
+    // 눌러도 걸리지 않습니다.
+    const html = renderSignature(emp({ nameEn: "Gildong Hong" }), co(), "en");
+
+    assert.ok(html.includes("TEL +82-53-710-1022"));
+    assert.ok(html.includes("FAX +82-53-715-2096"));
+    assert.ok(html.includes("MOBILE +82-10-1234-5678"));
+    assert.ok(!html.includes("010-1234-5678"), "국내 표기가 남으면 안 된다");
+  });
+
+  it("국문 서명의 번호는 국내 표기 그대로다", () => {
+    const html = renderSignature(emp(), co());
+
+    assert.ok(html.includes("TEL 053-710-1022"));
+    assert.ok(!html.includes("+82"), "국문 서명에 국가번호를 붙이면 안 된다");
+  });
+
   it("이름에 태그가 들어와도 alt 가 마크업으로 해석되지 않는다", () => {
     const html = renderSignature(emp({ nameKo: `<script>` }), co());
 

@@ -1,6 +1,7 @@
 import { tokens } from "@/config/tokens";
 import { CARD_TEXT, cardImagePath, cardPath, requireCardName, type Lang } from "@/lib/lang";
 import { officeLines, roleParts } from "@/lib/org";
+import { displayPhone } from "@/lib/phone";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 /**
@@ -69,11 +70,12 @@ function resolveFields(employee: EmployeeWithOrg, company: CompanyWithOffices, l
       .filter(Boolean)
       .join(" · "),
     // TEL 은 개인 사무실 번호 우선, 없으면 회사 대표번호.
-    tel: present(employee.telWork) ?? present(company.tel),
+    // 영문 서명의 번호는 +82 국제 표기로 나갑니다 — 이유는 lib/phone.ts 에.
+    tel: displayPhone(present(employee.telWork) ?? present(company.tel), lang),
     // mobilePublic 이 false 면 번호가 있어도 공개하지 않습니다.
-    mobile: employee.mobilePublic ? present(employee.telMobile) : null,
+    mobile: employee.mobilePublic ? displayPhone(employee.telMobile, lang) : null,
     // 팩스는 회사 공용 번호입니다.
-    fax: present(company.fax),
+    fax: displayPhone(company.fax, lang),
     email: present(employee.email),
     // 사업장이 여러 곳이면 전부 줄을 나눠 넣습니다. `(43011) 대구시 …` 형태입니다.
     // 영문은 영문 주소만 나갑니다 — 안 채운 사업장은 줄이 빠집니다.

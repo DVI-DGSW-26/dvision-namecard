@@ -1,5 +1,6 @@
 import { cardPath, requireCardName, type Lang } from "@/lib/lang";
 import { roleParts } from "@/lib/org";
+import { displayPhone } from "@/lib/phone";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 /**
@@ -81,8 +82,12 @@ export function buildVCard(
 ): string {
   const en = lang === "en";
 
+  // 영문 vCard 의 번호는 +82 국제 표기로 저장됩니다 — 해외 주소록에 앞자리 0 인
+  // 채로 들어간 번호는 그 폰에서 걸리지 않습니다. 이유는 lib/phone.ts 에.
+  const telWork = displayPhone(employee.telWork, lang);
   // mobilePublic 이 false 면 번호가 있어도 내보내지 않습니다.
-  const mobile = employee.mobilePublic ? present(employee.telMobile) : null;
+  const mobile = employee.mobilePublic ? displayPhone(employee.telMobile, lang) : null;
+  const fax = displayPhone(company.fax, lang);
 
   // 직위(수석매니저) · 임원 직책(대표이사) · 직책(연구소장)은 각각 다른 값입니다.
   // 가진 것만 순서대로 이어 붙입니다.
@@ -124,9 +129,9 @@ export function buildVCard(
     `ORG:${escapeValue(en ? company.nameEn : company.nameKo)}`,
     title ? `TITLE:${escapeValue(title)}` : null,
 
-    present(employee.telWork) ? `TEL;TYPE=WORK,VOICE:${escapeValue(employee.telWork!)}` : null,
+    telWork ? `TEL;TYPE=WORK,VOICE:${escapeValue(telWork)}` : null,
     mobile ? `TEL;TYPE=CELL,VOICE:${escapeValue(mobile)}` : null,
-    present(company.fax) ? `TEL;TYPE=WORK,FAX:${escapeValue(company.fax!)}` : null,
+    fax ? `TEL;TYPE=WORK,FAX:${escapeValue(fax)}` : null,
 
     `EMAIL;TYPE=INTERNET,WORK:${escapeValue(employee.email)}`,
 
