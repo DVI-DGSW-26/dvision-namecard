@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import { brand } from "@/config/brand";
 import { safeRedirect } from "@/lib/safe-redirect";
 import { GateForm } from "./GateForm";
@@ -18,12 +19,24 @@ import { GateForm } from "./GateForm";
  */
 
 type Props = {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; manual?: string }>;
 };
 
 export default async function GatePage({ searchParams }: Props) {
-  const { next, error } = await searchParams;
+  const { next, error, manual } = await searchParams;
   const destination = safeRedirect(next);
+
+  /*
+    오류도 수동 요청도 아니면 화면 없이 바로 통합 로그인을 시작한다.
+    허브 등에서 이미 로그인한 사람은 버튼 클릭 없이 그대로 통과된다.
+
+    루프가 되지 않는 이유: SSO 콜백이 실패하면 /gate?error=... 로 오고,
+    그때는 이 리다이렉트를 건너뛰어 버튼과 접힌 기존 폼이 보인다.
+    기존 방식으로 로그인하고 싶으면 /gate?manual=1 로 들어온다.
+  */
+  if (!error && manual === undefined) {
+    redirect(`/api/auth/sso?next=${encodeURIComponent(destination)}`);
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center px-group py-section sm:px-section sm:py-block">
