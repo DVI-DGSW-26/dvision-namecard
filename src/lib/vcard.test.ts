@@ -58,6 +58,7 @@ const employee: EmployeeWithOrg = {
   email: "yk.ryu@dvi-ind.com",
   // 계정 컬럼. 명함 렌더링과는 무관하지만 타입을 채우려면 있어야 합니다.
   passwordHash: null,
+    ssoSubject: null,
   mustChangePassword: false,
   role: "MEMBER",
   nameKo: "류영균",
