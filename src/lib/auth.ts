@@ -1,8 +1,6 @@
 import { cookies } from "next/headers";
-import { defaultPositionId } from "./org-store";
+import { api, apiOrNull, ensureCards, json } from "./api";
 import { hashPassword, verifyPassword } from "./password";
-import { prisma } from "./prisma";
-import { buildSlug } from "./slug";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
@@ -17,13 +15,15 @@ import {
  * 계정 인증. 직원마다 이메일 + 본인 비밀번호를 갖습니다.
  *
  * 관리자만 개인 비밀번호를 갖고, 나머지 직원은 공용 비밀번호 하나를 함께 씁니다.
- * 사내 메일 도메인이면 등록되지 않은 사람도 그 값으로 들어오면서 본인 명함이
- * 만들어집니다. (COMPANY_EMAIL_DOMAIN · DEFAULT_EMPLOYEE_PASSWORD)
+ * (COMPANY_EMAIL_DOMAIN · DEFAULT_EMPLOYEE_PASSWORD)
+ *
+ * 누가 직원인지는 인사 시스템이 정합니다. 인사에 등록된 이메일이 아니면 들어올 수
+ * 없고, 인사에서 퇴사 처리되면 그 순간부터 막힙니다. 명함 쪽에서 사람을 만들지 않습니다.
  *
  * 역할(admin/member)은 여전히 사람에게 붙습니다 — 비밀번호로 가르지 않으므로,
  * 공용 값이 새더라도 관리자 권한은 따라 나가지 않습니다.
  *
- * prisma 와 node:crypto 를 쓰므로 이 파일은 Node 런타임 전용입니다.
+ * node:crypto 를 쓰므로 이 파일은 Node 런타임 전용입니다.
  * middleware(Edge)에서는 lib/session-token.ts 를 직접 import 하세요.
  */
 
@@ -37,12 +37,28 @@ export type Authenticated = {
   mustChangePassword: boolean;
 };
 
+/** 로그인용 조회 결과(명함 서버 /auth/lookup). 비밀번호 해시가 오는 곳은 여기뿐입니다. */
+export type AccountLookup = {
+  id: string;
+  status: "ACTIVE" | "RESIGNED";
+  /** 명함이 아직 없으면 null 입니다. 인사에 막 등록된 사람입니다. */
+  slug: string | null;
+  role: "MEMBER" | "ADMIN";
+  passwordHash: string | null;
+  mustChangePassword: boolean;
+};
+
+export function lookupAccount(by: { email: string } | { ssoUsername: string } | { id: string }) {
+  return apiOrNull<AccountLookup>(`/auth/lookup?${new URLSearchParams(by)}`);
+}
+
+/** 명함이 없는 사람이면 만듭니다. 비밀번호·권한은 명함 행에 저장되므로 그 전에 있어야 합니다. */
+export async function ensureCardFor(account: AccountLookup): Promise<void> {
+  if (!account.slug) await ensureCards();
+}
+
 /**
- * 사내 이메일 도메인.
- *
- * 관리자가 미리 등록해 둔 사람만 들어올 수 있게 했더니, 입사·이동 때마다 등록을
- * 기다려야 해서 "메일은 있는데 왜 못 들어가냐" 가 반복됐습니다. 사내 메일 계정을
- * 가진 것 자체를 재직 증명으로 보고, 이 도메인이면 등록이 없어도 들여보냅니다.
+ * 사내 이메일 도메인. 공용 비밀번호는 이 도메인의 메일에만 열립니다.
  */
 export const COMPANY_EMAIL_DOMAIN = "dvi-ind.com";
 
@@ -70,41 +86,29 @@ export function isCompanyEmail(email: string): boolean {
  * 없는 이메일일 때도 해시 검증을 한 번 돌립니다. 곧바로 null 을 돌려주면 응답이
  * 눈에 띄게 빨라서, 그 차이만으로 어떤 이메일이 등록돼 있는지 훑을 수 있습니다.
  *
- * 들어오는 길은 셋입니다.
- *   1. 등록된 직원 + 본인 비밀번호 — 재발급받은 사람은 이 길로만 들어옵니다.
- *   2. 등록은 됐지만 비밀번호를 못 받은 직원 + 공용 비밀번호 — 그 값을 심어 줍니다.
- *   3. 등록이 아예 없는 사내 이메일 + 공용 비밀번호 — 명함을 그 자리에서 만듭니다.
- * 2·3 은 관리자 계정에는 열리지 않습니다.
+ * 들어오는 길은 둘입니다.
+ *   1. 본인 비밀번호 — 재발급받은 사람은 이 길로만 들어옵니다.
+ *   2. 비밀번호를 못 받은 직원 + 공용 비밀번호 — 그 값을 심어 줍니다. 관리자는 제외.
  *
- * 퇴사자(RESIGNED)는 비밀번호가 맞아도 들이지 않습니다. 사내 메일이 아직 살아
- * 있어도 여기서 막혀야 하므로, 3번 길로 새 명함이 만들어지지 않게 상태를 먼저 봅니다.
+ * 퇴사자(인사의 RESIGNED)는 비밀번호가 맞아도 들이지 않습니다.
  */
 export async function authenticate(email: string, password: string): Promise<Authenticated | null> {
-  const employee = await prisma.employee.findUnique({
-    where: { email },
-    select: { id: true, role: true, status: true, passwordHash: true, mustChangePassword: true },
-  });
+  const employee = await lookupAccount({ email });
 
   const ok = await verifyPassword(password, employee?.passwordHash ?? null);
   const sharedPassword = password === DEFAULT_EMPLOYEE_PASSWORD && isCompanyEmail(email);
 
-  if (!employee) {
-    return sharedPassword ? provisionCompanyEmployee(email.trim().toLowerCase()) : null;
-  }
-
-  if (employee.status === "RESIGNED") return null;
+  if (!employee || employee.status === "RESIGNED") return null;
 
   if (!ok) {
     // 비밀번호를 아직 못 받은 사람만 공용 값으로 열어 줍니다. 해시가 이미 있으면
     // 재발급받은 값이 있다는 뜻이라, 공용 값이 그걸 덮고 들어오면 재발급이 무의미해집니다.
     if (employee.passwordHash || employee.role === "ADMIN" || !sharedPassword) return null;
-    await prisma.employee.update({
-      where: { id: employee.id },
-      data: {
-        passwordHash: await hashPassword(DEFAULT_EMPLOYEE_PASSWORD),
-        mustChangePassword: false,
-      },
-    });
+    await ensureCardFor(employee);
+    await api(
+      `/employees/${employee.id}/password`,
+      json("PUT", { passwordHash: await hashPassword(DEFAULT_EMPLOYEE_PASSWORD), mustChangePassword: false }),
+    );
   }
 
   return {
@@ -112,62 +116,6 @@ export async function authenticate(email: string, password: string): Promise<Aut
     role: employee.role === "ADMIN" ? "admin" : "member",
     mustChangePassword: employee.mustChangePassword,
   };
-}
-
-/**
- * 등록이 없는 사내 이메일에게 빈 명함을 만들어 줍니다.
- *
- * 이름·부서는 로그인한 본인이 /edit 에서 채웁니다. 지금은 이메일 앞부분을 임시
- * 이름·슬러그로 씁니다. slug 는 공개 URL 에 그대로 들어가므로 로마자·숫자만
- * 남기고(buildSlug), 충돌하면 숫자를 붙입니다.
- *
- * 회사 정보가 하나도 없으면 명함을 만들 수 없어 로그인도 실패합니다 — 그 상태는
- * 관리자가 회사 정보를 먼저 등록해야 풀립니다.
- */
-async function provisionCompanyEmployee(email: string): Promise<Authenticated | null> {
-  const company = await prisma.company.findFirst({ select: { id: true } });
-  if (!company) return null;
-
-  const localPart = email.split("@")[0] || "member";
-  const taken = (await prisma.employee.findMany({ select: { slug: true } })).map((row) => row.slug);
-  // localPart 가 한글 등이라 로마자로 못 만들면 member2, member3 … 으로 폴백합니다.
-  const slug = buildSlug({ familyName: localPart }, taken) ?? `member${taken.length + 1}`;
-
-  try {
-    const created = await prisma.employee.create({
-      data: {
-        email,
-        slug,
-        nameKo: localPart,
-        // familyName/givenName 은 vCard N 필드용입니다. 임시로 이름 자리에만 넣어 두고
-        // 정확한 성·이름은 본인이 /edit 에서 바로잡습니다.
-        familyName: "",
-        givenName: localPart,
-        // 직위·부서는 비워 둡니다 — 본인이 고릅니다. 직책만 '팀원' 으로 시작합니다.
-        positionId: await defaultPositionId(),
-        status: "ACTIVE",
-        // 다음 로그인부터는 1번 길(본인 해시)로 들어옵니다. 값은 같은 공용 비밀번호입니다.
-        passwordHash: await hashPassword(DEFAULT_EMPLOYEE_PASSWORD),
-        mustChangePassword: false,
-        companyId: company.id,
-      },
-      select: { id: true },
-    });
-    return { employeeId: created.id, role: "member", mustChangePassword: false };
-  } catch {
-    // 같은 이메일로 동시에 들어오면 unique 제약에 걸립니다. 이미 만들어진 걸 다시 집습니다.
-    // (slug 가 겹쳐서 실패한 경우에는 아래 조회도 비어서 그대로 로그인 실패가 됩니다.)
-    const existing = await prisma.employee.findFirst({
-      where: { email, status: { not: "RESIGNED" } },
-      select: { id: true, role: true, mustChangePassword: true },
-    });
-    if (!existing) return null;
-    return {
-      employeeId: existing.id,
-      role: existing.role === "ADMIN" ? "admin" : "member",
-      mustChangePassword: existing.mustChangePassword,
-    };
-  }
 }
 
 /**

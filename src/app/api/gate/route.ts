@@ -5,14 +5,11 @@ import { authenticate, createSession, destroySession } from "@/lib/auth";
 /**
  * 이메일 + 비밀번호 검증 → 세션 쿠키 발급.
  *
- * 사내 메일 도메인이면 관리자가 미리 등록하지 않았어도 공용 비밀번호로 들어오고,
- * 그때 본인 명함이 함께 만들어집니다. 판단은 전부 lib/auth 의 authenticate 가
- * 합니다 — 이 라우트는 요청을 받고 쿠키를 심는 일만 합니다.
+ * 인사 시스템에 등록된 이메일만 들어옵니다. 비밀번호를 아직 못 받은 사람은 공용
+ * 비밀번호로 들어옵니다. 판단은 전부 lib/auth 의 authenticate 가 합니다 — 이 라우트는
+ * 요청을 받고 쿠키를 심는 일만 합니다.
  *
- * 대가로 오타 난 주소(@dvi-ind.com 이기만 하면)로도 빈 명함이 하나 생깁니다.
- * 관리자가 임직원 관리에서 지우면 됩니다.
- *
- * authenticate 가 prisma·node:crypto 를 쓰므로 Node 런타임이어야 합니다.
+ * authenticate 가 node:crypto 를 쓰므로 Node 런타임이어야 합니다.
  * (Route Handler 는 기본이 Node 런타임이라 별도 설정은 필요 없습니다.)
  */
 

@@ -30,7 +30,7 @@ export type Session = {
    * 관리자가 발급한 초기 비밀번호를 아직 안 바꿨는지.
    *
    * DB 가 아니라 토큰에 담는 이유: 이 값을 보고 막는 곳이 middleware 인데, 거기는
-   * Edge 런타임이라 prisma 를 부를 수 없습니다. 비밀번호를 바꾸면 세션을 다시
+   * Edge 런타임이라 명함 서버를 부르지 않습니다. 비밀번호를 바꾸면 세션을 다시
    * 발급해 false 로 덮습니다.
    */
   mustChangePassword: boolean;

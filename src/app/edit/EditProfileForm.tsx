@@ -12,7 +12,6 @@ import {
   employeeProfileSchema,
   fieldErrors,
   formatPhone,
-  fullNameKo,
 } from "@/lib/validation";
 import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
@@ -27,9 +26,8 @@ import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 /** 폼 state 는 체크박스 하나(mobilePublic)를 빼면 전부 문자열입니다. */
 type EmployeeForm = {
   /*
-    성·이름을 나눠 들고 있습니다. 표시용 합본(nameKo)은 서버가 만듭니다 —
-    화면에서 붙여 보내면 붙이는 규칙이 두 곳이 되고, 그러면 vCard 의 N 필드가
-    실제 이름과 갈라지는 예전 문제로 돌아갑니다.
+    성·이름·휴대전화·이메일은 인사 시스템 값을 보여 주기만 합니다(disabled).
+    보내도 서버 스키마에 없어 버려집니다.
   */
   familyName: string;
   givenName: string;
@@ -59,6 +57,9 @@ type EmployeeForm = {
 type CompanyForm = CompanyFormValues;
 
 const str = (value: string | null | undefined) => value ?? "";
+
+/** 이름·이메일·휴대전화는 인사 시스템이 원본입니다. 바꾸려면 관리팀에 요청합니다. */
+const HR_OWNED_HINT = "인사 시스템에서 관리합니다. 바꾸려면 관리팀에 요청하세요.";
 
 export function EditProfileForm({
   role,
@@ -91,7 +92,7 @@ export function EditProfileForm({
       telWork: str(employee.telWork),
       telMobile: str(employee.telMobile),
       mobilePublic: employee.mobilePublic,
-      email: employee.email,
+      email: str(employee.email),
     }),
     [employee],
   );
@@ -147,24 +148,6 @@ export function EditProfileForm({
     [],
   );
 
-  /**
-   * 휴대전화 칸 — 빈 칸에 번호를 적으면 공개를 같이 켭니다.
-   *
-   * 적어 놓고 체크를 못 봐서 명함에 안 나오는 일이 실제로 많았습니다. 번호를 적는
-   * 행동 자체가 "명함에 넣겠다" 는 뜻이라, 그걸 기본값으로 둡니다.
-   *
-   * 빈 칸 → 값이 생기는 순간에만 켭니다. 이미 적어 둔 번호를 고치는 중이라면
-   * 본인이 일부러 꺼 둔 체크를 되살리지 않습니다.
-   */
-  const setMobile = useCallback(
-    (value: string) =>
-      setEmp((prev) => ({
-        ...prev,
-        telMobile: value,
-        mobilePublic: !prev.telMobile.trim() && value.trim() ? true : prev.mobilePublic,
-      })),
-    [],
-  );
   const setCoField = useCallback(
     (key: keyof CompanyForm, value: string) => setCo((prev) => ({ ...prev, [key]: value })),
     [],
@@ -315,8 +298,8 @@ export function EditProfileForm({
       // /c/[slug]/en 에서 확인합니다 — 폼 하나에 미리보기 둘을 붙이면
       // 좁은 화면에서 편집할 자리가 남지 않습니다.
       lang: "ko",
-      // 서버가 저장할 값과 같은 규칙으로 붙입니다. 미리보기와 실제 카드가 갈리지 않도록.
-      nameKo: fullNameKo(emp.familyName, emp.givenName),
+      // 이름은 인사 값 그대로입니다. 이 폼에서 바뀌지 않습니다.
+      nameKo: employee.nameKo,
       nameEn: emp.nameEn,
       roles: previewRoles,
       credential: emp.credential,
@@ -353,6 +336,7 @@ export function EditProfileForm({
       co,
       previewRoles,
       employee.slug,
+      employee.nameKo,
       // 사진을 올리거나 지우면 미리보기가 그 자리에서 따라가야 합니다.
       photoUrl,
       company.offices,
@@ -450,33 +434,15 @@ export function EditProfileForm({
 
             <div className="flex flex-1 flex-col gap-group">
               {/*
-                이름을 성·이름 두 칸으로 받습니다. 한 칸으로 받아 서버에서 쪼개면
-                두 글자 성(남궁·선우·제갈)에서 반드시 틀리고, 그 값이 연락처 저장
-                파일(vCard)의 이름 칸에 그대로 들어갑니다.
+                이름은 인사 시스템이 원본입니다. 여기서 고치면 인사와 명함이 갈라지므로
+                보여 주기만 합니다. 성·이름 구분은 서버가 인사의 이름에서 나눕니다.
               */}
               <FieldRow>
-                <Field
-                  label="성"
-                  htmlFor="familyName"
-                  error={err("familyName")}
-                  hint="남궁·선우처럼 두 글자 성은 성 칸에 함께 적습니다."
-                >
-                  <Input
-                    id="familyName"
-                    value={emp.familyName}
-                    maxLength={10}
-                    invalid={Boolean(err("familyName"))}
-                    onChange={(e) => setEmpField("familyName", e.target.value)}
-                  />
+                <Field label="성" htmlFor="familyName" hint={HR_OWNED_HINT}>
+                  <Input id="familyName" value={emp.familyName} disabled />
                 </Field>
-                <Field label="이름" htmlFor="givenName" error={err("givenName")}>
-                  <Input
-                    id="givenName"
-                    value={emp.givenName}
-                    maxLength={10}
-                    invalid={Boolean(err("givenName"))}
-                    onChange={(e) => setEmpField("givenName", e.target.value)}
-                  />
+                <Field label="이름" htmlFor="givenName">
+                  <Input id="givenName" value={emp.givenName} disabled />
                 </Field>
               </FieldRow>
 
@@ -680,14 +646,8 @@ export function EditProfileForm({
                   onChange={(e) => setEmpField("telWork", formatPhone(e.target.value))}
                 />
               </Field>
-              <Field label="휴대전화" htmlFor="telMobile" error={err("telMobile")}>
-                <Input
-                  id="telMobile"
-                  inputMode="tel"
-                  value={emp.telMobile}
-                  invalid={Boolean(err("telMobile"))}
-                  onChange={(e) => setMobile(formatPhone(e.target.value))}
-                />
+              <Field label="휴대전화" htmlFor="telMobile" hint={HR_OWNED_HINT}>
+                <Input id="telMobile" inputMode="tel" value={emp.telMobile} disabled />
               </Field>
             </FieldRow>
 
@@ -696,30 +656,23 @@ export function EditProfileForm({
               이 값을 봅니다. 번호 칸 바로 아래에 두어야 "적었는데 왜 안 나오지" 가
               생기지 않습니다.
 
-              번호를 새로 적으면 setMobile 이 이걸 켭니다 — 기본은 공개이고, 감추고
-              싶은 사람이 끄는 자리입니다. 번호를 안 적었으면 켤 것이 없으므로 잠급니다.
+              번호는 인사 시스템에 있습니다. 번호가 없으면 켤 것이 없으므로 잠급니다.
             */}
             <Checkbox
               id="mobilePublic"
               label="휴대전화를 명함에 공개"
               hint={
                 emp.telMobile.trim()
-                  ? "끄면 번호가 저장돼 있어도 명함·서명·연락처 파일 어디에도 나가지 않습니다."
-                  : "번호를 적으면 켜집니다. 감추고 싶으면 그때 끄세요."
+                  ? "끄면 번호가 있어도 명함·서명·연락처 파일 어디에도 나가지 않습니다."
+                  : "인사 시스템에 휴대전화가 등록되면 켤 수 있습니다."
               }
               checked={emp.mobilePublic}
               disabled={!emp.telMobile.trim()}
               onChange={(checked) => setEmpFlag("mobilePublic", checked)}
             />
 
-            <Field label="이메일" htmlFor="email" error={err("email")}>
-              <Input
-                id="email"
-                type="email"
-                value={emp.email}
-                invalid={Boolean(err("email"))}
-                onChange={(e) => setEmpField("email", e.target.value)}
-              />
+            <Field label="이메일" htmlFor="email" hint={HR_OWNED_HINT}>
+              <Input id="email" type="email" value={emp.email} disabled />
             </Field>
           </div>
         </section>

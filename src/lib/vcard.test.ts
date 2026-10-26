@@ -56,9 +56,8 @@ const employee: EmployeeWithOrg = {
   id: "emp_1",
   slug: "ryu",
   email: "yk.ryu@dvi-ind.com",
-  // 계정 컬럼. 명함 렌더링과는 무관하지만 타입을 채우려면 있어야 합니다.
-  passwordHash: null,
-    ssoSubject: null,
+  // 계정 컬럼. 렌더링과는 무관하지만 타입을 채우려면 있어야 합니다.
+  hasPassword: false,
   mustChangePassword: false,
   role: "MEMBER",
   nameKo: "류영균",
@@ -84,7 +83,6 @@ const employee: EmployeeWithOrg = {
   mobilePublic: true,
   photoUrl: null,
   status: "ACTIVE",
-  companyId: "dvision",
   createdAt: new Date("2026-01-01"),
   updatedAt: new Date("2026-01-01"),
 };

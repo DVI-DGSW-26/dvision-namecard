@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { employeeProfileSchema, fullNameKo } from "./validation";
+import { employeeProfileSchema } from "./validation";
 
 /**
  * 프로필 저장 계약을 지키는 테스트.
@@ -36,43 +36,16 @@ const valid = {
   email: "hong@dvi-ind.com",
 };
 
-describe("fullNameKo", () => {
-  it("성과 이름을 붙인다", () => {
-    assert.equal(fullNameKo("홍", "길동"), "홍길동");
-  });
-
-  it("두 글자 성도 그대로 붙인다", () => {
-    // 합쳐 받은 뒤 쪼개는 구현이었다면 `남;궁민수` 로 틀렸을 값입니다.
-    assert.equal(fullNameKo("남궁", "민수"), "남궁민수");
-  });
-});
-
 describe("employeeProfileSchema", () => {
-  it("성·이름을 따로 받는다", () => {
+  it("인사 시스템 값(이름 · 이메일 · 휴대전화)은 받지 않는다", () => {
+    // 폼이 보여 주려고 같이 보내도 저장 대상에서 빠져야 합니다. 여기서 받으면
+    // 명함만 고쳐지고 인사와 갈라집니다.
     const parsed = employeeProfileSchema.safeParse(valid);
 
     assert.equal(parsed.success, true);
-    assert.equal(parsed.data?.familyName, "홍");
-    assert.equal(parsed.data?.givenName, "길동");
-  });
-
-  it("합본 이름(nameKo)은 받지 않는다 — 서버가 만든다", () => {
-    const parsed = employeeProfileSchema.safeParse({ ...valid, nameKo: "다른이름" });
-
-    assert.equal(parsed.success, true);
-    assert.equal("nameKo" in (parsed.data ?? {}), false);
-  });
-
-  it("성이 비면 거부한다", () => {
-    const parsed = employeeProfileSchema.safeParse({ ...valid, familyName: "" });
-
-    assert.equal(parsed.success, false);
-  });
-
-  it("이름이 비면 거부한다", () => {
-    const parsed = employeeProfileSchema.safeParse({ ...valid, givenName: "  " });
-
-    assert.equal(parsed.success, false);
+    for (const key of ["nameKo", "familyName", "givenName", "email", "telMobile"]) {
+      assert.equal(key in (parsed.data ?? {}), false, key);
+    }
   });
 
   it("mobilePublic 을 저장 대상으로 통과시킨다", () => {
