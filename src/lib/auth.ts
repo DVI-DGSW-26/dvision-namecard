@@ -48,7 +48,7 @@ export type AccountLookup = {
   mustChangePassword: boolean;
 };
 
-export function lookupAccount(by: { email: string } | { ssoUsername: string } | { id: string }) {
+export function lookupAccount(by: { email: string } | { id: string }) {
   return apiOrNull<AccountLookup>(`/auth/lookup?${new URLSearchParams(by)}`);
 }
 
