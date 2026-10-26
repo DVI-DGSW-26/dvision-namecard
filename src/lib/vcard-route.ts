@@ -1,8 +1,17 @@
 import { cardName, type Lang } from "@/lib/lang";
-import { prisma } from "@/lib/prisma";
+import { ApiError, apiFetch, employeeBySlug } from "@/lib/api";
 import { photoAsVCardJpeg } from "@/lib/photo";
 import { buildVCard } from "@/lib/vcard";
-import { companyOfficesInclude, employeeOrgInclude } from "@/types";
+
+async function photoBytes(slug: string): Promise<Uint8Array | null> {
+  try {
+    const res = await apiFetch(`/photos/${encodeURIComponent(slug)}`);
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (cause) {
+    if (cause instanceof ApiError && cause.status === 404) return null;
+    throw cause;
+  }
+}
 
 /**
  * .vcf 응답. 국문(/c/[slug]/vcard)과 영문(/c/[slug]/en/vcard)이 함께 씁니다.
@@ -11,15 +20,7 @@ import { companyOfficesInclude, employeeOrgInclude } from "@/types";
  * 여기만 열려 있으면 프로필은 404 인데 연락처는 받아지는 구멍이 생깁니다.
  */
 export async function vcardResponse(slug: string, lang: Lang): Promise<Response | null> {
-  const employee = await prisma.employee.findUnique({
-    where: { slug },
-    // 사진 바이트를 include 하는 곳은 여기뿐입니다. 명함 한 장을 읽는 다른
-    // 조회에 수십 KB 가 딸려 오지 않도록 표가 따로 나뉘어 있습니다.
-    // (schema.prisma 의 EmployeePhoto)
-    include: { company: { include: companyOfficesInclude }, photo: true, ...employeeOrgInclude },
-    // 관계마다 SELECT 를 따로 보내지 않고 한 번에 조인합니다. (schema.prisma 의 relationJoins)
-    relationLoadStrategy: "join",
-  });
+  const employee = await employeeBySlug(slug);
 
   if (!employee || employee.status === "RESIGNED") return null;
 
@@ -29,7 +30,9 @@ export async function vcardResponse(slug: string, lang: Lang): Promise<Response 
 
   // 사진이 없거나 변환에 실패하면 사진 없는 연락처가 나갑니다. 얼굴 한 장 때문에
   // 번호까지 못 받는 것이 더 나쁩니다.
-  const photo = employee.photo ? await photoAsVCardJpeg(employee.photo.data) : null;
+  // 사진 바이트는 명함 한 장을 읽는 조회에 딸려 오지 않습니다. 필요한 여기서만 따로 받습니다.
+  const bytes = employee.photoUrl ? await photoBytes(slug) : null;
+  const photo = bytes ? await photoAsVCardJpeg(bytes) : null;
 
   const vcf = buildVCard(employee, employee.company, lang, photo);
 

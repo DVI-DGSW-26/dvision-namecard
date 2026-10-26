@@ -3,7 +3,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Field, Input } from "@/components/form";
 import { employeeAdminSchema, fieldErrors } from "@/lib/validation";
-import type { Status } from "@/types";
 
 /**
  * 공개 주소(slug) 변경 모달.
@@ -21,7 +20,6 @@ type Props = {
     id: string;
     nameKo: string;
     slug: string;
-    status: Status;
     role: "MEMBER" | "ADMIN";
   } | null;
   onClose: () => void;
@@ -71,8 +69,8 @@ function SlugForm({
     setSaveError(null);
     setErrors({});
 
-    // 상태·권한은 바꾸지 않지만 스키마가 세 값을 함께 받으므로 현재 값을 그대로 실어 보냅니다.
-    const payload = { slug, status: target.status, role: target.role };
+    // 권한은 바꾸지 않지만 스키마가 두 값을 함께 받으므로 현재 값을 그대로 실어 보냅니다.
+    const payload = { slug, role: target.role };
 
     const parsed = employeeAdminSchema.safeParse(payload);
     if (!parsed.success) {

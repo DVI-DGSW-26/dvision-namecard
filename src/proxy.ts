@@ -4,7 +4,7 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/session-token";
 /**
  * /edit, /admin 보호. 세션이 없거나 만료됐으면 /gate 로 보냅니다.
  *
- * Edge 런타임에서 돌기 때문에 prisma 나 lib/auth.ts(node:crypto 의존)를 여기서
+ * Edge 런타임에서 돌기 때문에 lib/auth.ts(node:crypto 의존)를 여기서
  * import 하면 안 됩니다. jose 기반인 lib/session-token.ts 만 사용하세요.
  *
  * /c/[slug] 는 공개 경로라 matcher 에 넣지 않습니다.

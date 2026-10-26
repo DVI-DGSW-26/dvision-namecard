@@ -15,9 +15,9 @@ import { findOrLinkEmployee } from "@/lib/sso";
  *
  * 검증(state · iss · aud · nonce · exp · employee 롤)을 통과하면 기존 세션
  * 체계(dvi_session)를 그대로 발급합니다 — 이후 화면·권한 검사 코드는 SSO 를
- * 모릅니다. 명함 연결은 lib/sso.ts 가 합니다 (sub → 이메일 → 생성).
+ * 모릅니다. 명함 연결은 lib/sso.ts 가 합니다 (인사 이메일).
  *
- * prisma 를 쓰므로 Node 런타임입니다 (Route Handler 기본값).
+ * Node 런타임입니다 (Route Handler 기본값).
  */
 
 function fail(req: NextRequest, message: string) {
@@ -104,14 +104,10 @@ export async function GET(req: NextRequest) {
     return fail(req, "재직 중이며 부서가 배정된 계정만 이용할 수 있습니다. 관리팀에 문의해주세요.");
   }
 
-  /* 명함 연결 — 권한 확인이 끝난 뒤에만 계정을 만듭니다 */
-  const auth = await findOrLinkEmployee(
-    claims.sub,
-    String(claims.email || "").toLowerCase(),
-    claims.name || claims.preferred_username || "",
-  );
+  /* 명함 연결 — 인사 이메일로 찾습니다 */
+  const auth = await findOrLinkEmployee(String(claims.email || ""));
   if (!auth) {
-    return fail(req, "명함 계정을 연결하지 못했습니다. 관리자에게 문의해주세요.");
+    return fail(req, "인사 시스템에서 직원 정보를 찾지 못했습니다. 관리팀에 문의해주세요.");
   }
 
   /* 기존 세션 체계를 그대로 사용 — remember 없이 12시간 */

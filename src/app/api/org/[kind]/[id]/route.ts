@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { guardOrgWrite, orgDelegate, orgWriteError, parseOrgBody } from "@/lib/org-mutate";
+import { guardOrgWrite, orgApi, orgWriteError, parseOrgBody } from "@/lib/org-mutate";
 import { invalidateOrgCache } from "@/lib/org-store";
 
 type Context = { params: Promise<{ kind: string; id: string }> };
@@ -21,10 +21,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
   if (!parsed.ok) return parsed.response;
 
   try {
-    await (orgDelegate(guard.kind).update as (args: unknown) => Promise<unknown>)({
-      where: { id },
-      data: parsed.data,
-    });
+    await orgApi.update(guard.kind, id, parsed.data);
     invalidateOrgCache();
     return NextResponse.json({ ok: true });
   } catch (cause) {
@@ -44,7 +41,7 @@ export async function DELETE(_request: NextRequest, { params }: Context) {
   if (!guard.ok) return guard.response;
 
   try {
-    await (orgDelegate(guard.kind).delete as (args: unknown) => Promise<unknown>)({ where: { id } });
+    await orgApi.remove(guard.kind, id);
     invalidateOrgCache();
     return NextResponse.json({ ok: true });
   } catch (cause) {
