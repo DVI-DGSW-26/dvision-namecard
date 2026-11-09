@@ -57,18 +57,18 @@ export function SignatureStaleBanner({
   if (!stale) return null;
 
   return (
-    // 배경·테두리는 /edit 의 "다른 임직원의 명함을 보고 있습니다" 띠와 같은 규칙입니다.
-    // 강조는 색이 아니라 자리(화면 맨 위)와 굵기로 냅니다 — primary 예산은 링크 몫입니다.
-    <div className="border-b border-border bg-sub-bg">
+    // 손봐야 할 일을 알리는 띠라 warn(주의) 상태 토큰을 씁니다. /edit 의 "다른 임직원의
+    // 명함을 보고 있습니다" 띠는 안내라 info 입니다.
+    <div className="border-b border-warn-line bg-warn-soft">
       {/* 좁은 화면에서 문구가 길어 링크가 밀려나므로 줄을 나눕니다. */}
-      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-group gap-y-tight px-group py-sibling sm:px-section">
-        <p className="text-caption text-sub-text">
+      <div className="flex flex-wrap items-center justify-between gap-x-group gap-y-tight px-4 py-sibling md:px-6">
+        <p className="text-sm text-warn-fg">
           {linkToSignature
             ? "메일 프로그램에 넣어 둔 서명이 최신이 아닙니다. 다시 복사해 교체해 주세요."
             : "메일 프로그램에 넣어 둔 서명이 최신이 아닙니다. 아래 서명 복사 를 눌러 교체해 주세요."}
         </p>
         {linkToSignature ? (
-          <Link href="/edit/signature" className="text-caption-bold text-primary">
+          <Link href="/edit/signature" className="text-sm font-semibold text-brand-fg hover:underline">
             서명 복사하러 가기
           </Link>
         ) : null}

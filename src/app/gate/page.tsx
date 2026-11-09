@@ -40,7 +40,7 @@ export default async function GatePage({ searchParams }: Props) {
 
   return (
     <main className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center px-group py-section sm:px-section sm:py-block">
-      <p className="text-caption text-sub-text">(주)디비전 사내 디지털 명함</p>
+      <p className="text-xs text-fg-muted">(주)디비전 사내 디지털 명함</p>
       {/* 로고가 곧 제목입니다. 화면에 글자가 없으므로 alt 가 h1 의 텍스트 역할을 합니다. */}
       <h1 className="mt-sibling">
         <Image
@@ -52,13 +52,13 @@ export default async function GatePage({ searchParams }: Props) {
           className="h-10 w-auto"
         />
       </h1>
-      <p className="mt-group text-body text-sub-text">
+      <p className="mt-group text-sm text-fg-muted">
         DVI 계정으로 로그인해 주세요. 다른 사내 서비스와 같은 계정입니다.
       </p>
 
       {/* SSO 콜백이 실패하면 ?error=<이유> 로 돌아옵니다. */}
       {error && (
-        <p className="mt-group rounded-card bg-red-50 px-4 py-3 text-caption text-red-600">
+        <p className="mt-group rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger-fg">
           {error}
         </p>
       )}
@@ -66,7 +66,7 @@ export default async function GatePage({ searchParams }: Props) {
       <div className="mt-block flex flex-col gap-group">
         <a
           href={`/api/auth/sso?next=${encodeURIComponent(destination)}`}
-          className="flex h-12 w-full items-center justify-center rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover"
+          className="flex h-12 w-full items-center justify-center rounded-md bg-brand text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover"
         >
           DVI 계정으로 로그인
         </a>
@@ -76,7 +76,7 @@ export default async function GatePage({ searchParams }: Props) {
           고민하게 됩니다 — 롤백 경로는 살아 있되 화면에서는 하나만 보입니다.
         */}
         <details className="group">
-          <summary className="cursor-pointer list-none text-center text-caption text-sub-text underline-offset-4 hover:underline">
+          <summary className="cursor-pointer list-none text-center text-xs text-fg-muted underline-offset-4 hover:underline">
             기존 방식(공지 비밀번호)으로 로그인
           </summary>
           <div className="mt-group">

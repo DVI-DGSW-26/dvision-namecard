@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { BottomTabBar } from "@/components/BottomTabBar";
-import { TopNav } from "@/components/TopNav";
+import { AppShell } from "@/components/AppShell";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { companyOfficesInclude } from "@/types";
@@ -24,9 +23,8 @@ export default async function AdminCompanyPage() {
   const company = await prisma.company.findFirst({ include: companyOfficesInclude });
 
   return (
-    <>
-      <TopNav role={session.role} current="/admin/company" />
-      <main className="mx-auto w-full max-w-[1000px] px-group py-section sm:px-section sm:py-block">
+    <AppShell role={session.role} current="/admin/company" title="회사 정보">
+      <div className="w-full max-w-[960px] p-4 md:p-6">
         {company ? (
           <CompanyEditor company={company} />
         ) : (
@@ -36,14 +34,13 @@ export default async function AdminCompanyPage() {
             있게 하면 회사가 둘이 되는 길이 생깁니다.
           */
           <div className="py-block text-center">
-            <h1 className="text-display">회사 정보가 없습니다</h1>
-            <p className="mt-group text-body text-sub-text">
+            <h2 className="text-base font-semibold">회사 정보가 없습니다</h2>
+            <p className="mt-group text-sm text-fg-muted">
               임직원 관리에서 첫 직원을 등록하면 회사 정보가 만들어집니다.
             </p>
           </div>
         )}
-      </main>
-      <BottomTabBar role={session.role} current="/admin/company" />
-    </>
+      </div>
+    </AppShell>
   );
 }

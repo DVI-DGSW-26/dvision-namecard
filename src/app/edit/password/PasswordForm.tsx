@@ -61,18 +61,17 @@ export function PasswordForm({ forced }: { forced: boolean }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto w-full max-w-[420px]">
+    <form onSubmit={handleSubmit} className="w-full max-w-[480px] rounded-xl border border-edge bg-surface p-5">
+      {/* 화면 제목(비밀번호 변경)은 헤더 h1 에 있습니다. */}
       <header>
-        <p className="text-caption text-sub-text">내 계정</p>
-        <h1 className="mt-tight text-display">비밀번호 변경</h1>
-        <p className="mt-sibling text-body text-sub-text">
+        <p className="text-sm text-fg-muted">
           {forced
             ? "관리자가 발급한 초기 비밀번호로 로그인했습니다. 본인만 아는 비밀번호로 바꿔야 계속 쓸 수 있습니다."
             : "새 비밀번호로 바꿉니다. 바꾼 뒤에는 이 기기의 로그인은 그대로 유지됩니다."}
         </p>
       </header>
 
-      <div className="mt-block flex flex-col gap-group">
+      <div className="mt-section flex flex-col gap-group">
         <Field label="현재 비밀번호" htmlFor="currentPassword" error={errors.currentPassword}>
           <Input
             id="currentPassword"
@@ -111,12 +110,12 @@ export function PasswordForm({ forced }: { forced: boolean }) {
           />
         </Field>
 
-        {message ? <p className="text-caption text-sub-text">{message}</p> : null}
+        {message ? <p className="text-xs text-fg-muted">{message}</p> : null}
 
         <button
           type="submit"
           disabled={saving}
-          className="h-12 w-full rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text"
+          className="h-10 w-full rounded-md bg-brand px-4 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-faint"
         >
           {saving ? "바꾸는 중…" : "비밀번호 바꾸기"}
         </button>

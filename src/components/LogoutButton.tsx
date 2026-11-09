@@ -30,7 +30,7 @@ export function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={busy}
-      className="text-caption text-sub-text hover:text-text disabled:text-border"
+      className="h-10 rounded-lg px-3 text-sm font-medium text-fg-muted hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:text-fg-faint"
     >
       로그아웃
     </button>

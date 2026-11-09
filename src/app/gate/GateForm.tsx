@@ -116,12 +116,12 @@ export function GateForm({ next }: { next: string }) {
               // 상태를 텍스트로도 알립니다 — 아이콘만으로는 화면 낭독기에서 구분되지 않습니다.
               aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
               aria-pressed={showPassword}
-              className="flex h-11 w-11 items-center justify-center rounded-card text-sub-text transition-colors hover:text-text"
+              className="flex size-10 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
             >
               {showPassword ? (
-                <EyeOffIcon className="h-5 w-5" />
+                <EyeOffIcon className="size-[18px]" />
               ) : (
-                <EyeIcon className="h-5 w-5" />
+                <EyeIcon className="size-[18px]" />
               )}
             </button>
           }
@@ -132,12 +132,12 @@ export function GateForm({ next }: { next: string }) {
         로그인 유지. 사내 이메일과 공용 비밀번호를 매번 치는 건 모바일에서 특히 번거롭습니다.
         기본값은 꺼짐입니다 — 공용 PC 에서 켜진 채로 들어오면 다음 사람이 그대로 이어받습니다.
       */}
-      <label className="flex min-h-11 items-center gap-sibling text-caption text-sub-text">
+      <label className="flex min-h-11 items-center gap-sibling text-xs text-fg-muted">
         <input
           type="checkbox"
           checked={remember}
           onChange={(e) => setRemember(e.target.checked)}
-          className="h-4 w-4 accent-primary"
+          className="size-4 accent-brand"
         />
         로그인 유지 (30일)
       </label>
@@ -157,11 +157,11 @@ export function GateForm({ next }: { next: string }) {
         type="submit"
         disabled={!email || !password || busy}
         aria-busy={busy}
-        className="flex h-12 w-full items-center justify-center gap-sibling rounded-card bg-primary text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text"
+        className="flex h-12 w-full items-center justify-center gap-1.5 rounded-md bg-brand text-base font-semibold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-faint"
       >
         {busy ? (
           <>
-            <SpinnerIcon className="h-5 w-5 animate-spin" />
+            <SpinnerIcon className="size-4 animate-spin" />
             {navigating ? "들어가는 중…" : "확인 중…"}
           </>
         ) : (

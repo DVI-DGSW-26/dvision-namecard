@@ -367,23 +367,23 @@ export function EditProfileForm({
     <div className="flex flex-col gap-group">
       <div className="flex items-start justify-between gap-group">
         <div>
-          <p className="text-body-bold">실시간 미리보기</p>
-          <p className="mt-tight text-caption text-sub-text">모바일 · 375px</p>
+          <p className="text-sm font-semibold">실시간 미리보기</p>
+          <p className="mt-tight text-xs text-fg-muted">모바일 · 375px</p>
         </div>
         <a
           href={previewUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-tight text-caption-bold text-primary hover:text-primary-hover"
+          className="flex items-center gap-1.5 text-sm font-semibold text-brand-fg hover:text-brand-hover hover:underline"
         >
           새 탭에서 열기
-          <ArrowRightIcon className="h-4 w-4" />
+          <ArrowRightIcon className="size-4" />
         </a>
       </div>
 
-      <div className="w-full max-w-[375px] overflow-hidden rounded-card border border-border">
+      <div className="w-full max-w-[375px] overflow-hidden rounded-xl border border-edge bg-surface">
         {/* PREVIEW 머리띠는 미리보기 전용 장식입니다. ProfileCard 안에 넣으면 공개 페이지에도 찍힙니다. */}
-        <p className="border-b border-border bg-sub-bg py-sibling text-center text-caption text-sub-text">
+        <p className="border-b border-line bg-surface-2 py-sibling text-center text-xs text-fg-muted">
           PREVIEW · {previewHost}
           {previewUrl}
         </p>
@@ -401,28 +401,28 @@ export function EditProfileForm({
   const err = (key: string) => errors[key];
 
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-section px-group py-section sm:gap-block sm:px-section sm:py-block xl:flex-row xl:items-start">
+    <div className="flex w-full flex-col gap-group p-4 md:p-6 xl:flex-row xl:items-start xl:gap-section">
       {/* 1280px 미만 — 미리보기를 폼 위로 올리고 접기/펴기 */}
       <section className="order-first xl:hidden">
         <button
           type="button"
           onClick={() => setPreviewOpen((v) => !v)}
           aria-expanded={previewOpen}
-          className="flex w-full items-center justify-between rounded-card border border-border px-group py-group text-body-bold"
+          className="flex h-12 w-full items-center justify-between rounded-xl border border-edge bg-surface px-5 text-sm font-semibold text-fg hover:border-line-strong"
         >
           실시간 미리보기
           <ChevronDownIcon
-            className={`h-5 w-5 text-sub-text transition-transform ${previewOpen ? "rotate-180" : ""}`}
+            className={`size-5 text-fg-muted transition-transform ${previewOpen ? "rotate-180" : ""}`}
           />
         </button>
-        {previewOpen ? <div className="mt-section">{preview}</div> : null}
+        {previewOpen ? <div className="mt-group">{preview}</div> : null}
       </section>
 
-      <main className="w-full max-w-[1000px] xl:flex-1">
+      <div className="w-full max-w-[960px] xl:flex-1">
+        {/* 화면 제목(내 명함)은 헤더 h1 에 있습니다. 여기는 이 화면이 하는 일만 적습니다. */}
         <header>
-          <p className="text-caption text-sub-text">내 명함</p>
-          <h1 className="mt-tight text-display">프로필 편집</h1>
-          <p className="mt-sibling text-body text-sub-text">
+          <h2 className="text-base font-semibold text-fg">프로필 편집</h2>
+          <p className="mt-tight text-sm text-fg-muted">
             여기서 저장하면 이미 보낸 메일의 링크에도 즉시 반영됩니다.
           </p>
           {/*
@@ -431,14 +431,14 @@ export function EditProfileForm({
           */}
           <a
             href="/edit/signature"
-            className="mt-group inline-block text-caption-bold text-primary hover:text-primary-hover"
+            className="mt-sibling inline-block text-sm font-semibold text-brand-fg hover:text-brand-hover hover:underline"
           >
             이메일 서명 받기 →
           </a>
         </header>
 
         {/* 01 기본 정보 ------------------------------------------------------ */}
-        <section className="mt-block">
+        <section className="mt-group rounded-xl border border-edge bg-surface p-5">
           <SectionHeader number="01" title="기본 정보" />
 
           <div className="flex flex-col gap-section sm:flex-row sm:gap-block">
@@ -662,7 +662,7 @@ export function EditProfileForm({
         </section>
 
         {/* 02 연락처 --------------------------------------------------------- */}
-        <section className="mt-block border-t border-border pt-block">
+        <section className="mt-group rounded-xl border border-edge bg-surface p-5">
           <SectionHeader
             number="02"
             title="연락처"
@@ -725,7 +725,7 @@ export function EditProfileForm({
         </section>
 
         {/* 03 회사 정보 ------------------------------------------------------ */}
-        <section className="mt-block border-t border-border pt-block">
+        <section className="mt-group rounded-xl border border-edge bg-surface p-5">
           {/*
             관리자에게는 전용 화면(/admin/company)을 알려 줍니다. 여기서도 고칠 수
             있지만, 회사 값을 바꾸러 "내 명함" 으로 들어와야 한다는 걸 아무도
@@ -754,25 +754,25 @@ export function EditProfileForm({
           저장 바 — 폼 하단 고정. 모바일에서는 안내 문구와 버튼이 한 줄에 들어가지
           않아 세로로 쌓고, 버튼을 화면 폭만큼 늘려 엄지로 누르기 쉽게 합니다.
 
-          md 미만에서는 하단 탭바(h-14)가 화면 바닥을 차지하므로 그만큼 올려 붙입니다.
+          lg 미만에서는 하단 탭바(h-14)가 화면 바닥을 차지하므로 그보다 위에 띄워 붙입니다.
           bottom-0 으로 두면 저장 버튼이 탭바 뒤에 깔려 눌리지 않습니다.
         */}
-        <div className="sticky bottom-14 mt-section border-t border-border bg-bg py-group sm:mt-block md:bottom-0">
+        <div className="sticky bottom-16 mt-group rounded-xl border border-edge bg-surface px-5 py-3 shadow-lg lg:bottom-4">
           <div className="flex flex-col items-stretch gap-sibling sm:flex-row sm:items-center sm:justify-between sm:gap-group">
-            <p className="text-caption text-sub-text">
+            <p className="text-xs text-fg-muted">
               {saveError ?? (dirty ? "저장하지 않은 변경사항이 있습니다." : "모든 변경사항이 저장되었습니다.")}
             </p>
             <button
               type="button"
               onClick={handleSave}
               disabled={!dirty || saving}
-              className="h-12 w-full shrink-0 rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text sm:w-auto"
+              className="h-10 w-full shrink-0 rounded-md bg-brand px-4 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-faint sm:w-auto"
             >
               {saving ? "저장 중…" : "저장"}
             </button>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* 1280px 이상 — 우측 고정 미리보기 */}
       <aside className="hidden xl:block xl:w-[420px] xl:shrink-0">

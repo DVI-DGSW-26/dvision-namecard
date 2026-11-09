@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 import { resolveEditTarget } from "@/lib/current-employee";
 import { LANGS, cardName } from "@/lib/lang";
 import { renderSignature, renderSignatureText } from "@/lib/signature";
-import { BottomTabBar } from "@/components/BottomTabBar";
 import { SignatureStaleBanner } from "@/components/SignatureStaleBanner";
-import { TopNav } from "@/components/TopNav";
+import { AppShell } from "@/components/AppShell";
 import { SignaturePanel, type SignatureVariant } from "./SignaturePanel";
 
 /**
@@ -27,10 +26,10 @@ type Props = {
 function Notice({ title, detail }: { title: string; detail: string }) {
   return (
     <main className="mx-auto w-full max-w-[720px] px-group py-section sm:px-section sm:py-block">
-      <p className="text-caption text-sub-text">내 명함</p>
-      <h1 className="mt-tight text-display">{title}</h1>
-      <p className="mt-group text-body text-sub-text">{detail}</p>
-      <Link href="/edit" className="mt-section inline-block text-caption-bold text-primary">
+      <p className="text-xs text-fg-muted">내 명함</p>
+      <h1 className="mt-tight text-xl font-semibold">{title}</h1>
+      <p className="mt-group text-sm text-fg-muted">{detail}</p>
+      <Link href="/edit" className="mt-section inline-block text-xs font-semibold text-brand-fg">
         프로필 편집으로 가기
       </Link>
     </main>
@@ -92,35 +91,32 @@ export default async function SignaturePage({ searchParams }: Props) {
 
 
   return (
-    <>
-      <TopNav role={role} email={employee.email} current="/edit/signature" />
+    <AppShell role={role} email={employee.email} current="/edit/signature" title="이메일 서명">
       {/* 복사 버튼이 바로 아래에 있으므로 다른 화면으로 보내는 링크는 달지 않습니다. */}
       <SignatureStaleBanner
         employeeId={employee.id}
         profileUpdatedAt={employee.updatedAt.toISOString()}
         linkToSignature={false}
       />
-      <main className="mx-auto w-full max-w-[1000px] px-group py-section sm:px-section sm:py-block">
+      <div className="w-full max-w-[960px] p-4 md:p-6">
+        {/* 화면 제목은 헤더 h1 에 있습니다. 여기는 설명 줄만 둡니다. */}
         <header>
-          <p className="text-caption text-sub-text">내 명함</p>
-          <h1 className="mt-tight text-display">이메일 서명</h1>
-          <p className="mt-sibling text-body text-sub-text">
+          <p className="text-sm text-fg-muted">
             아래 서명을 복사해 메일 프로그램에 넣으세요. 프로필을 수정하면 서명 안의 명함
             링크가 가리키는 내용도 함께 바뀝니다.
           </p>
           <Link
             href="/edit"
-            className="mt-group inline-block text-caption-bold text-primary hover:text-primary-hover"
+            className="mt-sibling inline-block text-sm font-semibold text-brand-fg hover:text-brand-hover hover:underline"
           >
             프로필 편집으로 돌아가기
           </Link>
         </header>
 
-        <div className="mt-block">
+        <div className="mt-section">
           <SignaturePanel employeeId={employee.id} variants={variants} />
         </div>
-      </main>
-      <BottomTabBar role={role} current="/edit/signature" />
-    </>
+      </div>
+    </AppShell>
   );
 }

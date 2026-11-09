@@ -53,7 +53,7 @@ export function AddEmployeeDialog({ open, onClose, onCreated }: Props) {
       onClose={onClose}
       // p-0 은 브라우저 기본 dialog 여백 제거용입니다. 실제 여백은 안쪽 form 의 p-section.
       // backdrop 은 토큰 정의서의 Shape·Effect 절이 잘려 있어 임시값입니다.
-      className="w-[min(560px,calc(100vw-2rem))] rounded-card border border-border bg-bg p-0 text-text backdrop:bg-text/40"
+      className="w-[min(560px,calc(100vw-2rem))] rounded-2xl border border-edge bg-surface p-0 text-fg shadow-xl backdrop:bg-black/40"
     >
       {/* 닫히면 언마운트되므로 다음에 열 때 입력값·에러가 저절로 비워집니다. */}
       {open ? (
@@ -145,10 +145,10 @@ function AddEmployeeForm({ onClose, onCreated }: Omit<Props, "open">) {
       className="flex flex-col gap-section p-section"
     >
       <div>
-        <h2 id={`${formId}-title`} className="text-title">
+        <h2 id={`${formId}-title`} className="text-xl font-semibold">
           직원 추가
         </h2>
-        <p className="mt-tight text-caption text-sub-text">
+        <p className="mt-tight text-xs text-fg-muted">
           초대중 상태로 등록됩니다. 나머지 정보는 본인이 내 명함에서 채웁니다.
         </p>
       </div>
@@ -260,11 +260,11 @@ function AddEmployeeForm({ onClose, onCreated }: Omit<Props, "open">) {
         />
       </Field>
 
-      {/* 에러도 색이 아니라 문구로 알립니다. 빨강을 추가하면 팔레트가 늘어납니다. */}
+      {/* 오류는 danger 상태 토큰으로 알립니다. */}
       {saveError ? (
         <p
           role="alert"
-          className="rounded-card bg-sub-bg px-group py-sibling text-caption text-text"
+          className="rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger-fg"
         >
           {saveError}
         </p>
@@ -274,14 +274,14 @@ function AddEmployeeForm({ onClose, onCreated }: Omit<Props, "open">) {
         <button
           type="button"
           onClick={onClose}
-          className="h-12 rounded-card border border-border px-group text-body transition-colors hover:border-text"
+          className="h-10 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-4 text-sm font-semibold transition-colors"
         >
           취소
         </button>
         <button
           type="submit"
           disabled={saving}
-          className="h-12 rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text"
+          className="h-10 rounded-md bg-brand px-4 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-faint"
         >
           {saving ? "추가하는 중…" : "추가"}
         </button>

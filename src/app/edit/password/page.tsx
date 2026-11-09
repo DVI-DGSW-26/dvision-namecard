@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { BottomTabBar } from "@/components/BottomTabBar";
-import { TopNav } from "@/components/TopNav";
+import { AppShell } from "@/components/AppShell";
 import { getSession } from "@/lib/auth";
 import { PasswordForm } from "./PasswordForm";
 
@@ -18,12 +17,10 @@ export default async function PasswordPage() {
   if (!session) redirect("/gate?next=%2Fedit%2Fpassword");
 
   return (
-    <>
-      <TopNav role={session.role} current="/edit/password" />
-      <main className="mx-auto w-full max-w-[720px] px-group py-section sm:px-section sm:py-block">
+    <AppShell role={session.role} current="/edit/password" title="비밀번호 변경">
+      <div className="w-full max-w-[960px] p-4 md:p-6">
         <PasswordForm forced={false} />
-      </main>
-      <BottomTabBar role={session.role} current="/edit/password" />
-    </>
+      </div>
+    </AppShell>
   );
 }
