@@ -61,7 +61,7 @@ export function PasswordForm({ forced }: { forced: boolean }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-[480px] rounded-xl border border-edge bg-surface p-5">
+    <form onSubmit={handleSubmit} className="mx-auto w-full max-w-[480px] rounded-xl border border-edge bg-surface p-5">
       {/* 화면 제목(비밀번호 변경)은 헤더 h1 에 있습니다. */}
       <header>
         <p className="text-sm text-fg-muted">

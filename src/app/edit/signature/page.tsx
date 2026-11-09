@@ -98,7 +98,7 @@ export default async function SignaturePage({ searchParams }: Props) {
         profileUpdatedAt={employee.updatedAt.toISOString()}
         linkToSignature={false}
       />
-      <div className="w-full max-w-[960px] p-4 md:p-6">
+      <div className="mx-auto w-full max-w-[960px] p-4 md:p-6">
         {/* 화면 제목은 헤더 h1 에 있습니다. 여기는 설명 줄만 둡니다. */}
         <header>
           <p className="text-sm text-fg-muted">
