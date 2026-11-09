@@ -130,8 +130,8 @@ export function OrgManager({ initial }: { initial: OrgLists }) {
   );
 
   return (
-    <div className="flex flex-col gap-section">
-      <div className="flex flex-wrap gap-sibling border-b border-border">
+    <div className="flex flex-col gap-group">
+      <div role="tablist" className="flex overflow-x-auto border-b border-line">
         {TABS.map((item) => {
           const active = tab === item.key;
           return (
@@ -139,10 +139,12 @@ export function OrgManager({ initial }: { initial: OrgLists }) {
               key={item.key}
               type="button"
               onClick={() => setTab(item.key)}
+              role="tab"
+              aria-selected={active}
               aria-current={active ? "page" : undefined}
               className={[
-                "-mb-px border-b-2 px-group py-sibling text-caption-bold",
-                active ? "border-text text-text" : "border-transparent text-sub-text hover:text-text",
+                "-mb-px h-12 shrink-0 whitespace-nowrap border-b-2 px-group text-sm font-semibold",
+                active ? "border-brand text-brand-fg" : "border-transparent text-fg-subtle hover:text-fg-muted",
               ].join(" ")}
             >
               {item.label}
@@ -151,7 +153,11 @@ export function OrgManager({ initial }: { initial: OrgLists }) {
         })}
       </div>
 
-      {error ? <p className="text-caption text-text">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger-fg">
+          {error}
+        </p>
+      ) : null}
 
       {tab === "departments" ? (
         <Departments teams={lists.teams} send={send} busy={busy} />
@@ -196,14 +202,14 @@ function SimpleList({
 
   return (
     <section className="flex flex-col gap-group">
-      <p className="text-caption text-sub-text">
+      <p className="text-xs text-fg-muted">
         {kind === "offices"
           ? "명함에는 여기 등록된 사업장이 전부 찍힙니다. 우편번호는 (43011) 처럼 주소 앞에 붙습니다."
           : `${ORG_KIND_LABEL[kind]} 목록입니다. 순서 숫자가 작을수록 선택 상자에서 위에 놓입니다.`}
       </p>
 
       {items.length === 0 ? (
-        <p className="text-body text-sub-text">아직 항목이 없습니다. 아래에서 추가하세요.</p>
+        <p className="text-sm text-fg-muted">아직 항목이 없습니다. 아래에서 추가하세요.</p>
       ) : (
         <ul className="flex flex-col gap-sibling">
           {items.map((item) => (
@@ -277,7 +283,7 @@ function ItemRow({
   const err = (key: string) => errors[key];
 
   return (
-    <li className="rounded-card border border-border p-group">
+    <li className="rounded-xl border border-edge bg-surface p-5">
       <div className="grid grid-cols-1 gap-group sm:grid-cols-[1fr_1fr_6rem]">
         <Field label="이름" htmlFor={`${kind}-${item?.id ?? "new"}-name`} error={err("name")}>
           <Input
@@ -413,13 +419,13 @@ function ItemRow({
       <div className="mt-group flex flex-wrap items-center justify-end gap-sibling">
         {confirmingDelete ? (
           <>
-            <p className="mr-auto text-caption text-sub-text">
+            <p className="mr-auto text-xs text-fg-muted">
               지우면 이 값을 쓰던 직원의 칸이 비워집니다. 계속할까요?
             </p>
             <button
               type="button"
               onClick={() => setConfirmingDelete(false)}
-              className="h-10 rounded-card border border-border px-group text-caption-bold text-text"
+              className="h-9 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-3 text-xs font-medium"
             >
               취소
             </button>
@@ -427,7 +433,7 @@ function ItemRow({
               type="button"
               onClick={remove}
               disabled={busy}
-              className="h-10 rounded-card bg-primary px-group text-caption-bold text-white disabled:bg-sub-bg disabled:text-sub-text"
+              className="h-9 rounded-md bg-brand px-3 text-xs font-medium text-on-brand disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-faint"
             >
               삭제
             </button>
@@ -439,7 +445,7 @@ function ItemRow({
                 type="button"
                 onClick={() => setConfirmingDelete(true)}
                 disabled={busy}
-                className="h-10 rounded-card border border-border px-group text-caption-bold text-text disabled:text-sub-text"
+                className="h-9 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-3 text-xs font-medium disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-3 disabled:text-fg-faint"
               >
                 삭제
               </button>
@@ -448,7 +454,7 @@ function ItemRow({
               type="button"
               onClick={save}
               disabled={busy}
-              className="h-10 rounded-card bg-primary px-group text-caption-bold text-white disabled:bg-sub-bg disabled:text-sub-text"
+              className="h-9 rounded-md bg-brand px-3 text-xs font-medium text-on-brand disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-faint"
             >
               {isNew ? "추가" : "저장"}
             </button>
@@ -474,7 +480,7 @@ function Departments({
 
   return (
     <section className="flex flex-col gap-section">
-      <p className="text-caption text-sub-text">
+      <p className="text-xs text-fg-muted">
         부서는 팀 · 파트 2단계입니다. 팀을 지우면 그 팀의 파트도 함께 사라집니다.
       </p>
 
@@ -488,8 +494,8 @@ function Departments({
               <ItemRow kind="teams" item={team} send={send} busy={busy} />
             </ul>
 
-            <div className="ml-group border-l border-border pl-group">
-              <p className="mb-sibling text-caption text-sub-text">파트</p>
+            <div className="ml-group border-l border-line pl-group">
+              <p className="mb-sibling text-[0.6875rem] font-semibold tracking-wide text-fg-subtle">파트</p>
               <ul className="flex flex-col gap-sibling">
                 {team.parts.map((part) => (
                   <ItemRow
@@ -518,7 +524,7 @@ function Departments({
       })}
 
       <div>
-        <p className="mb-sibling text-caption text-sub-text">팀 추가</p>
+        <p className="mb-sibling text-xs text-fg-muted">팀 추가</p>
         <ul>
           <ItemRow
             kind="teams"

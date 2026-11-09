@@ -94,18 +94,16 @@ export function CompanyEditor({ company }: { company: CompanyWithOffices }) {
   return (
     <>
       {/*
-        SectionHeader 는 번호가 붙는 폼 내부 섹션용이라 여기서는 쓰지 않습니다.
-        단독 화면이므로 이메일 서명 페이지와 같은 머리말 형식을 씁니다.
+        화면 제목(회사 정보)은 헤더 h1 에 있습니다. 여기는 설명 줄만 둡니다 —
+        이메일 서명·조직 관리 화면과 같은 형식입니다.
       */}
       <header>
-        <p className="text-caption text-sub-text">관리자</p>
-        <h1 className="mt-tight text-display">회사 정보</h1>
-        <p className="mt-sibling text-body text-sub-text">
+        <p className="text-sm text-fg-muted">
           여기서 바꾼 값은 전 직원의 명함·이메일 서명에 함께 반영됩니다.
         </p>
       </header>
 
-      <div className="mt-block">
+      <div className="mt-group rounded-xl border border-edge bg-surface p-5">
         <CompanyFields
           values={values}
           error={(field) => errors[field]}
@@ -114,17 +112,17 @@ export function CompanyEditor({ company }: { company: CompanyWithOffices }) {
         />
       </div>
 
-      {/* 저장 바 — /edit 과 같은 자리, 같은 동작. 하단 탭바에 가리지 않게 올려 붙입니다. */}
-      <div className="sticky bottom-14 mt-section border-t border-border bg-bg py-group sm:mt-block md:bottom-0">
+      {/* 저장 바 — /edit 과 같은 자리, 같은 동작. 하단 탭바(lg 미만)에 가리지 않게 그 위에 띄웁니다. */}
+      <div className="sticky bottom-16 mt-group rounded-xl border border-edge bg-surface px-5 py-3 shadow-lg lg:bottom-4">
         <div className="flex flex-col items-stretch gap-sibling sm:flex-row sm:items-center sm:justify-between sm:gap-group">
-          <p className="text-caption text-sub-text">
+          <p className="text-xs text-fg-muted">
             {message ?? (dirty ? "저장하지 않은 변경사항이 있습니다." : "모든 변경사항이 저장되었습니다.")}
           </p>
           <button
             type="button"
             onClick={handleSave}
             disabled={!dirty || saving}
-            className="h-12 w-full shrink-0 rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text sm:w-auto"
+            className="h-10 w-full shrink-0 rounded-md bg-brand px-4 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-faint sm:w-auto"
           >
             {saving ? "저장 중…" : "저장"}
           </button>

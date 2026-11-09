@@ -42,7 +42,7 @@ export function EditSlugDialog({ target, onClose, onSaved }: Props) {
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="w-[min(28rem,calc(100vw-2rem))] rounded-card border border-border bg-bg p-0 text-text backdrop:bg-black/40"
+      className="w-[min(400px,calc(100vw-2rem))] rounded-2xl border border-edge bg-surface p-0 text-fg shadow-xl backdrop:bg-black/40"
     >
       {/* target 이 바뀌면 폼 상태를 새로 만들도록 key 를 답니다. */}
       {target ? <SlugForm key={target.id} target={target} onClose={onClose} onSaved={onSaved} /> : null}
@@ -105,8 +105,8 @@ function SlugForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-section p-section">
       <div>
-        <h2 className="text-title">공개 주소 변경</h2>
-        <p className="mt-tight text-caption text-sub-text">{target.nameKo}</p>
+        <h2 className="text-xl font-semibold">공개 주소 변경</h2>
+        <p className="mt-tight text-xs text-fg-muted">{target.nameKo}</p>
       </div>
 
       <Field
@@ -124,13 +124,13 @@ function SlugForm({
         />
       </Field>
 
-      <p className="rounded-card bg-sub-bg px-group py-sibling text-caption text-text">
+      <p className="rounded-lg border border-warn-line bg-warn-soft px-4 py-3 text-sm text-warn-fg">
         주소를 바꾸면 이전 주소로 나간 링크는 전부 열리지 않습니다. 이미 보낸 메일 서명의
         명함 링크도 포함됩니다.
       </p>
 
       {saveError ? (
-        <p role="alert" className="text-caption text-text">
+        <p role="alert" className="rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger-fg">
           {saveError}
         </p>
       ) : null}
@@ -139,14 +139,14 @@ function SlugForm({
         <button
           type="button"
           onClick={onClose}
-          className="h-12 rounded-card border border-border px-group text-body"
+          className="h-10 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-4 text-sm font-semibold"
         >
           취소
         </button>
         <button
           type="submit"
           disabled={saving || slug === target.slug}
-          className="h-12 rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover disabled:bg-sub-bg disabled:text-sub-text"
+          className="h-10 rounded-md bg-brand px-4 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-fg-faint"
         >
           {saving ? "저장 중…" : "저장"}
         </button>

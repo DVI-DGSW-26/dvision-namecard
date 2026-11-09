@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import { BottomTabBar } from "@/components/BottomTabBar";
 import { OrgManager } from "@/components/OrgManager";
-import { TopNav } from "@/components/TopNav";
+import { AppShell } from "@/components/AppShell";
 import { getSession } from "@/lib/auth";
 import { readOrgLists } from "@/lib/org-store";
 
@@ -24,19 +23,15 @@ export default async function AdminOrgPage() {
   const lists = await readOrgLists();
 
   return (
-    <>
-      <TopNav role={session.role} current="/admin/org" />
-      <main className="mx-auto w-full max-w-[1000px] px-group py-section sm:px-section sm:py-block">
-        <header className="mb-block">
-          <p className="text-caption text-sub-text">관리자</p>
-          <h1 className="mt-tight text-display">조직 관리</h1>
-          <p className="mt-sibling text-body text-sub-text">
+    <AppShell role={session.role} current="/admin/org" title="조직 관리">
+      <div className="w-full max-w-[960px] p-4 md:p-6">
+        <header className="mb-group">
+          <p className="text-sm text-fg-muted">
             여기서 바꾼 목록이 프로필 편집의 선택 상자에 그대로 나옵니다.
           </p>
         </header>
         <OrgManager initial={lists} />
-      </main>
-      <BottomTabBar role={session.role} current="/admin/org" />
-    </>
+      </div>
+    </AppShell>
   );
 }
