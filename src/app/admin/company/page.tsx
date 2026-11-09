@@ -24,7 +24,7 @@ export default async function AdminCompanyPage() {
 
   return (
     <AppShell role={session.role} current="/admin/company" title="회사 정보">
-      <div className="w-full max-w-[960px] p-4 md:p-6">
+      <div className="mx-auto w-full max-w-[960px] p-4 md:p-6">
         {company ? (
           <CompanyEditor company={company} />
         ) : (

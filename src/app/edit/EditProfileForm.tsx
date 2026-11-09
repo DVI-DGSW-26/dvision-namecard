@@ -401,7 +401,7 @@ export function EditProfileForm({
   const err = (key: string) => errors[key];
 
   return (
-    <div className="flex w-full flex-col gap-group p-4 md:p-6 xl:flex-row xl:items-start xl:gap-section">
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-group p-4 md:p-6 xl:flex-row xl:items-start xl:justify-center xl:gap-section">
       {/* 1280px 미만 — 미리보기를 폼 위로 올리고 접기/펴기 */}
       <section className="order-first xl:hidden">
         <button
@@ -418,7 +418,7 @@ export function EditProfileForm({
         {previewOpen ? <div className="mt-group">{preview}</div> : null}
       </section>
 
-      <div className="w-full max-w-[960px] xl:flex-1">
+      <div className="mx-auto w-full max-w-[960px] xl:mx-0 xl:flex-1">
         {/* 화면 제목(내 명함)은 헤더 h1 에 있습니다. 여기는 이 화면이 하는 일만 적습니다. */}
         <header>
           <h2 className="text-base font-semibold text-fg">프로필 편집</h2>

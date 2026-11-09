@@ -18,7 +18,7 @@ export default async function PasswordPage() {
 
   return (
     <AppShell role={session.role} current="/edit/password" title="비밀번호 변경">
-      <div className="w-full max-w-[960px] p-4 md:p-6">
+      <div className="mx-auto w-full max-w-[960px] p-4 md:p-6">
         <PasswordForm forced={false} />
       </div>
     </AppShell>

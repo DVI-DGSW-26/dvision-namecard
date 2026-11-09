@@ -24,7 +24,7 @@ export default async function AdminOrgPage() {
 
   return (
     <AppShell role={session.role} current="/admin/org" title="조직 관리">
-      <div className="w-full max-w-[960px] p-4 md:p-6">
+      <div className="mx-auto w-full max-w-[960px] p-4 md:p-6">
         <header className="mb-group">
           <p className="text-sm text-fg-muted">
             여기서 바꾼 목록이 프로필 편집의 선택 상자에 그대로 나옵니다.

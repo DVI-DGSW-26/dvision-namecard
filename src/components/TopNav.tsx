@@ -54,7 +54,7 @@ export function TopNav({
   }, [open]);
 
   return (
-    <header className="sidebar-scope shrink-0 bg-surface">
+    <header className="sidebar-scope sticky top-0 z-30 shrink-0 bg-surface">
       <div className="flex h-14 items-center gap-3 px-4 md:px-6 lg:h-24">
         {/* 사이드바가 없는 폭에서만. PC 에서는 사이드바 맨 위 로고가 같은 일을 합니다. */}
         <Link href="/edit" className="flex shrink-0 items-center lg:hidden" aria-label="dingdong 홈으로">
