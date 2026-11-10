@@ -1,3 +1,4 @@
+import Script from "next/script";
 import type { Role } from "@/lib/session-token";
 import { BottomTabBar } from "./BottomTabBar";
 import { Sidebar } from "./Sidebar";
@@ -40,6 +41,13 @@ export function AppShell({
           <BottomTabBar role={role} current={current} />
         </main>
       </div>
+      {/*
+        사내 공통 "서비스 이동" 버튼(왼쪽 아래). 목록은 서비스 허브가 관리합니다.
+        루트 layout 이 아니라 여기에 두는 이유: 공개 명함(/c/[slug])은 외부인이 보는
+        화면이라 사내 메뉴가 나오면 안 됩니다. 로그인 후 화면에만 붙입니다.
+        버튼 높이(모바일 하단 탭바 위로 올림)는 허브의 services.ts 에서 정합니다.
+      */}
+      <Script src="https://dvi-service-hub.vercel.app/switcher.js" strategy="afterInteractive" />
     </div>
   );
 }
