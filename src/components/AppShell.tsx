@@ -47,7 +47,7 @@ export function AppShell({
         화면이라 사내 메뉴가 나오면 안 됩니다. 로그인 후 화면에만 붙입니다.
         버튼 높이(모바일 하단 탭바 위로 올림)는 허브의 services.ts 에서 정합니다.
       */}
-      <Script src="https://dvi-service-hub.vercel.app/switcher.js" strategy="afterInteractive" />
+      <Script src="https://api.dvi-ind.com/static/switcher/switcher.js" strategy="afterInteractive" />
     </div>
   );
 }
