@@ -24,8 +24,10 @@ export async function GET(req: NextRequest) {
   const nonce = randomString(24);
   const verifier = randomString(48);
   const next = safeRedirect(req.nextUrl.searchParams.get("next"));
+  // 콜백이 authentication_expired 로 다시 시작한 로그인이면 표시해 둡니다 — 또 나면 멈춥니다
+  const retried = req.nextUrl.searchParams.get("retried") === "1";
 
-  const pending = await signPending({ state, nonce, verifier, next });
+  const pending = await signPending({ state, nonce, verifier, next, retried });
 
   const auth = new URL(meta.authorization_endpoint);
   auth.searchParams.set("response_type", "code");

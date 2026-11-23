@@ -1,6 +1,8 @@
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { brand } from "@/config/brand";
+import { SSO_BACK_COOKIE } from "@/lib/oidc";
 import { safeRedirect } from "@/lib/safe-redirect";
 import { GateForm } from "./GateForm";
 
@@ -32,11 +34,19 @@ export default async function GatePage({ searchParams }: Props) {
 
     루프가 되지 않는 이유: SSO 콜백이 실패하면 /gate?error=... 로 오고,
     그때는 이 리다이렉트를 건너뛰어 버튼과 접힌 기존 폼이 보인다.
+    통합 로그인에서 막 돌아왔는데(1분 안, justBack) 또 게이트로 왔다면 세션이
+    이어지지 않는 것이다. 다시 보내면 끝없이 오가므로 그때도 멈추고 안내한다.
     기존 방식으로 로그인하고 싶으면 /gate?manual=1 로 들어온다.
   */
-  if (!error && manual === undefined) {
+  const justBack = (await cookies()).has(SSO_BACK_COOKIE);
+  if (!error && manual === undefined && !justBack) {
     redirect(`/api/auth/sso?next=${encodeURIComponent(destination)}`);
   }
+  const notice =
+    error ??
+    (justBack && manual === undefined
+      ? "로그인하고 돌아왔지만 로그인 상태가 이어지지 않았습니다. 잠시 후 아래 버튼으로 다시 시도해 주세요."
+      : undefined);
 
   return (
     <main className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-center px-group py-section sm:px-section sm:py-block">
@@ -56,10 +66,10 @@ export default async function GatePage({ searchParams }: Props) {
         DVI 계정으로 로그인해 주세요. 다른 사내 서비스와 같은 계정입니다.
       </p>
 
-      {/* SSO 콜백이 실패하면 ?error=<이유> 로 돌아옵니다. */}
-      {error && (
+      {/* SSO 콜백·갱신이 실패하면 ?error=<이유> 로 돌아옵니다. */}
+      {notice && (
         <p className="mt-group rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger-fg">
-          {error}
+          {notice}
         </p>
       )}
 

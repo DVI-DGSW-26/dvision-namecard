@@ -1,6 +1,7 @@
 import Script from "next/script";
 import type { Role } from "@/lib/session-token";
 import { BottomTabBar } from "./BottomTabBar";
+import { SessionKeeper } from "./SessionKeeper";
 import { Sidebar } from "./Sidebar";
 import { TopNav } from "./TopNav";
 
@@ -48,6 +49,8 @@ export function AppShell({
         버튼 높이(모바일 하단 탭바 위로 올림)는 허브의 services.ts 에서 정합니다.
       */}
       <Script src="https://api.dvi-ind.com/static/switcher/switcher.js" strategy="afterInteractive" />
+      {/* SSO 세션을 끝나기 전에 갱신합니다. 로그인 후 화면에만 있으면 됩니다. */}
+      <SessionKeeper />
     </div>
   );
 }
