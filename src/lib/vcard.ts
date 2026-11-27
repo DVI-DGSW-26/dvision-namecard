@@ -133,7 +133,8 @@ export function buildVCard(
     mobile ? `TEL;TYPE=CELL,VOICE:${escapeValue(mobile)}` : null,
     fax ? `TEL;TYPE=WORK,FAX:${escapeValue(fax)}` : null,
 
-    `EMAIL;TYPE=INTERNET,WORK:${escapeValue(employee.email)}`,
+    // 인사에 이메일이 없는 직원(생산직 일부)은 줄을 뺍니다.
+    employee.email ? `EMAIL;TYPE=INTERNET,WORK:${escapeValue(employee.email)}` : null,
 
     /*
       사업장마다 ADR 을 한 줄씩 냅니다. vCard 3.0 은 같은 속성을 여러 번 쓸 수 있고,

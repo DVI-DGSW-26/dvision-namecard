@@ -4,8 +4,7 @@ import { CARDS_TAG, cardTag } from "@/lib/card-cache";
 import { cardName, type Lang } from "@/lib/lang";
 import { departmentText, officeLine, roleParts } from "@/lib/org";
 import { displayPhone } from "@/lib/phone";
-import { prisma } from "@/lib/prisma";
-import { companyOfficesInclude, employeeOrgInclude } from "@/types";
+import { employeeBySlug } from "@/lib/api";
 
 /**
  * 명함을 PNG 한 장으로 렌더합니다. 이메일 서명이 이 이미지를 그대로 씁니다.
@@ -19,7 +18,7 @@ import { companyOfficesInclude, employeeOrgInclude } from "@/types";
  * (대신 이미지라 글자·링크는 눌리지 않습니다. 서명 HTML 이 이미지 전체를 명함 링크로 감쌉니다.)
  *
  * next/og(Satori)는 flexbox 하위 집합만 지원합니다. grid·gap 없이 flex 로만 짜세요.
- * prisma·폰트 fetch 때문에 Node 런타임이어야 합니다 — 라우트에서 runtime 을 지정합니다.
+ * 폰트 fetch 때문에 Node 런타임이어야 합니다 — 라우트에서 runtime 을 지정합니다.
  *
  * 국문·영문 라우트가 이 파일 하나를 함께 씁니다. 언어별로 파일을 나누면 레이아웃을
  * 한쪽만 고치는 순간 같은 명함이 두 모양이 됩니다.
@@ -150,12 +149,7 @@ function RoleLine({ parts, size, color }: { parts: string[]; size: number; color
  * 예외로 저장돼 다음 요청에서 되살아납니다. 없음은 null 로 돌려주고 판단은 밖에서 합니다.
  */
 async function renderCard(slug: string, lang: Lang): Promise<string | null> {
-  const employee = await prisma.employee.findUnique({
-    where: { slug },
-    include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
-    // 관계마다 SELECT 를 따로 보내지 않고 한 번에 조인합니다. (schema.prisma 의 relationJoins)
-    relationLoadStrategy: "join",
-  });
+  const employee = await employeeBySlug(slug);
   if (!employee || employee.status === "RESIGNED") return null;
 
   const { company } = employee;

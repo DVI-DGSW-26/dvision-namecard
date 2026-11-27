@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createSession, getSession } from "@/lib/auth";
+import { api, json } from "@/lib/api";
+import { createSession, getSession, lookupAccount } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import { prisma } from "@/lib/prisma";
 import { passwordChangeSchema } from "@/lib/validation";
 import { fieldErrors } from "@/lib/validation";
 
@@ -31,10 +31,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ errors: fieldErrors(parsed.error) }, { status: 422 });
   }
 
-  const employee = await prisma.employee.findUnique({
-    where: { id: session.employeeId },
-    select: { passwordHash: true, role: true },
-  });
+  const employee = await lookupAccount({ id: session.employeeId });
   if (!employee) {
     return NextResponse.json({ error: "없는 계정입니다." }, { status: 404 });
   }
@@ -49,14 +46,14 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    await prisma.employee.update({
-      where: { id: session.employeeId },
-      data: {
+    await api(
+      `/employees/${session.employeeId}/password`,
+      json("PUT", {
         passwordHash: await hashPassword(parsed.data.newPassword),
         // 초기 비밀번호를 벗어났습니다. 이걸 안 내리면 계속 변경 화면으로 돌아옵니다.
         mustChangePassword: false,
-      },
-    });
+      }),
+    );
   } catch {
     return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
   }

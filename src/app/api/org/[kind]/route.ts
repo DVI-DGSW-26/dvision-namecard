@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { guardOrgWrite, orgDelegate, orgWriteError, parseOrgBody } from "@/lib/org-mutate";
+import { guardOrgWrite, orgApi, orgWriteError, parseOrgBody } from "@/lib/org-mutate";
 import { invalidateOrgCache } from "@/lib/org-store";
-import { prisma } from "@/lib/prisma";
 
 type Context = { params: Promise<{ kind: string }> };
 
@@ -21,22 +20,9 @@ export async function POST(request: NextRequest, { params }: Context) {
   const parsed = parseOrgBody(guard.kind, body);
   if (!parsed.ok) return parsed.response;
 
-  // 사업장만 회사에 매답니다. Company 는 1행뿐이라 클라이언트가 보낼 값이 아닙니다.
-  let data: object = parsed.data;
-  if (guard.kind === "offices") {
-    const company = await prisma.company.findFirst({ select: { id: true } });
-    if (!company) {
-      return NextResponse.json({ error: "회사 정보가 없습니다." }, { status: 409 });
-    }
-    data = { ...parsed.data, companyId: company.id };
-  }
-
   try {
-    // 델리게이트마다 create 인자 타입이 달라 유니온으로는 좁혀지지 않습니다.
-    // parseOrgBody 가 kind 에 맞는 필드만 골라 주므로 여기서는 통과시킵니다.
-    const created = await (orgDelegate(guard.kind).create as (args: unknown) => Promise<{ id: string }>)({
-      data,
-    });
+    // 사업장을 회사(1행)에 매다는 건 서버가 합니다.
+    const created = await orgApi.create(guard.kind, parsed.data);
     invalidateOrgCache();
     return NextResponse.json(created, { status: 201 });
   } catch (cause) {

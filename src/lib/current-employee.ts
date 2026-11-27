@@ -1,12 +1,7 @@
+import { employeeById, employeeBySlug } from "@/lib/api";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import type { Role } from "@/lib/session-token";
-import {
-  companyOfficesInclude,
-  employeeOrgInclude,
-  type CompanyWithOffices,
-  type EmployeeWithOrg,
-} from "@/types";
+import type { CompanyWithOffices, EmployeeWithOrg } from "@/types";
 
 /**
  * "지금 편집할 대상" 을 정합니다. /edit 과 /edit/signature 가 같이 씁니다.
@@ -41,20 +36,11 @@ export async function resolveEditTarget(slugParam?: string): Promise<ResolveResu
   if (!otherSlug && !session.employeeId) return { kind: "no-self" };
 
   try {
-    /*
-     * 회사를 따로 조회하지 않고 직원에 붙여서 한 번에 읽습니다.
-     *
-     * 예전에는 employee 를 읽고 나서 company 를 또 읽었는데, DB 가 싱가포르에
-     * 있어 그 한 줄이 그대로 80ms 였습니다. Employee.companyId 는 not null 이라
-     * 직원이 있으면 회사는 반드시 딸려 옵니다. (공개 카드도 같은 방식입니다 —
-     * app/c/[slug]/profile.tsx 의 getProfile)
-     */
-    const employee = await prisma.employee.findUnique({
-      where: otherSlug ? { slug: otherSlug } : { id: session.employeeId! },
-      include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
-      // 관계마다 SELECT 를 따로 보내지 않고 한 번에 조인합니다. (schema.prisma 의 relationJoins)
-      relationLoadStrategy: "join",
-    });
+    // 회사는 명함 서버가 직원에 붙여서 한 번에 돌려줍니다. (공개 카드도 같은 방식입니다 —
+    // app/c/[slug]/profile.tsx 의 getProfile)
+    const employee = otherSlug
+      ? await employeeBySlug(otherSlug)
+      : await employeeById(session.employeeId!);
 
     if (!employee) return { kind: "not-found" };
 

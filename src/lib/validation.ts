@@ -77,34 +77,12 @@ export const passwordChangeSchema = z
   });
 
 /**
- * 표시용 합본 이름. 성·이름을 붙인 값입니다.
+ * 프로필 저장. 명함이 원본인 값만 받습니다.
  *
- * 직원 추가와 프로필 수정 두 경로가 같은 규칙을 쓰도록 여기 한 곳에 둡니다.
- * 예전에는 추가할 때만 붙여 만들고 수정할 때는 nameKo 를 직접 받았습니다. 그래서
- * 이름을 고쳐도 familyName/givenName 은 등록 당시 값 그대로 남았고, 그 둘로 만드는
- * vCard 의 N 필드가 실제 이름과 갈라졌습니다. (홍박사인데 주소록에는 홍길동)
+ * 이름·이메일·휴대전화는 인사 시스템이 원본이라 여기 없습니다. zod 는 모르는 키를
+ * 버리므로 폼이 같이 보내도 저장되지 않습니다.
  */
-export function fullNameKo(familyName: string, givenName: string): string {
-  return `${familyName}${givenName}`;
-}
-
 export const employeeProfileSchema = z.object({
-  /*
-   * 이름은 성·이름을 나눠 받습니다. nameKo 는 서버가 fullNameKo 로 만듭니다.
-   *
-   * 합쳐 받은 뒤 서버에서 쪼개면 두 글자 성(남궁·선우·제갈)에서 반드시 틀리고,
-   * 나눠 저장한 값을 안 고치면 vCard 이름이 옛날 이름으로 남습니다.
-   */
-  familyName: z
-    .string()
-    .trim()
-    .min(1, "성을 입력해 주세요.")
-    .max(10, "성이 너무 깁니다."),
-  givenName: z
-    .string()
-    .trim()
-    .min(1, "이름을 입력해 주세요.")
-    .max(10, "이름이 너무 깁니다."),
   /**
    * 영문명은 필수입니다.
    *
@@ -131,7 +109,7 @@ export const employeeProfileSchema = z.object({
     폼에는 처음부터 팀·파트 칸이 있었는데 이 스키마에만 없었습니다. zod 는 모르는
     키를 조용히 버리므로 저장 요청은 200 으로 끝나고 부서만 옛 값으로 남았습니다 —
     화면에서는 "저장했는데 안 바뀐다" 로만 보입니다. 폼에 있는 칸은 전부 여기 있어야
-    합니다. (직원 추가는 employeeCreateSchema 가 같은 값을 받습니다)
+    합니다. (인사 시스템 값인 이름·연락처는 예외 — 화면에서 잠겨 있습니다)
   */
   teamId: orgRef,
   partId: orgRef,
@@ -146,7 +124,6 @@ export const employeeProfileSchema = z.object({
   bio: optionalText(80, "소개"),
   bioEn: optionalText(120, "소개 영문"),
   telWork: phone,
-  telMobile: phone,
   /**
    * 휴대폰을 명함에 내보낼지. 본인이 정합니다.
    *
@@ -155,10 +132,6 @@ export const employeeProfileSchema = z.object({
    * 관리자도 켤 수 없었습니다. 기본값은 스키마와 같은 false 입니다.
    */
   mobilePublic: z.boolean(),
-  email: z.preprocess(
-    emptyToNull,
-    z.email({ message: "이메일 형식이 올바르지 않습니다." }),
-  ),
 })
   /*
     파트만 고르고 팀을 비우는 건 막습니다. 파트는 팀 아래에만 있어서 팀 없는 파트는
@@ -171,38 +144,7 @@ export const employeeProfileSchema = z.object({
   });
 
 /**
- * 직원 추가(관리자 전용).
- *
- * nameKo 를 받지 않고 성·이름을 따로 받습니다. vCard N 필드(`류;영균;;;`)가 둘을
- * 나눠 요구하는데, 합쳐 받은 뒤 서버에서 쪼개면 두 글자 성(남궁·선우·제갈)에서
- * 반드시 틀립니다. nameKo 는 서버가 둘을 이어 붙여 만듭니다.
- */
-export const employeeCreateSchema = z.object({
-  familyName: z.string().trim().min(1, "성을 입력해 주세요.").max(10, "성이 너무 깁니다."),
-  givenName: z.string().trim().min(1, "이름을 입력해 주세요.").max(10, "이름이 너무 깁니다."),
-  email: z.preprocess(emptyToNull, z.email({ message: "이메일 형식이 올바르지 않습니다." })),
-  rankId: orgRef,
-  // 부서는 팀·파트 2단계입니다. 관리자가 직원을 만들 때 정해 두면 본인이 안 골라도 됩니다.
-  teamId: orgRef,
-  partId: orgRef,
-  /**
-   * 공개 URL(/c/[slug])에 그대로 들어갑니다. 비우면 성에서 자동 생성합니다.
-   * 표에 없는 성이라 자동 생성이 안 되면 서버가 이 필드로 에러를 돌려줍니다.
-   */
-  slug: z.preprocess(
-    emptyToNull,
-    z
-      .string()
-      .regex(/^[a-z0-9]+$/, "주소는 영문 소문자와 숫자만 쓸 수 있습니다.")
-      .max(30, "주소가 너무 깁니다.")
-      .nullable(),
-  ),
-});
-
-export type EmployeeCreateInput = z.input<typeof employeeCreateSchema>;
-
-/**
- * 공개 주소(slug). 직원 추가와 관리자 수정이 같은 규칙을 씁니다.
+ * 공개 주소(slug). 관리자만 바꿉니다.
  *
  * 소문자·숫자만 받는 이유: /c/[slug] 에 그대로 들어가는 값이라 대문자나 한글이 섞이면
  * 메신저·메일 클라이언트가 URL 을 다르게 인코딩해 링크가 갈립니다.
@@ -215,13 +157,13 @@ const slugRule = z
   .max(30, "주소가 너무 깁니다.");
 
 /**
- * 관리자만 바꿀 수 있는 값 — 노출 여부(status)와 공개 주소(slug).
+ * 관리자만 바꿀 수 있는 값 — 공개 주소(slug)와 권한(role).
  *
  * 프로필 스키마(employeeProfileSchema)와 나눠 둔 이유: 저 스키마는 본인도 쓰기 때문에
- * 거기에 status 를 넣는 순간 직원이 자기 계정을 스스로 활성화할 수 있게 됩니다.
+ * 거기에 role 을 넣는 순간 직원이 자기 권한을 스스로 올릴 수 있게 됩니다.
+ * 재직 상태는 인사 시스템이 정해서 여기 없습니다.
  */
 export const employeeAdminSchema = z.object({
-  status: z.enum(["PENDING", "ACTIVE", "RESIGNED"], { message: "상태를 선택해 주세요." }),
   slug: slugRule,
   /**
    * 권한. 예전에는 어떤 공용 비밀번호로 들어왔느냐로 갈렸습니다.
@@ -232,25 +174,6 @@ export const employeeAdminSchema = z.object({
    */
   role: z.enum(["MEMBER", "ADMIN"], { message: "권한을 선택해 주세요." }),
 });
-
-/**
- * 여러 명 한꺼번에 처리.
- *
- * 상한을 두는 이유: 화면의 "이 페이지 전체 선택" 은 페이지 밖 선택을 유지하므로
- * 넘어오는 id 가 얼마든지 길어질 수 있습니다. 한 요청이 DB 를 오래 잡지 않게 막습니다.
- */
-export const employeeBulkSchema = z.discriminatedUnion("action", [
-  z.object({
-    action: z.literal("status"),
-    ids: z.array(z.string().max(40)).min(1, "대상을 선택해 주세요.").max(500, "한 번에 500명까지 처리할 수 있습니다."),
-    status: z.enum(["PENDING", "ACTIVE", "RESIGNED"], { message: "상태를 선택해 주세요." }),
-  }),
-  z.object({
-    action: z.literal("delete"),
-    ids: z.array(z.string().max(40)).min(1, "대상을 선택해 주세요.").max(500, "한 번에 500명까지 처리할 수 있습니다."),
-  }),
-]);
-export type EmployeeCreateValues = z.output<typeof employeeCreateSchema>;
 
 /**
  * 인증 뱃지 한 줄 → 문자열 배열. 국문·영문 칸이 같은 규칙을 씁니다.

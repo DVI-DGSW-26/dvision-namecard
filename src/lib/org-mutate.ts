@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { ApiError, api, json } from "@/lib/api";
 import { isOrgKind, orgItemSchema, type OrgKind } from "@/lib/org";
 import { fieldErrors } from "@/lib/validation";
 
@@ -11,7 +11,7 @@ import { fieldErrors } from "@/lib/validation";
  * 여기 모읍니다. 목록별로 다른 건 "어떤 컬럼을 쓰는가" 하나뿐입니다.
  */
 
-/** kind 별로 실제 저장할 필드를 고릅니다. 목록에 없는 컬럼을 넘기면 Prisma 가 거부합니다. */
+/** kind 별로 실제 저장할 필드를 고릅니다. 서버도 kind 에 없는 키는 버립니다. */
 function dataFor(kind: OrgKind, values: ReturnType<typeof orgItemSchema.parse>) {
   // 사업장은 nameEn 이 없고 우편번호·주소를 갖습니다. 회사는 1행뿐이라 companyId 는
   // 여기서 정하지 않고 라우트가 채웁니다.
@@ -32,23 +32,16 @@ function dataFor(kind: OrgKind, values: ReturnType<typeof orgItemSchema.parse>) 
   return base;
 }
 
-/** Prisma 클라이언트에서 kind 에 해당하는 델리게이트를 꺼냅니다. */
-function delegate(kind: OrgKind) {
-  switch (kind) {
-    case "ranks":
-      return prisma.rank;
-    case "executiveTitles":
-      return prisma.executiveTitle;
-    case "positions":
-      return prisma.position;
-    case "teams":
-      return prisma.team;
-    case "parts":
-      return prisma.part;
-    case "offices":
-      return prisma.office;
-  }
-}
+/**
+ * 명함 서버의 조직 목록 쓰기. kind 이름이 서버 경로와 같습니다(/org/{kind}).
+ * 사업장의 회사 연결은 서버가 합니다 — 회사는 1행뿐이라 클라이언트가 보낼 값이 아닙니다.
+ */
+export const orgApi = {
+  create: (kind: OrgKind, data: object) => api<{ id: string }>(`/org/${kind}`, json("POST", data)),
+  update: (kind: OrgKind, id: string, data: object) =>
+    api(`/org/${kind}/${encodeURIComponent(id)}`, json("PATCH", data)),
+  remove: (kind: OrgKind, id: string) => api(`/org/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" }),
+};
 
 type Guard = { ok: true; kind: OrgKind } | { ok: false; response: NextResponse };
 
@@ -95,24 +88,22 @@ export function parseOrgBody(kind: OrgKind, body: unknown) {
 }
 
 /**
- * 저장 중 터지는 Prisma 오류를 사용자에게 보여 줄 응답으로 바꿉니다.
+ * 명함 서버의 오류를 사용자에게 보여 줄 응답으로 바꿉니다.
  *
- * P2002 unique — 같은 이름이 이미 있습니다. 파트는 (팀, 이름) 조합이 유일합니다.
- * P2003 외래키 — 없는 팀 id 를 넘겼습니다.
- * P2025 없는 행 — 다른 창에서 이미 지운 항목입니다.
+ * 409 unique — 같은 이름이 이미 있습니다. 파트는 (팀, 이름) 조합이 유일합니다.
+ * 422 외래키 — 없는 팀 id 를 넘겼습니다.
+ * 404 없는 행 — 다른 창에서 이미 지운 항목입니다.
  */
 export function orgWriteError(cause: unknown): NextResponse {
-  const code = typeof cause === "object" && cause !== null && "code" in cause ? cause.code : null;
-  if (code === "P2002") {
+  const status = cause instanceof ApiError ? cause.status : null;
+  if (status === 409) {
     return NextResponse.json({ errors: { name: "같은 이름이 이미 있습니다." } }, { status: 409 });
   }
-  if (code === "P2003") {
+  if (status === 422) {
     return NextResponse.json({ errors: { teamId: "없는 팀입니다." } }, { status: 422 });
   }
-  if (code === "P2025") {
+  if (status === 404) {
     return NextResponse.json({ error: "이미 삭제된 항목입니다." }, { status: 404 });
   }
   return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
 }
-
-export { delegate as orgDelegate };

@@ -1,5 +1,5 @@
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { api, ensureCards, json } from "../src/lib/api";
+import type { AccountLookup } from "../src/lib/auth";
 import { generatePassword, hashPassword } from "../src/lib/password";
 
 /**
@@ -11,21 +11,12 @@ import { generatePassword, hashPassword } from "../src/lib/password";
  * 하나뿐입니다 — 관리자가 아직 아무도 없어서 그 화면에 들어갈 수 없을 때.
  * (관리자가 0명이 되는 걸 서버가 막고 있으므로, 정상 운영 중에는 생기지 않습니다)
  *
- * 이메일로 사람을 찾습니다. 없는 이메일이면 만들지 않고 멈춥니다 — 직원 등록은
- * 관리 화면의 일이고, 여기서 만들 수 있게 하면 그게 곧 뒷문이 됩니다.
+ * 인사 시스템에 등록된 이메일이어야 합니다. 직원은 인사가 만들고, 여기서는 만들지
+ * 않습니다. 명함 서버(NAMECARD_API_URL)가 떠 있어야 합니다.
  */
-
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL 환경변수가 설정되지 않았습니다. .env 를 확인하세요.");
-}
-
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
-
 async function main() {
   const args = process.argv.slice(2);
   const email = args.find((a) => !a.startsWith("--"))?.trim().toLowerCase();
-  // 기본은 관리자입니다. 이 스크립트를 쓰는 상황 자체가 "관리자가 없다" 이기 때문입니다.
   const asMember = args.includes("--member");
 
   if (!email) {
@@ -33,32 +24,36 @@ async function main() {
     process.exit(1);
   }
 
-  const employee = await prisma.employee.findUnique({
-    where: { email },
-    select: { id: true, nameKo: true, status: true },
-  });
+  const lookup = () =>
+    api<AccountLookup>(`/auth/lookup?${new URLSearchParams({ email })}`).catch(() => null);
 
+  let employee = await lookup();
   if (!employee) {
-    console.error(`${email} 로 등록된 직원이 없습니다. 임직원 관리에서 먼저 등록해 주세요.`);
+    console.error(`${email} 로 등록된 직원이 인사 시스템에 없습니다.`);
     process.exit(1);
   }
   if (employee.status === "RESIGNED") {
-    console.error(`${employee.nameKo} 님은 퇴사 처리 상태라 로그인할 수 없습니다.`);
+    console.error(`${email} 은(는) 인사 시스템에서 퇴사 처리된 직원이라 로그인할 수 없습니다.`);
     process.exit(1);
+  }
+  // 인사에 막 등록돼 명함이 아직 없으면 만듭니다. 비밀번호·권한은 명함 행에 저장됩니다.
+  if (!employee.slug) {
+    await ensureCards();
+    employee = (await lookup())!;
   }
 
   const password = generatePassword();
-  await prisma.employee.update({
-    where: { id: employee.id },
-    data: {
-      passwordHash: await hashPassword(password),
-      mustChangePassword: true,
-      role: asMember ? "MEMBER" : "ADMIN",
-    },
-  });
+  await api(
+    `/employees/${employee.id}/password`,
+    json("PUT", { passwordHash: await hashPassword(password), mustChangePassword: true }),
+  );
+  await api(
+    `/employees/${employee.id}/admin`,
+    json("PATCH", { slug: employee.slug, role: asMember ? "MEMBER" : "ADMIN" }),
+  );
 
   console.log("");
-  console.log(`  ${employee.nameKo} (${email})`);
+  console.log(`  ${email}`);
   console.log(`  권한     ${asMember ? "직원" : "관리자"}`);
   console.log(`  비밀번호 ${password}`);
   console.log("");
@@ -66,11 +61,7 @@ async function main() {
   console.log("");
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

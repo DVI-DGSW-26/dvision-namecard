@@ -91,14 +91,6 @@ export function isOrgKind(value: string): value is OrgKind {
 }
 
 /**
- * 새로 만든 직원에게 기본으로 붙는 직책.
- *
- * 이름으로 찾습니다 — 목록이 테이블이라 고정 id 가 없고, 관리자가 이 항목을
- * 지웠을 수도 있습니다. 못 찾으면 직책 없이 만들고 나중에 고르게 둡니다.
- */
-export const DEFAULT_POSITION_NAME = "팀원";
-
-/**
  * 목록 항목 입력값.
  *
  * 영문은 비워 둘 수 있습니다. 관리자가 한글 명칭부터 만들어 놓고 영문은 나중에

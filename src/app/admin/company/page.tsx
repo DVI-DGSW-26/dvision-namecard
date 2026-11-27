@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { companyOfficesInclude } from "@/types";
+import { apiOrNull } from "@/lib/api";
+import type { CompanyWithOffices } from "@/types";
 import { CompanyEditor } from "./CompanyEditor";
 
 /**
@@ -19,8 +19,8 @@ export default async function AdminCompanyPage() {
   if (!session) redirect("/gate?next=/admin/company");
   if (session.role !== "admin") redirect("/edit");
 
-  // Company 는 1행만 존재하는 모델입니다.
-  const company = await prisma.company.findFirst({ include: companyOfficesInclude });
+  // Company 는 1행만 존재합니다. 명함 서버의 첫 마이그레이션(V2__seed)이 만듭니다.
+  const company = await apiOrNull<CompanyWithOffices>("/company");
 
   return (
     <AppShell role={session.role} current="/admin/company" title="회사 정보">
@@ -28,15 +28,11 @@ export default async function AdminCompanyPage() {
         {company ? (
           <CompanyEditor company={company} />
         ) : (
-          /*
-            회사가 아직 없는 새 환경입니다. 여기서 만들게 하지 않는 이유: 회사 생성은
-            첫 직원 등록과 함께 일어나는 부트스트랩 절차라(api/gate), 두 곳에서 만들 수
-            있게 하면 회사가 둘이 되는 길이 생깁니다.
-          */
+          // 명함 서버 마이그레이션이 회사 1행을 넣습니다. 여기 오면 서버 DB 를 확인해야 합니다.
           <div className="py-block text-center">
             <h2 className="text-base font-semibold">회사 정보가 없습니다</h2>
             <p className="mt-group text-sm text-fg-muted">
-              임직원 관리에서 첫 직원을 등록하면 회사 정보가 만들어집니다.
+              명함 서버의 DB 마이그레이션이 적용됐는지 확인해 주세요.
             </p>
           </div>
         )}

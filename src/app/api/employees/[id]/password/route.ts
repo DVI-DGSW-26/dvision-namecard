@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { generatePassword, hashPassword } from "@/lib/password";
-import { prisma } from "@/lib/prisma";
+import { api, employeeById, json } from "@/lib/api";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -26,10 +26,7 @@ export async function POST(_request: NextRequest, { params }: Context) {
 
   const { id } = await params;
 
-  const employee = await prisma.employee.findUnique({
-    where: { id },
-    select: { email: true, nameKo: true, status: true },
-  });
+  const employee = await employeeById(id);
   if (!employee) {
     return NextResponse.json({ error: "없는 직원입니다." }, { status: 404 });
   }
@@ -37,7 +34,7 @@ export async function POST(_request: NextRequest, { params }: Context) {
   // 만들어 전달하는 사고를 여기서 막습니다.
   if (employee.status === "RESIGNED") {
     return NextResponse.json(
-      { error: "퇴사 처리된 직원입니다. 상태를 되돌린 뒤에 발급해 주세요." },
+      { error: "인사 시스템에서 퇴사 처리된 직원입니다." },
       { status: 409 },
     );
   }
@@ -45,12 +42,12 @@ export async function POST(_request: NextRequest, { params }: Context) {
   const password = generatePassword();
 
   try {
-    await prisma.employee.update({
-      where: { id },
+    await api(
+      `/employees/${encodeURIComponent(id)}/password`,
       // 강제 변경(mustChangePassword)은 켜지 않습니다 — 운영자가 변경 화면 자체를
       // 없애기로 했습니다. 발급받은 비번이 곧 그 사람 비번입니다.
-      data: { passwordHash: await hashPassword(password), mustChangePassword: false },
-    });
+      json("PUT", { passwordHash: await hashPassword(password), mustChangePassword: false }),
+    );
   } catch {
     return NextResponse.json({ error: "발급하지 못했습니다." }, { status: 500 });
   }

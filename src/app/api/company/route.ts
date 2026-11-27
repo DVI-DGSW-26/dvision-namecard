@@ -2,7 +2,7 @@ import { revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { CARDS_TAG } from "@/lib/card-cache";
-import { prisma } from "@/lib/prisma";
+import { ApiError, api, json } from "@/lib/api";
 import { companyProfileSchema, fieldErrors } from "@/lib/validation";
 
 /**
@@ -33,13 +33,15 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    // Company 는 1행만 존재하는 모델입니다.
-    const company = await prisma.company.findFirst({ select: { id: true } });
-    if (!company) {
-      return NextResponse.json({ error: "회사 정보가 없습니다." }, { status: 404 });
+    // Company 는 1행뿐이라 서버가 id 없이 그 행을 고칩니다.
+    try {
+      await api("/company", json("PATCH", parsed.data));
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 404) {
+        return NextResponse.json({ error: "회사 정보가 없습니다." }, { status: 404 });
+      }
+      throw cause;
     }
-
-    await prisma.company.update({ where: { id: company.id }, data: parsed.data });
 
     // 회사 값(주소·팩스·대표번호)은 전 직원의 명함 이미지에 찍힙니다. 한 명씩 지울
     // 수 없으니 카드 전체에 걸어 둔 태그를 지웁니다.

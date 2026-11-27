@@ -12,8 +12,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Prisma 가 생성하는 코드는 린트 대상이 아닙니다.
-    "src/generated/**",
   ]),
   {
     rules: {

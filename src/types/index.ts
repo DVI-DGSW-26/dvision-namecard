@@ -1,72 +1,100 @@
 /**
- * 앱 공용 타입.
+ * 앱 공용 타입. 명함 서버(dvision-namecard-server)가 돌려주는 모양입니다.
  *
- * Prisma 7 은 모델 타입을 `CompanyModel` 처럼 Model 접미사로 내보냅니다.
- * 앱 코드 전반에서 짧은 이름을 쓰기 위해 여기서 한 번만 별칭을 답니다.
+ * 예전 Prisma 모델과 키를 맞춰 두었습니다 — 명함·서명·vCard 를 그리는 코드가 이 타입을
+ * 그대로 받습니다. 서버 응답을 바꿀 때는 여기와 명함 서버의 SQL 별칭을 함께 고치세요.
  */
-import type {
-  CompanyModel,
-  EmployeeModel,
-  ExecutiveTitleModel,
-  OfficeModel,
-  PartModel,
-  PositionModel,
-  RankModel,
-  TeamModel,
-} from "@/generated/prisma/models";
+import type { ExecutiveTitleItem, OfficeItem, OrgItem, PartItem } from "@/lib/org";
 
-export type {
-  CompanyModel as Company,
-  OfficeModel as Office,
-  EmployeeModel as Employee,
-  ExecutiveTitleModel as ExecutiveTitle,
-  PartModel as Part,
-  PositionModel as Position,
-  RankModel as Rank,
-  TeamModel as Team,
-  ProfileViewModel as ProfileView,
-} from "@/generated/prisma/models";
+/**
+ * 재직 상태. 인사 시스템이 정하고 명함에서는 바꾸지 않습니다.
+ * 인사의 휴직(ON_LEAVE)은 ACTIVE 로 옵니다 — 휴직 중에도 명함은 살아 있습니다.
+ */
+export type Status = "ACTIVE" | "RESIGNED";
 
-export type { Status } from "@/generated/prisma/enums";
+export type Rank = OrgItem;
+export type ExecutiveTitle = ExecutiveTitleItem;
+export type Position = OrgItem;
+export type Team = OrgItem;
+export type Part = PartItem;
+export type Office = OfficeItem & { companyId: string };
+
+export type Company = {
+  id: string;
+  nameKo: string;
+  nameEn: string;
+  tel: string;
+  fax: string | null;
+  homepageUrl: string | null;
+  homepageUrlEn: string | null;
+  linkedinUrl: string | null;
+  youtubeUrl: string | null;
+  youtubeUrlEn: string | null;
+  instagramUrl: string | null;
+  brandColor: string;
+  tagline: string | null;
+  taglineEn: string | null;
+  industry: string | null;
+  industryEn: string | null;
+  certifications: string[];
+  certificationsEn: string[];
+};
+
+export type Employee = {
+  /** 인사 시스템의 직원 id(숫자)를 문자열로 바꾼 값입니다. */
+  id: string;
+  slug: string;
+  role: "MEMBER" | "ADMIN";
+  mustChangePassword: boolean;
+  /** 비밀번호를 발급받았는지. 해시는 로그인 조회(/auth/lookup)로만 나옵니다. */
+  hasPassword: boolean;
+
+  // ── 인사 시스템이 원본인 값. 명함에서 고칠 수 없습니다. ──
+  nameKo: string;
+  /** 인사의 이름 한 칸을 서버가 나눈 값입니다(vCard N 필드용). */
+  familyName: string;
+  givenName: string;
+  email: string | null;
+  telMobile: string | null;
+  status: Status;
+
+  // ── 명함이 원본인 값 ──
+  nameEn: string | null;
+  rankId: string | null;
+  executiveTitleId: string | null;
+  positionId: string | null;
+  teamId: string | null;
+  partId: string | null;
+  credential: string | null;
+  credentialEn: string | null;
+  bio: string | null;
+  bioEn: string | null;
+  telWork: string | null;
+  mobilePublic: boolean;
+  photoUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 /**
  * 조직 목록까지 붙여서 읽은 직원.
  *
- * 명함·서명·vCard 는 직위·직책·부서의 "이름" 을 찍습니다. Employee 만으로는 rankId
- * 같은 id 밖에 없어서, 이 관계들을 include 해서 읽어야 합니다. 렌더 쪽 함수들이
- * 전부 이 타입을 받으므로, include 를 빠뜨리면 컴파일에서 걸립니다.
+ * 명함·서명·vCard 는 직위·직책·부서의 "이름" 을 찍습니다. 렌더 쪽 함수들이 전부 이
+ * 타입을 받습니다.
  */
-export type EmployeeWithOrg = EmployeeModel & {
-  rank: RankModel | null;
-  executiveTitle: ExecutiveTitleModel | null;
-  position: PositionModel | null;
-  team: TeamModel | null;
-  part: PartModel | null;
+export type EmployeeWithOrg = Employee & {
+  rank: Rank | null;
+  executiveTitle: ExecutiveTitle | null;
+  position: Position | null;
+  team: Team | null;
+  part: Part | null;
 };
 
-/** 위 타입을 얻기 위한 Prisma include. 조회하는 쪽마다 다시 적지 않도록 모아 둡니다. */
-export const employeeOrgInclude = {
-  rank: true,
-  executiveTitle: true,
-  position: true,
-  team: true,
-  part: true,
-} as const;
-
 /**
- * 사업장까지 붙여서 읽은 회사.
- *
- * 명함·서명·vCard 는 주소를 회사에서 가져오는데, 주소가 Office 표로 빠지면서
- * Company 만으로는 그릴 수 없게 됐습니다. 이 세 곳이 전부 이 타입을 받습니다.
+ * 사업장까지 붙여서 읽은 회사. 명함·서명·vCard 가 주소를 여기서 가져옵니다.
+ * 사업장은 관리 화면에서 정한 순서대로 옵니다.
  */
-export type CompanyWithOffices = CompanyModel & { offices: OfficeModel[] };
+export type CompanyWithOffices = Company & { offices: Office[] };
 
-/**
- * 사업장은 관리 화면에서 정한 순서대로 나옵니다. 명함에 찍히는 순서이기도 합니다.
- *
- * `as const` 를 붙이지 않는 이유: orderBy 배열이 readonly 가 되면 Prisma 의
- * 인자 타입(변경 가능한 배열)에 맞지 않아 include 자체가 거부됩니다.
- */
-export const companyOfficesInclude = {
-  offices: { orderBy: [{ sortOrder: "asc" as const }, { name: "asc" as const }] },
-};
+/** 명함 한 장을 그리는 데 필요한 전부. 서버가 한 번에 돌려줍니다. */
+export type EmployeeFull = EmployeeWithOrg & { company: CompanyWithOffices };

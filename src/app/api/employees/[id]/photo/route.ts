@@ -2,9 +2,9 @@ import { revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { cardTag } from "@/lib/card-cache";
-import { photoUrlFor, processPhoto } from "@/lib/photo";
+import { api, employeeById } from "@/lib/api";
+import { processPhoto } from "@/lib/photo";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, isAcceptedType } from "@/lib/photo-limits";
-import { prisma } from "@/lib/prisma";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest, { params }: Context) {
   const allowed = await guard(id);
   if (!allowed.ok) return allowed.response;
 
-  const employee = await prisma.employee.findUnique({ where: { id }, select: { slug: true } });
+  const employee = await employeeById(id);
   if (!employee) {
     return NextResponse.json({ error: "없는 직원입니다." }, { status: 404 });
   }
@@ -77,16 +77,12 @@ export async function POST(request: NextRequest, { params }: Context) {
   }
 
   try {
-    const saved = await prisma.employeePhoto.upsert({
-      where: { employeeId: id },
-      update: { data: processed.data, mimeType: processed.mimeType },
-      create: { employeeId: id, data: processed.data, mimeType: processed.mimeType },
-      select: { updatedAt: true },
+    // 카드가 보는 건 photoUrl 뿐입니다. 서버가 갱신 시각을 붙여 돌려줘 옛 사진이 캐시에 남지 않습니다.
+    const { photoUrl } = await api<{ photoUrl: string }>(`/employees/${encodeURIComponent(id)}/photo`, {
+      method: "PUT",
+      headers: { "Content-Type": processed.mimeType },
+      body: processed.data,
     });
-
-    // 카드가 보는 건 이 주소뿐입니다. 갱신 시각을 붙여 옛 사진이 캐시에 남지 않게 합니다.
-    const photoUrl = photoUrlFor(employee.slug, saved.updatedAt);
-    await prisma.employee.update({ where: { id }, data: { photoUrl } });
 
     revalidateTag(cardTag(employee.slug), { expire: 0 });
     return NextResponse.json({ ok: true, photoUrl });
@@ -100,15 +96,14 @@ export async function DELETE(_request: NextRequest, { params }: Context) {
   const allowed = await guard(id);
   if (!allowed.ok) return allowed.response;
 
-  const employee = await prisma.employee.findUnique({ where: { id }, select: { slug: true } });
+  const employee = await employeeById(id);
   if (!employee) {
     return NextResponse.json({ error: "없는 직원입니다." }, { status: 404 });
   }
 
   try {
     // 사진이 없어도 성공으로 답합니다 — 두 번 눌렀을 때 오류가 뜰 이유가 없습니다.
-    await prisma.employeePhoto.deleteMany({ where: { employeeId: id } });
-    await prisma.employee.update({ where: { id }, data: { photoUrl: null } });
+    await api(`/employees/${encodeURIComponent(id)}/photo`, { method: "DELETE" });
 
     revalidateTag(cardTag(employee.slug), { expire: 0 });
     return NextResponse.json({ ok: true });

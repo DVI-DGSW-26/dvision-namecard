@@ -26,7 +26,7 @@ const SIZE = 512;
 /**
  * 저장할 형태.
  *
- * Buffer 가 아니라 Uint8Array 인 이유: Prisma 의 Bytes 는 Uint8Array<ArrayBuffer> 를
+ * Buffer 가 아니라 Uint8Array 인 이유: fetch 본문(BodyInit)은 Uint8Array<ArrayBuffer> 를
  * 요구하는데, Buffer 의 backing buffer 타입이 더 넓어서 그대로는 들어가지 않습니다.
  */
 export type ProcessedPhoto = { data: Uint8Array<ArrayBuffer>; mimeType: string };
@@ -63,16 +63,6 @@ export async function processPhoto(input: Buffer): Promise<ProcessedPhoto | null
     // 이미지가 아니거나 깨진 파일입니다. 부르는 쪽이 422 로 답합니다.
     return null;
   }
-}
-
-/**
- * 사진을 내주는 공개 주소.
- *
- * 뒤에 갱신 시각을 붙입니다. 이게 없으면 사진을 바꿔도 브라우저와 중간 캐시가
- * 옛 사진을 계속 보여 줍니다 — 주소가 그대로이기 때문입니다.
- */
-export function photoUrlFor(slug: string, updatedAt: Date): string {
-  return `/c/${encodeURIComponent(slug)}/photo?v=${updatedAt.getTime()}`;
 }
 
 /**

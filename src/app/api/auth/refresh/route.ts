@@ -15,7 +15,7 @@ import { clearSsoSession, renewSsoSession, setSsoSession } from "@/lib/sso-sessi
  * 살아 있으면 화면 없이 돌아옵니다. 다녀온 직후(dvi_sso_back) 또 실패하면 다시
  * 보내지 않고 게이트에 안내를 띄웁니다 — 무한 반복 방지.
  *
- * prisma 를 쓰므로 Node 런타임입니다 (Route Handler 기본값).
+ * Node 런타임입니다 (Route Handler 기본값).
  */
 
 export async function GET(req: NextRequest) {

@@ -24,7 +24,7 @@ import { findOrLinkEmployee } from "./sso";
  * refresh token 이 없으므로 12시간/30일 세션 그대로입니다. 여기는 SSO 로 들어온
  * 세션만 다룹니다.
  *
- * prisma 를 쓰므로 Node 런타임 전용입니다. proxy(Edge)는 lib/oidc.ts 의 쿠키 이름만 씁니다.
+ * 명함 서버를 부르므로 Node 런타임 전용입니다. proxy(Edge)는 lib/oidc.ts 의 쿠키 이름만 씁니다.
  */
 
 /** 토큰 엔드포인트 응답 중 쓰는 것 */
@@ -58,13 +58,9 @@ export async function ssoAccount(
   }
   if (!claims.sub) return { ok: false, message: "계정 식별자가 없습니다." };
 
-  /* 명함 연결 — 권한 확인이 끝난 뒤에만 계정을 만듭니다 */
-  const auth = await findOrLinkEmployee(
-    claims.sub,
-    String(claims.email || "").toLowerCase(),
-    claims.name || claims.preferred_username || "",
-  );
-  if (!auth) return { ok: false, message: "명함 계정을 연결하지 못했습니다. 관리자에게 문의해주세요." };
+  /* 명함 연결 — 인사 이메일로 찾습니다. 퇴사 처리도 여기서 걸립니다 */
+  const auth = await findOrLinkEmployee(String(claims.email || ""));
+  if (!auth) return { ok: false, message: "인사 시스템에서 직원 정보를 찾지 못했습니다. 관리팀에 문의해주세요." };
   return { ok: true, auth };
 }
 

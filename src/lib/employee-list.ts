@@ -16,7 +16,7 @@ export const listQuerySchema = z.object({
   q: z.string().trim().max(100).default(""),
   /** 부서 필터는 팀 단위입니다. 값은 팀 id 입니다. */
   teamId: z.string().trim().max(40).default(""),
-  status: z.enum(["PENDING", "ACTIVE", "RESIGNED"]).optional(),
+  status: z.enum(["ACTIVE", "RESIGNED"]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(PAGE_SIZE),
 });

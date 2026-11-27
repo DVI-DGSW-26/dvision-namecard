@@ -14,11 +14,11 @@ import { markSsoReturn, setSsoSession, ssoAccount, type TokenResponse } from "@/
  *
  * 검증(state · iss · aud · nonce · exp · employee 롤)을 통과하면 기존 세션
  * 쿠키(dvi_session)를 발급합니다 — 이후 화면·권한 검사 코드는 SSO 를 모릅니다.
- * 명함 연결은 lib/sso.ts 가 합니다 (sub → 이메일 → 생성).
+ * 명함 연결은 lib/sso.ts 가 합니다 (인사 이메일).
  *
  * 세션은 15분짜리이고 refresh token 으로 연장합니다 (lib/sso-session.ts).
  *
- * prisma 를 쓰므로 Node 런타임입니다 (Route Handler 기본값).
+ * Node 런타임입니다 (Route Handler 기본값).
  */
 
 function fail(req: NextRequest, message: string) {

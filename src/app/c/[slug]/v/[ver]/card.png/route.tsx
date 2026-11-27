@@ -12,7 +12,7 @@ import { cardImageResponse } from "@/lib/card-image";
  * 번호 없는 /c/[slug]/card.png 도 그대로 살아 있습니다. 이미 나간 서명들이 그 주소를
  * 쓰고 있어서 지우면 그동안 보낸 메일의 명함이 전부 깨집니다.
  *
- * prisma·폰트 fetch 때문에 Node 런타임이어야 합니다.
+ * 폰트 fetch 때문에 Node 런타임이어야 합니다.
  */
 export const runtime = "nodejs";
 

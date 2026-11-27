@@ -5,8 +5,7 @@ import { notFound } from "next/navigation";
 import { ProfileCard, toProfileCardData } from "@/components/ProfileCard";
 import { LANG_LABEL, LANGS, cardName, cardPath, type Lang } from "@/lib/lang";
 import { roleParts } from "@/lib/org";
-import { prisma } from "@/lib/prisma";
-import { companyOfficesInclude, employeeOrgInclude } from "@/types";
+import { employeeBySlug } from "@/lib/api";
 
 /**
  * 공개 프로필의 알맹이. /c/[slug](국문)과 /c/[slug]/en(영문)이 함께 씁니다.
@@ -27,12 +26,7 @@ import { companyOfficesInclude, employeeOrgInclude } from "@/types";
  * 합니다. (이미지는 성격이 달라 lib/card-image.tsx 에서 따로 캐시합니다)
  */
 export const getProfile = cache(async (slug: string) => {
-  const employee = await prisma.employee.findUnique({
-    where: { slug },
-    include: { company: { include: companyOfficesInclude }, ...employeeOrgInclude },
-    // 관계마다 SELECT 를 따로 보내지 않고 한 번에 조인합니다. (schema.prisma 의 relationJoins)
-    relationLoadStrategy: "join",
-  });
+  const employee = await employeeBySlug(slug);
 
   // RESIGNED 는 링크를 알아도 열리지 않아야 합니다.
   if (!employee || employee.status === "RESIGNED") return null;
