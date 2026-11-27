@@ -140,12 +140,12 @@ export function SignaturePanel({
   }[status];
 
   return (
-    <div className="flex flex-col gap-block">
+    <div className="flex flex-col gap-group">
       <section>
         <div className="flex flex-wrap items-center justify-between gap-group">
           <div>
-            <h2 className="text-title">미리보기</h2>
-            <p className="mt-tight text-caption text-sub-text">
+            <h2 className="text-base font-semibold">미리보기</h2>
+            <p className="mt-tight text-xs text-fg-muted">
               실제 메일에 붙는 모습입니다. 값을 바꾸려면 프로필 편집에서 수정하세요.
             </p>
           </div>
@@ -153,7 +153,7 @@ export function SignaturePanel({
           <button
             type="button"
             onClick={handleCopy}
-            className="h-12 w-full rounded-card bg-primary px-block text-body-bold text-white transition-colors hover:bg-primary-hover sm:w-auto"
+            className="h-10 w-full rounded-md bg-brand px-4 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover sm:w-auto"
           >
             {multi ? `${TAB_LABEL[current.lang]} 서명 복사` : "서명 복사"}
           </button>
@@ -168,7 +168,7 @@ export function SignaturePanel({
           미리보기와 복사 대상 하나뿐이라 그만한 장치가 필요 없습니다.
         */}
         {multi ? (
-          <div role="group" aria-label="서명 언어" className="mt-section flex flex-wrap gap-tight">
+          <div role="group" aria-label="서명 언어" className="mt-group flex flex-wrap gap-sibling">
             {variants.map((variant) => {
               const active = variant.lang === current.lang;
               return (
@@ -181,12 +181,12 @@ export function SignaturePanel({
                     setStatus("idle");
                   }}
                   aria-pressed={active}
-                  // 활성 표시는 색이 아니라 굵기와 테두리로 냅니다. primary 예산은 복사 버튼 몫입니다.
+                  // 필터 칩 모양입니다(DVISION 공통 기준 6.4): 고른 칩만 brand 로 채웁니다.
                   className={[
-                    "rounded-card border px-group py-tight text-caption transition-colors",
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                     active
-                      ? "border-text text-caption-bold text-text"
-                      : "border-border text-sub-text hover:text-text",
+                      ? "border-brand bg-brand text-on-brand"
+                      : "border-line text-fg-muted hover:bg-surface-2 hover:text-fg",
                   ].join(" ")}
                 >
                   {TAB_LABEL[variant.lang]} 서명
@@ -195,12 +195,12 @@ export function SignaturePanel({
             })}
           </div>
         ) : (
-          <p className="mt-section text-caption text-sub-text">
+          <p className="mt-section text-xs text-fg-muted">
             프로필 편집에서 영문명을 채우면 영문 서명 탭이 생깁니다.
           </p>
         )}
 
-        <p className="mt-group text-caption text-sub-text">{message}</p>
+        <p className="mt-group text-xs text-fg-muted">{message}</p>
 
         {/*
           서버가 만든 서명 HTML 을 그대로 렌더합니다. 이 문자열은 renderSignature() 가
@@ -209,33 +209,33 @@ export function SignaturePanel({
           바깥에 흰 배경과 테두리를 두는 건 미리보기 장식일 뿐입니다. 복사되는 것은
           div 안쪽 문자열이지 이 테두리가 아닙니다.
         */}
-        <div className="mt-section overflow-x-auto rounded-card border border-border bg-bg p-group sm:p-section">
+        <div className="mt-group overflow-x-auto rounded-lg border border-line bg-surface p-group sm:p-section">
           <div dangerouslySetInnerHTML={{ __html: current.html }} />
         </div>
       </section>
 
-      <section className="border-t border-border pt-block">
-        <h2 className="text-title">설치 방법</h2>
-        <p className="mt-tight text-caption text-sub-text">
+      <section className="rounded-xl border border-edge bg-surface p-5">
+        <h2 className="text-base font-semibold">설치 방법</h2>
+        <p className="mt-tight text-xs text-fg-muted">
           쓰시는 메일 프로그램을 골라 따라 하세요.
         </p>
 
-        <div className="mt-section flex flex-col gap-sibling">
+        <div className="mt-group flex flex-col gap-sibling">
           {GUIDES.map((guide) => {
             const open = openGuide === guide.id;
             return (
-              <div key={guide.id} className="rounded-card border border-border">
+              <div key={guide.id} className="rounded-lg border border-line">
                 <button
                   type="button"
                   onClick={() => setOpenGuide(open ? "" : guide.id)}
                   aria-expanded={open}
-                  className="flex w-full items-center justify-between px-group py-group text-left text-body-bold"
+                  className="flex h-12 w-full items-center justify-between rounded-lg px-4 text-left text-sm font-semibold text-fg hover:bg-surface-2"
                 >
                   {guide.label}
-                  <span className="text-caption text-sub-text">{open ? "닫기" : "열기"}</span>
+                  <span className="text-xs text-fg-muted">{open ? "닫기" : "열기"}</span>
                 </button>
                 {open ? (
-                  <div className="border-t border-border px-group py-section sm:px-block">
+                  <div className="border-t border-line p-4">
                     {/*
                       복사 → 설정 열기 순서로 눌러야 합니다. 설정은 새 탭에서 열리므로
                       클립보드 내용은 그대로 유지됩니다.
@@ -245,18 +245,18 @@ export function SignaturePanel({
                         href={guide.settingsUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-1 mb-2 rounded-card border border-black px-group py-sibling text-caption-bold text-primary hover:border-text"
+                        className="inline-flex h-9 items-center rounded-md border border-line-strong bg-surface px-3 text-xs font-medium text-brand-fg transition-colors hover:bg-surface-2"
                       >
                         설정 열기 (새 탭) →
                       </a>
                     ) : null}
-                    <ol className="flex mt-3 list-decimal flex-col gap-sibling pl-group text-body text-sub-text">
+                    <ol className="mt-3 flex list-decimal flex-col gap-sibling pl-group text-sm text-fg-muted">
                       {guide.steps.map((step) => (
                         <li key={step}>{step}</li>
                       ))}
                     </ol>
                     {guide.note ? (
-                      <p className="mt-section text-caption text-sub-text">{guide.note}</p>
+                      <p className="mt-section text-xs text-fg-muted">{guide.note}</p>
                     ) : null}
                   </div>
                 ) : null}
@@ -266,14 +266,14 @@ export function SignaturePanel({
         </div>
 
         {multi ? (
-          <p className="mt-section text-caption text-sub-text">
+          <p className="mt-section text-xs text-fg-muted">
             국문과 영문을 둘 다 쓰시려면 메일 프로그램에서 서명을 두 개 만들고, 위 탭을
             바꿔 가며 각각 복사해 붙여넣으세요. 프로필을 고친 뒤에는 두 개 다 교체해야
             합니다.
           </p>
         ) : null}
 
-        <p className="mt-section text-caption text-sub-text">
+        <p className="mt-section text-xs text-fg-muted">
           회신·전달할 때도 서명이 유지되는지 한 번 확인해 보세요. 메일 클라이언트가 서식을
           지우는 경우가 가장 많이 발견되는 지점입니다.
         </p>

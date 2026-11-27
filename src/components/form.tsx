@@ -3,7 +3,7 @@
 /**
  * 폼 기본 요소.
  *
- * 타이포·여백은 토큰 유틸(text-body, gap-tight …)만 씁니다. 여기서 임의 크기를
+ * 타이포·여백은 토큰 유틸(text-sm, gap-tight …)만 씁니다. 여기서 임의 크기를
  * 한 번 허용하면 화면 전체로 번집니다.
  */
 
@@ -20,11 +20,11 @@ export function SectionHeader({
     <div className="mb-section">
       <div className="flex items-baseline gap-sibling">
         {/* 섹션 번호는 primary 를 쓰는 몇 안 되는 자리입니다. */}
-        <span className="text-caption-bold text-primary">{number}</span>
-        <h2 className="text-title">{title}</h2>
+        <span className="text-sm font-semibold text-brand-fg tabular-nums">{number}</span>
+        <h2 className="text-base font-semibold">{title}</h2>
       </div>
       {description ? (
-        <p className="mt-tight text-caption text-sub-text">{description}</p>
+        <p className="mt-tight text-xs text-fg-muted">{description}</p>
       ) : null}
     </div>
   );
@@ -44,18 +44,18 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-tight">
-      <label htmlFor={htmlFor} className="text-caption text-sub-text">
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={htmlFor} className="text-xs font-medium text-fg-muted">
         {label}
       </label>
       {children}
-      {/* 에러도 색이 아니라 문구로 알립니다. 빨강을 추가하면 팔레트가 늘어납니다. */}
+      {/* 오류는 danger 상태 토큰으로 냅니다. 칸 테두리도 같은 색으로 바뀝니다. */}
       {error ? (
-        <p id={`${htmlFor}-error`} role="alert" className="text-caption text-text">
+        <p id={`${htmlFor}-error`} role="alert" className="mt-tight text-xs text-danger-fg">
           {error}
         </p>
       ) : hint ? (
-        <p className="text-caption text-sub-text">{hint}</p>
+        <p className="text-xs text-fg-muted">{hint}</p>
       ) : null}
     </div>
   );
@@ -84,13 +84,14 @@ export function Input({ suffix, icon, action, invalid, className = "", ...props 
       aria-invalid={invalid || undefined}
       aria-describedby={invalid ? `${props.id}-error` : undefined}
       className={[
-        "h-12 w-full rounded-card border bg-bg px-group text-body text-text",
-        "placeholder:text-sub-text focus:outline-none focus:border-text",
+        "h-10 w-full rounded-md border bg-surface px-3 text-sm text-fg",
+        "placeholder:text-fg-subtle hover:border-fg-subtle",
+        "focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand",
         // 비활성(회사 정보 · 회원)은 배경으로 구분합니다. 값은 그대로 읽을 수 있어야 합니다.
-        "disabled:bg-sub-bg disabled:text-sub-text",
-        invalid ? "border-text" : "border-border",
+        "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-muted disabled:hover:border-line-strong",
+        invalid ? "border-danger hover:border-danger" : "border-line-strong",
         suffix || action ? "pr-block" : "",
-        icon ? "pl-block" : "",
+        icon ? "pl-9" : "",
         className,
       ].join(" ")}
     />
@@ -102,18 +103,18 @@ export function Input({ suffix, icon, action, invalid, className = "", ...props 
     <div className="relative">
       {field}
       {icon ? (
-        <span className="pointer-events-none absolute inset-y-0 left-group flex items-center text-sub-text">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-fg-subtle">
           {icon}
         </span>
       ) : null}
       {suffix ? (
-        <span className="pointer-events-none absolute inset-y-0 right-group flex items-center text-caption text-sub-text">
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-fg-muted">
           {suffix}
         </span>
       ) : null}
       {/*
         right-tight 로 붙이는 이유: 안에 들어오는 버튼이 손가락에 맞는 크기(44px)를
-        가지려면 자기 여백이 필요한데, right-group(16px) 에 두면 그 여백까지 더해져
+        가지려면 자기 여백이 필요한데, right-3(12px) 에 두면 그 여백까지 더해져
         인풋 테두리 밖으로 밀려납니다.
       */}
       {action ? (
@@ -133,9 +134,10 @@ export function Select({
       {...props}
       aria-invalid={invalid || undefined}
       className={[
-        "h-12 w-full rounded-card border bg-bg px-group text-body text-text",
-        "focus:outline-none focus:border-text disabled:bg-sub-bg disabled:text-sub-text",
-        invalid ? "border-text" : "border-border",
+        "h-10 w-full rounded-md border bg-surface px-3 text-sm text-fg hover:border-fg-subtle",
+        "focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand",
+        "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-muted disabled:hover:border-line-strong",
+        invalid ? "border-danger hover:border-danger" : "border-line-strong",
         className,
       ].join(" ")}
     />
@@ -177,11 +179,11 @@ export function Checkbox({
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-tight h-5 w-5 shrink-0 accent-primary"
+        className="mt-0.5 size-4 shrink-0 accent-brand"
       />
       <span>
-        <span className="text-body text-text">{label}</span>
-        {hint ? <span className="mt-tight block text-caption text-sub-text">{hint}</span> : null}
+        <span className="text-sm text-fg">{label}</span>
+        {hint ? <span className="mt-tight block text-xs text-fg-muted">{hint}</span> : null}
       </span>
     </label>
   );

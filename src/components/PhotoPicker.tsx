@@ -136,14 +136,14 @@ export function PhotoPicker({ employeeId, photoUrl, onChange }: Props) {
 
   return (
     <div className="flex flex-col gap-tight">
-      <span className="text-caption text-sub-text">프로필 사진</span>
+      <span className="text-xs font-medium text-fg-muted">프로필 사진</span>
 
-      <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-sub-bg">
+      <div className="flex size-24 items-center justify-center overflow-hidden rounded-full bg-surface-2">
         {photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- 우리 라우트가 내주는 이미지라 next/image 의 최적화가 필요 없습니다.
           <img src={photoUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <UserIcon className="h-10 w-10 text-sub-text" />
+          <UserIcon className="size-10 text-fg-subtle" />
         )}
       </div>
 
@@ -172,7 +172,7 @@ export function PhotoPicker({ employeeId, photoUrl, onChange }: Props) {
           type="button"
           disabled={busy}
           onClick={() => inputRef.current?.click()}
-          className="h-9 rounded-card border border-border px-group text-caption-bold text-text disabled:text-sub-text"
+          className="h-9 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-3 text-xs font-medium disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-3 disabled:text-fg-faint"
         >
           {busy ? "처리 중…" : photoUrl ? "변경" : "사진 올리기"}
         </button>
@@ -181,7 +181,7 @@ export function PhotoPicker({ employeeId, photoUrl, onChange }: Props) {
             type="button"
             disabled={busy}
             onClick={remove}
-            className="h-9 rounded-card border border-border px-group text-caption text-sub-text disabled:text-sub-text"
+            className="h-9 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-3 text-xs font-medium disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-3 disabled:text-fg-faint"
           >
             지우기
           </button>
@@ -189,13 +189,13 @@ export function PhotoPicker({ employeeId, photoUrl, onChange }: Props) {
       </div>
 
       {error ? (
-        <p role="alert" className="max-w-24 text-caption text-text">
+        <p role="alert" className="max-w-24 text-xs text-danger-fg">
           {error}
         </p>
       ) : null}
 
       {/* 저장 버튼과 따로 도는 걸 알려 줍니다. 안 그러면 저장 전에 닫아도 되는지 모릅니다. */}
-      <p className="text-caption text-sub-text">사진은 고르는 즉시 저장됩니다.</p>
+      <p className="text-xs text-fg-muted">사진은 고르는 즉시 저장됩니다.</p>
     </div>
   );
 }

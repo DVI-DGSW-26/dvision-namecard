@@ -2,9 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveEditTarget } from "@/lib/current-employee";
 import { readOrgLists } from "@/lib/org-store";
-import { BottomTabBar } from "@/components/BottomTabBar";
 import { SignatureStaleBanner } from "@/components/SignatureStaleBanner";
-import { TopNav } from "@/components/TopNav";
+import { AppShell } from "@/components/AppShell";
 import { EditProfileForm } from "./EditProfileForm";
 
 /**
@@ -31,11 +30,11 @@ function Notice({
 }) {
   return (
     <main className="mx-auto w-full max-w-[720px] px-group py-section sm:px-section sm:py-block">
-      <p className="text-caption text-sub-text">내 명함</p>
-      <h1 className="mt-tight text-display">{title}</h1>
-      <p className="mt-group text-body text-sub-text">{detail}</p>
+      <p className="text-xs text-fg-muted">내 명함</p>
+      <h1 className="mt-tight text-xl font-semibold">{title}</h1>
+      <p className="mt-group text-sm text-fg-muted">{detail}</p>
       {action ? (
-        <Link href={action.href} className="mt-section inline-block text-caption-bold text-primary">
+        <Link href={action.href} className="mt-section inline-block text-xs font-semibold text-brand-fg">
           {action.label}
         </Link>
       ) : null}
@@ -95,8 +94,7 @@ export default async function EditPage({ searchParams }: Props) {
   const org = await orgPromise;
 
   return (
-    <>
-      <TopNav role={role} email={employee.email} current="/edit" />
+    <AppShell role={role} email={employee.email} current="/edit" title="내 명함">
       {/*
         남의 명함을 보고 있을 때는 안 답니다 — 그 사람의 서명이 낡았는지는 여기서
         판정할 수 없고(복사 기록은 그 사람 브라우저에 있습니다), 관리자가 대신
@@ -110,20 +108,19 @@ export default async function EditPage({ searchParams }: Props) {
       )}
       {/* 관리자가 남의 명함을 열었을 때, 본인 것으로 착각하고 고치는 일이 없도록 표시합니다. */}
       {viewingOther ? (
-        <div className="border-b border-border bg-sub-bg">
+        <div className="border-b border-info-line bg-info-soft">
           {/* 좁은 화면에서는 안내 문구가 길어 링크가 밀려나므로 줄을 나눕니다. */}
-          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-group gap-y-tight px-group py-sibling sm:px-section">
-            <p className="text-caption text-sub-text">
+          <div className="flex flex-wrap items-center justify-between gap-x-group gap-y-tight px-4 py-sibling md:px-6">
+            <p className="text-sm text-info-fg">
               다른 임직원의 명함을 보고 있습니다 — {employee.nameKo} ({employee.email})
             </p>
-            <Link href="/edit" className="text-caption-bold text-primary">
+            <Link href="/edit" className="text-sm font-semibold text-brand-fg hover:underline">
               내 명함으로
             </Link>
           </div>
         </div>
       ) : null}
       <EditProfileForm role={role} employee={employee} company={company} org={org} />
-      <BottomTabBar role={role} current="/edit" />
-    </>
+    </AppShell>
   );
 }

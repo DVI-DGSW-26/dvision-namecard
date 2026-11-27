@@ -13,6 +13,36 @@ import { SignJWT, jwtVerify } from "jose";
 /** 로그인 진행 중(state·nonce·verifier)에만 쓰는 임시 쿠키 */
 export const SSO_PENDING_COOKIE = "dvi_sso_pending";
 
+/**
+ * SSO 로그인 유지 — refresh_token 으로 짧은 세션을 계속 연장합니다.
+ *
+ * 쿠키 유효기간만 늘리면 퇴사·권한 변경이 그 기간 동안 반영되지 않습니다. 그래서
+ * SSO 로 들어온 세션(dvi_session)은 15분짜리로 발급하고, 끝나기 전에 Keycloak 에
+ * 갱신을 받아 다시 15분을 붙입니다. 갱신이 실패하면 세션을 지우고 통합 로그인으로 보냅니다.
+ *
+ * Keycloak 의 refresh token 은 한 번만 쓸 수 있습니다. 두 요청이 동시에 갱신하면
+ * 하나는 실패하고 세션이 끊기므로, 갱신은 /api/auth/refresh 한 곳에서만 합니다.
+ */
+export const SSO_REFRESH_COOKIE = "dvi_rt";
+/** refresh token 은 갱신 경로에만 실려 갑니다. 다른 요청·화면 스크립트에는 보이지 않습니다. */
+export const SSO_REFRESH_PATH = "/api/auth/refresh";
+/**
+ * SSO 세션이 끝나는 시각(초). 토큰이 아니라 시각만 담습니다 — 화면이 갱신할 때를 잡고,
+ * proxy 가 "갱신으로 이어 갈 수 있는 세션인지" 를 아는 데 씁니다. refresh token 과 같이 끝납니다.
+ */
+export const SSO_EXP_COOKIE = "dvi_sso_exp";
+/** 통합 로그인에서 방금 돌아왔다는 표시. 이 사이 또 실패하면 다시 보내지 않고 멈춥니다. */
+export const SSO_BACK_COOKIE = "dvi_sso_back";
+
+/** SSO 세션 길이. 퇴사·권한 변경이 늦어도 이 시간 안에 반영됩니다. */
+export const SSO_SESSION_SECONDS = 15 * 60;
+/** 세션이 이만큼 남았을 때부터 갱신합니다. 그 전에 온 갱신 요청은 Keycloak 에 묻지 않습니다. */
+export const SSO_RENEW_BEFORE_SECONDS = 5 * 60;
+/** 로그인하고 돌아와서 이 시간 안에 또 실패하면 무한 반복으로 보고 멈춥니다. */
+export const SSO_BACK_SECONDS = 60;
+/** refresh_expires_in 이 없거나 0(오프라인 토큰)일 때 쓰는 refresh token 수명 */
+export const SSO_REFRESH_FALLBACK_SECONDS = 12 * 60 * 60;
+
 export interface DiscoveryDoc {
   issuer: string;
   authorization_endpoint: string;
@@ -91,6 +121,8 @@ export interface SsoPending {
   nonce: string;
   verifier: string;
   next: string;
+  /** authentication_expired 로 한 번 다시 시작한 로그인인지 (다시 시작은 한 번만) */
+  retried?: boolean;
 }
 
 /** 로그인 진행 상태를 서명해 임시 쿠키 값으로 만듭니다. 10분만 유효합니다. */
@@ -118,6 +150,7 @@ export async function verifyPending(token: string | undefined): Promise<SsoPendi
       nonce: payload.nonce,
       verifier: payload.verifier,
       next: typeof payload.next === "string" ? payload.next : "/edit",
+      retried: payload.retried === true,
     };
   } catch {
     return null;

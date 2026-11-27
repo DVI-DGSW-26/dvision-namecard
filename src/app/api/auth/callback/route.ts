@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createSession } from "@/lib/auth";
 import {
   SSO_PENDING_COOKIE,
   decodeJwt,
@@ -8,14 +7,16 @@ import {
   type TokenClaims,
 } from "@/lib/oidc";
 import { safeRedirect } from "@/lib/safe-redirect";
-import { findOrLinkEmployee } from "@/lib/sso";
+import { markSsoReturn, setSsoSession, ssoAccount, type TokenResponse } from "@/lib/sso-session";
 
 /**
  * GET /api/auth/callback — 사내 통합 로그인 결과 처리.
  *
  * 검증(state · iss · aud · nonce · exp · employee 롤)을 통과하면 기존 세션
- * 체계(dvi_session)를 그대로 발급합니다 — 이후 화면·권한 검사 코드는 SSO 를
- * 모릅니다. 명함 연결은 lib/sso.ts 가 합니다 (인사 이메일).
+ * 쿠키(dvi_session)를 발급합니다 — 이후 화면·권한 검사 코드는 SSO 를 모릅니다.
+ * 명함 연결은 lib/sso.ts 가 합니다 (인사 이메일).
+ *
+ * 세션은 15분짜리이고 refresh token 으로 연장합니다 (lib/sso-session.ts).
  *
  * Node 런타임입니다 (Route Handler 기본값).
  */
@@ -36,7 +37,18 @@ export async function GET(req: NextRequest) {
   }
 
   const params = req.nextUrl.searchParams;
+  const pending = await verifyPending(req.cookies.get(SSO_PENDING_COOKIE)?.value);
   if (params.get("error")) {
+    /*
+      로그인 탭을 여러 개 열어 둔 상태에서 생기는 오류입니다. 다시 시도하면 바로
+      들어가지므로 오류 화면 대신 로그인을 한 번만 다시 시작합니다.
+    */
+    if (params.get("error_description") === "authentication_expired" && !pending?.retried) {
+      const retry = new URL("/api/auth/sso", req.nextUrl.origin);
+      retry.searchParams.set("next", safeRedirect(pending?.next));
+      retry.searchParams.set("retried", "1");
+      return NextResponse.redirect(retry, 302);
+    }
     return fail(
       req,
       `통합 로그인에서 거절되었습니다. (${params.get("error_description") || params.get("error")})`,
@@ -45,7 +57,6 @@ export async function GET(req: NextRequest) {
 
   const code = params.get("code");
   const state = params.get("state");
-  const pending = await verifyPending(req.cookies.get(SSO_PENDING_COOKIE)?.value);
   if (!code || !state || !pending || pending.state !== state) {
     return fail(req, "로그인 정보가 없거나 만료되었습니다. 다시 시도해주세요.");
   }
@@ -71,7 +82,7 @@ export async function GET(req: NextRequest) {
     return fail(req, `통합 로그인 서버가 토큰 발급을 거절했습니다 (${tokenRes.status}). 운영 주소에서 시도해주세요.`);
   }
 
-  const token = (await tokenRes.json()) as { id_token?: string; access_token?: string };
+  const token = (await tokenRes.json()) as TokenResponse;
   if (!token.id_token) return fail(req, "계정 정보를 받지 못했습니다.");
 
   let claims: TokenClaims;
@@ -95,28 +106,21 @@ export async function GET(req: NextRequest) {
   if (!claims.exp || claims.exp * 1000 < Date.now()) return fail(req, "계정 정보가 만료되었습니다.");
   if (!claims.sub) return fail(req, "계정 식별자가 없습니다.");
 
-  /* 재직자 확인 — 부서가 배정된 계정에만 employee 롤이 붙습니다 */
-  const realmRoles = [
-    ...(claims.realm_access?.roles ?? []),
-    ...(access?.realm_access?.roles ?? []),
-  ];
-  if (!realmRoles.includes("employee")) {
-    return fail(req, "재직 중이며 부서가 배정된 계정만 이용할 수 있습니다. 관리팀에 문의해주세요.");
-  }
+  /* 재직자 확인과 명함 연결 — 갱신 때도 같은 기준으로 다시 봅니다 */
+  const account = await ssoAccount(claims, access);
+  if (!account.ok) return fail(req, account.message);
 
-  /* 명함 연결 — 인사 이메일로 찾습니다 */
-  const auth = await findOrLinkEmployee(String(claims.email || ""));
-  if (!auth) {
-    return fail(req, "인사 시스템에서 직원 정보를 찾지 못했습니다. 관리팀에 문의해주세요.");
-  }
-
-  /* 기존 세션 체계를 그대로 사용 — remember 없이 12시간 */
-  await createSession(
-    { role: auth.role, employeeId: auth.employeeId, mustChangePassword: false },
-    false,
-  );
-
+  /*
+    30일 "로그인 유지" 쿠키는 쓰지 않습니다. 갱신 없이 오래 남으면 퇴사·권한 변경이
+    그동안 반영되지 않습니다. 15분 세션을 refresh token 으로 이어 갑니다.
+  */
   const res = NextResponse.redirect(new URL(safeRedirect(pending.next), req.nextUrl.origin), 302);
+  await setSsoSession(
+    res,
+    { role: account.auth.role, employeeId: account.auth.employeeId, mustChangePassword: false },
+    token,
+  );
+  markSsoReturn(res);
   res.cookies.set(SSO_PENDING_COOKIE, "", { path: "/", maxAge: 0 });
   return res;
 }

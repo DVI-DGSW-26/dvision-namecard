@@ -115,9 +115,9 @@ export function CompanyFields({ values, error, onChange, disabled, showOfficeHin
         /admin/org 의 '사업장' 탭에서 관리합니다. 명함에는 등록된 사업장이 전부 찍힙니다.
       */}
       {showOfficeHint ? (
-        <p className="text-caption text-sub-text">
+        <p className="text-xs text-fg-muted">
           주소는{" "}
-          <a href="/admin/org" className="text-caption-bold text-primary">
+          <a href="/admin/org" className="text-xs font-semibold text-brand-fg hover:underline">
             조직 관리 → 사업장
           </a>
           에서 관리합니다. 등록된 사업장이 명함에 전부 표시됩니다.
@@ -190,7 +190,7 @@ export function CompanyFields({ values, error, onChange, disabled, showOfficeHin
         명함 색.
 
         웹 카드가 아니라 **명함 이미지(card.png)** 의 이름·연락처 라벨 색입니다.
-        웹 카드는 디자인 토큰(text-primary)을 쓰기 때문에 여기서 바꿔도 화면 카드와
+        웹 카드는 디자인 토큰(text-brand-fg)을 쓰기 때문에 여기서 바꿔도 화면 카드와
         편집 미리보기는 그대로입니다. 그 사실을 안내에 적어 두지 않으면 "바꿨는데
         아무 일도 안 일어난다" 로 읽힙니다.
 
@@ -211,7 +211,7 @@ export function CompanyFields({ values, error, onChange, disabled, showOfficeHin
             // 형식이 깨진 값이 들어 있으면 색 상자가 검정으로 떨어집니다. 기본색을 보여 줍니다.
             value={/^#[0-9A-Fa-f]{6}$/.test(co.brandColor) ? co.brandColor : "#931B82"}
             onChange={(e) => set("brandColor", e.target.value.toUpperCase())}
-            className="h-12 w-14 shrink-0 cursor-pointer rounded-card border border-border bg-bg p-tight disabled:cursor-default"
+            className="h-10 w-14 shrink-0 cursor-pointer rounded-md border border-line-strong bg-surface p-tight disabled:cursor-not-allowed"
           />
           <Input
             id="co-brandColor"

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import { BottomTabBar } from "@/components/BottomTabBar";
 import { EmployeeTable } from "@/components/EmployeeTable";
-import { TopNav } from "@/components/TopNav";
+import { AppShell } from "@/components/AppShell";
 import { getSession } from "@/lib/auth";
 
 /**
@@ -19,13 +18,11 @@ export default async function AdminEmployeesPage() {
   if (session.role !== "admin") redirect("/edit");
 
   return (
-    <>
-      <TopNav role={session.role} current="/admin/employees" />
-      {/* 7열 표라 다른 화면(720·1000)보다 넓게, TopNav 와 같은 1440 에 맞춥니다. */}
-      <main className="mx-auto w-full max-w-[1440px] px-group py-section sm:px-section sm:py-block">
+    <AppShell role={session.role} current="/admin/employees" title="임직원 관리">
+      {/* 목록형 화면이라 폭 제한 없이 본문 전체를 씁니다(폼·상세형만 960px). */}
+      <div className="w-full p-4 md:p-6">
         <EmployeeTable />
-      </main>
-      <BottomTabBar role={session.role} current="/admin/employees" />
-    </>
+      </div>
+    </AppShell>
   );
 }

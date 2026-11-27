@@ -37,8 +37,8 @@ const STATUS_LABEL: Record<Status, string> = {
  * 테두리는 Border 토큰의 명시된 용도(배지 테두리)입니다.
  */
 const STATUS_STYLE: Record<Status, string> = {
-  ACTIVE: "text-caption-bold text-text",
-  RESIGNED: "text-caption text-sub-text",
+  ACTIVE: "text-xs font-semibold text-success-fg",
+  RESIGNED: "text-xs font-medium text-fg-muted",
 };
 
 const STATUS_OPTIONS: Status[] = ["ACTIVE", "RESIGNED"];
@@ -91,7 +91,7 @@ function toCsv(rows: EmployeeListItem[]): string {
   return [header.map(escape).join(","), ...lines].join("\r\n");
 }
 
-const CELL = "px-group py-sibling text-body text-text whitespace-nowrap";
+const CELL = "px-4 py-2 text-sm text-fg whitespace-nowrap";
 
 export function EmployeeTable() {
   const [search, setSearch] = useState("");
@@ -308,14 +308,13 @@ export function EmployeeTable() {
   }, [query]);
 
   return (
-    <div className="flex flex-col gap-section">
+    <div className="flex flex-col gap-group">
       <div className="flex flex-wrap items-start justify-between gap-group">
         <div>
-          <p className="text-caption text-sub-text">임직원 관리</p>
           {/* 숫자와 "명"이 갈라져 줄바꿈되지 않도록 한 덩어리로 둡니다. */}
-          <h1 className="mt-tight text-display whitespace-nowrap">
+          <h2 className="text-xl font-semibold whitespace-nowrap tabular-nums">
             직원 {total.toLocaleString("ko-KR")}명
-          </h1>
+          </h2>
         </div>
 
         {/* 직원 추가 버튼은 없습니다 — 입사자는 인사 시스템에 등록하면 여기 나타납니다. */}
@@ -324,7 +323,7 @@ export function EmployeeTable() {
             type="button"
             onClick={exportCsv}
             disabled={isExporting || total === 0}
-            className="h-12 flex-1 rounded-card border border-border px-group text-body whitespace-nowrap transition-colors hover:border-text disabled:cursor-not-allowed disabled:text-sub-text disabled:hover:border-border sm:flex-none"
+            className="h-10 flex-1 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-4 text-sm font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:border-transparent disabled:bg-surface-3 disabled:text-fg-faint disabled:hover:bg-surface-3 sm:flex-none"
           >
             {isExporting ? "내보내는 중…" : "CSV 내보내기"}
           </button>
@@ -340,7 +339,7 @@ export function EmployeeTable() {
             onChange={(event) => changeSearch(event.target.value)}
             placeholder="이름·이메일·부서 검색"
             aria-label="이름·이메일·부서 검색"
-            icon={<SearchIcon className="h-5 w-5" />}
+            icon={<SearchIcon className="size-[18px]" />}
           />
         </div>
 
@@ -381,15 +380,15 @@ export function EmployeeTable() {
         </div>
       </div>
 
-      {/* 에러도 색이 아니라 문구로 알립니다. 빨강을 추가하면 팔레트가 늘어납니다. */}
+      {/* 오류는 danger 상태 토큰으로 알립니다. */}
       {error ? (
-        <p role="alert" className="rounded-card bg-sub-bg px-group py-sibling text-caption text-text">
+        <p role="alert" className="rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger-fg">
           {error}
         </p>
       ) : null}
 
       {actionError ? (
-        <p role="alert" className="rounded-card bg-sub-bg px-group py-sibling text-caption text-text">
+        <p role="alert" className="rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger-fg">
           {actionError}
         </p>
       ) : null}
@@ -401,17 +400,17 @@ export function EmployeeTable() {
       */}
       <div className="flex flex-col gap-sibling md:hidden">
         {isLoading && items.length === 0 ? (
-          <p className="rounded-card border border-border px-group py-block text-center text-body text-sub-text">
+          <p className="rounded-xl border border-edge bg-surface px-4 py-10 text-center text-sm text-fg-subtle">
             불러오는 중…
           </p>
         ) : items.length === 0 ? (
-          <p className="rounded-card border border-border px-group py-block text-center text-body text-sub-text">
+          <p className="rounded-xl border border-edge bg-surface px-4 py-10 text-center text-sm text-fg-subtle">
             조건에 맞는 직원이 없습니다.
           </p>
         ) : (
           <ul className="flex flex-col gap-sibling">
             {items.map((row) => (
-              <li key={row.id} className="flex gap-sibling rounded-card border border-border p-group">
+              <li key={row.id} className="flex gap-sibling rounded-xl border border-edge bg-surface p-4">
                 {/* min-w-0 이 없으면 긴 이메일이 카드 밖으로 삐져나갑니다. */}
                 <div className="flex min-w-0 flex-1 flex-col gap-tight">
                   <div className="flex items-start justify-between gap-sibling">
@@ -421,22 +420,22 @@ export function EmployeeTable() {
                     >
                       <span
                         aria-hidden
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sub-bg text-caption text-sub-text"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand-fg"
                       >
                         {[...row.nameKo][0] ?? "?"}
                       </span>
-                      <span className="truncate text-body-bold">{row.nameKo}</span>
+                      <span className="truncate text-sm font-semibold">{row.nameKo}</span>
                     </Link>
-                    <span className={`shrink-0 rounded-card border border-border px-sibling py-tight whitespace-nowrap ${STATUS_STYLE[row.status]}`}>
+                    <span className={`shrink-0 rounded-md border border-line px-sibling py-tight whitespace-nowrap ${STATUS_STYLE[row.status]}`}>
                       {STATUS_LABEL[row.status]}
                     </span>
                   </div>
 
-                  <p className="text-caption text-sub-text">
+                  <p className="text-xs text-fg-muted">
                     {[row.department, row.rank].filter(Boolean).join(" · ")}
                   </p>
-                  <p className="truncate text-caption text-sub-text">{row.email ?? "—"}</p>
-                  <p className="text-caption text-sub-text">{formatDate(row.updatedAt)}</p>
+                  <p className="truncate text-xs text-fg-muted">{row.email ?? "—"}</p>
+                  <p className="text-xs text-fg-muted">{formatDate(row.updatedAt)}</p>
 
                   {/* 좁은 화면에서도 권한을 바꿀 수 있어야 합니다 — 관리자가 자리에 없을 때 폰으로 처리합니다. */}
                   <select
@@ -444,7 +443,7 @@ export function EmployeeTable() {
                     disabled={isActing}
                     onChange={(event) => changeRowRole(row, event.target.value as "MEMBER" | "ADMIN")}
                     aria-label={`${row.nameKo} 권한`}
-                    className="mt-tight h-9 w-full rounded-card border border-border bg-bg px-sibling text-caption focus:border-text focus:outline-none disabled:text-sub-text"
+                    className="mt-tight h-9 w-full rounded-md border border-line-strong bg-surface px-sibling text-xs hover:border-fg-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-faint"
                   >
                     <option value="MEMBER">직원</option>
                     <option value="ADMIN">관리자</option>
@@ -455,14 +454,14 @@ export function EmployeeTable() {
                       type="button"
                       onClick={() => issuePassword(row)}
                       disabled={isActing}
-                      className="h-9 rounded-card border border-border px-group text-caption text-text"
+                      className="h-9 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-3 text-xs font-medium"
                     >
                       {row.hasPassword ? "비번 재발급" : "비번 발급"}
                     </button>
                     <button
                       type="button"
                       onClick={() => setSlugTarget(row)}
-                      className="h-9 rounded-card border border-border px-group text-caption text-text"
+                      className="h-9 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-3 text-xs font-medium"
                     >
                       주소
                     </button>
@@ -474,15 +473,15 @@ export function EmployeeTable() {
         )}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-card border border-border md:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-edge bg-surface md:block">
         <table className="w-full border-collapse text-left">
-          <thead className="bg-sub-bg">
+          <thead className="bg-surface-2">
             <tr>
               {["이름", "부서", "직위", "이메일", "수정일", "상태", "권한", "관리"].map((label) => (
                 <th
                   key={label}
                   scope="col"
-                  className="px-group py-sibling text-caption text-sub-text whitespace-nowrap"
+                  className="px-4 py-3 text-sm font-medium text-fg-muted whitespace-nowrap"
                 >
                   {label}
                 </th>
@@ -492,45 +491,45 @@ export function EmployeeTable() {
           <tbody>
             {isLoading && items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-group py-block text-center text-body text-sub-text">
+                <td colSpan={8} className="px-4 py-10 text-center text-sm text-fg-subtle">
                   불러오는 중…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-group py-block text-center text-body text-sub-text">
+                <td colSpan={8} className="px-4 py-10 text-center text-sm text-fg-subtle">
                   조건에 맞는 직원이 없습니다.
                 </td>
               </tr>
             ) : (
               items.map((row) => (
-                <tr key={row.id} className="border-t border-border">
+                <tr key={row.id} className="border-t border-line hover:bg-surface-2">
                   <td className={CELL}>
                     {/* 이름을 누르면 관리자가 그 사람 명함을 대신 편집합니다. */}
                     <Link
                       href={`/edit?e=${encodeURIComponent(row.slug)}`}
-                      className="flex items-center gap-sibling hover:text-primary"
+                      className="flex items-center gap-sibling hover:text-brand-fg"
                     >
                       <span
                         aria-hidden
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sub-bg text-caption text-sub-text"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand-fg"
                       >
                         {[...row.nameKo][0] ?? "?"}
                       </span>
-                      <span className="text-body-bold">{row.nameKo}</span>
+                      <span className="text-sm font-semibold">{row.nameKo}</span>
                     </Link>
                   </td>
                   <td className={CELL}>{row.department ?? "—"}</td>
                   <td className={CELL}>{row.rank ?? "—"}</td>
                   <td className={CELL}>{row.email ?? "—"}</td>
-                  <td className="px-group py-sibling text-body text-sub-text whitespace-nowrap">
+                  <td className="px-4 py-2 text-sm text-fg-muted whitespace-nowrap tabular-nums">
                     {formatDate(row.updatedAt)}
                   </td>
-                  <td className={`px-group py-sibling whitespace-nowrap ${STATUS_STYLE[row.status]}`}>
+                  <td className={`px-4 py-2 whitespace-nowrap ${STATUS_STYLE[row.status]}`}>
                     {/* 재직 상태는 인사 시스템 값이라 보여 주기만 합니다. */}
                     {STATUS_LABEL[row.status]}
                   </td>
-                  <td className="px-group py-sibling">
+                  <td className="px-4 py-2">
                     {/*
                       권한은 선택 상자입니다. 예전에는 어떤 공용 비밀번호로
                       들어왔느냐로 갈려서, 권한을 옮기려면 비밀번호를 알려줘야 했습니다.
@@ -543,13 +542,13 @@ export function EmployeeTable() {
                         changeRowRole(row, event.target.value as "MEMBER" | "ADMIN")
                       }
                       aria-label={`${row.nameKo} 권한`}
-                      className="h-9 rounded-card border border-border bg-bg px-sibling text-caption whitespace-nowrap focus:border-text focus:outline-none disabled:text-sub-text"
+                      className="h-9 rounded-md border border-line-strong bg-surface px-sibling text-xs whitespace-nowrap hover:border-fg-subtle focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-faint"
                     >
                       <option value="MEMBER">직원</option>
                       <option value="ADMIN">관리자</option>
                     </select>
                   </td>
-                  <td className="px-group py-sibling">
+                  <td className="px-4 py-2">
                     <div className="flex gap-tight whitespace-nowrap">
                       {/*
                         비밀번호를 발급해야 로그인할 수 있습니다. 아직 못 받은 사람은
@@ -559,8 +558,8 @@ export function EmployeeTable() {
                         type="button"
                         onClick={() => issuePassword(row)}
                         disabled={isActing}
-                        className={`h-9 rounded-card border px-sibling text-caption hover:border-text ${
-                          row.hasPassword ? "border-border text-text" : "border-text text-text"
+                        className={`h-9 rounded-md border bg-surface px-3 text-xs font-medium transition-colors hover:bg-surface-2 ${
+                          row.hasPassword ? "border-line-strong text-fg-muted hover:text-fg" : "border-brand text-brand-fg"
                         }`}
                       >
                         {row.hasPassword ? "비번 재발급" : "비번 발급"}
@@ -568,7 +567,7 @@ export function EmployeeTable() {
                       <button
                         type="button"
                         onClick={() => setSlugTarget(row)}
-                        className="h-9 rounded-card border border-border px-sibling text-caption text-text hover:border-text"
+                        className="h-9 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-3 text-xs font-medium"
                       >
                         주소
                       </button>
@@ -590,31 +589,31 @@ export function EmployeeTable() {
         평문으로 계속 남습니다. 전달 방법은 관리자가 정하는 편이 낫습니다.
       */}
       {issued ? (
-        <div className="rounded-card border border-text px-group py-group">
-          <p className="text-caption-bold text-text">
+        <div className="rounded-xl border border-success-line bg-success-soft p-4">
+          <p className="text-sm font-semibold text-success-fg">
             {issued.nameKo} 님의 초기 비밀번호를 발급했습니다
           </p>
-          <p className="mt-tight text-caption text-sub-text">
+          <p className="mt-tight text-xs text-fg-muted">
             이 창을 닫으면 다시 볼 수 없습니다. 본인에게 전달하고, 놓쳤으면 다시 발급하세요.
             받은 사람은 첫 로그인에서 비밀번호를 바꾸게 됩니다.
           </p>
           <div className="mt-group flex flex-wrap items-center gap-group">
-            <code className="rounded-card bg-sub-bg px-group py-sibling text-body-bold text-text">
+            <code className="rounded-md border border-line-strong bg-surface px-3 py-2 text-sm font-semibold text-fg">
               {issued.password}
             </code>
-            <span className="text-caption text-sub-text">{issued.email}</span>
+            <span className="text-xs text-fg-muted">{issued.email}</span>
             <div className="ml-auto flex gap-sibling">
               <button
                 type="button"
                 onClick={() => navigator.clipboard?.writeText(issued.password)}
-                className="h-10 rounded-card border border-border px-group text-caption-bold text-text"
+                className="h-9 rounded-md border border-line-strong bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg px-3 text-xs font-medium"
               >
                 복사
               </button>
               <button
                 type="button"
                 onClick={() => setIssued(null)}
-                className="h-10 rounded-card bg-primary px-group text-caption-bold text-white"
+                className="h-9 rounded-md bg-brand px-3 text-xs font-medium text-on-brand"
               >
                 전달 완료
               </button>
@@ -624,7 +623,7 @@ export function EmployeeTable() {
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-group">
-        <p className="text-caption text-sub-text">
+        <p className="text-xs text-fg-muted tabular-nums">
           {`${firstRow} – ${lastRow} / ${total.toLocaleString("ko-KR")}`}
         </p>
 
@@ -637,14 +636,14 @@ export function EmployeeTable() {
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="h-9 rounded-card border border-border px-sibling text-caption whitespace-nowrap transition-colors hover:border-text disabled:text-sub-text disabled:hover:border-border"
+            className="h-9 rounded-md px-3 text-xs font-medium text-fg-muted whitespace-nowrap transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:text-fg-faint disabled:hover:bg-transparent"
           >
             이전
           </button>
 
           {pageTokens(page, lastPage).map((token, index) =>
             token === "gap" ? (
-              <span key={`gap-${index}`} className="px-sibling text-caption text-sub-text">
+              <span key={`gap-${index}`} className="px-sibling text-xs text-fg-muted">
                 …
               </span>
             ) : (
@@ -657,8 +656,8 @@ export function EmployeeTable() {
                 // 배경으로 깔지 않고, primary 예산은 CTA 몫으로 남깁니다.
                 className={
                   token === page
-                    ? "h-9 min-w-9 rounded-card border border-text px-sibling text-caption-bold text-text"
-                    : "h-9 min-w-9 rounded-card border border-border px-sibling text-caption text-sub-text transition-colors hover:border-text"
+                    ? "h-9 min-w-9 rounded-md bg-brand-soft px-sibling text-xs font-semibold text-brand-fg tabular-nums"
+                    : "h-9 min-w-9 rounded-md px-sibling text-xs font-medium text-fg-muted tabular-nums transition-colors hover:bg-surface-2 hover:text-fg"
                 }
               >
                 {token}
@@ -670,7 +669,7 @@ export function EmployeeTable() {
             type="button"
             onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
             disabled={page >= lastPage}
-            className="h-9 rounded-card border border-border px-sibling text-caption whitespace-nowrap transition-colors hover:border-text disabled:text-sub-text disabled:hover:border-border"
+            className="h-9 rounded-md px-3 text-xs font-medium text-fg-muted whitespace-nowrap transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:text-fg-faint disabled:hover:bg-transparent"
           >
             다음
           </button>

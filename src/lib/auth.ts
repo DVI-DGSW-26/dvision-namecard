@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { api, apiOrNull, ensureCards, json } from "./api";
+import { SSO_BACK_COOKIE, SSO_EXP_COOKIE, SSO_REFRESH_COOKIE, SSO_REFRESH_PATH } from "./oidc";
 import { hashPassword, verifyPassword } from "./password";
 import {
   SESSION_COOKIE,
@@ -148,8 +149,12 @@ export async function getSession(): Promise<Session | null> {
   return verifySessionToken(token);
 }
 
-/** 세션 쿠키를 제거합니다. */
+/** 세션 쿠키를 제거합니다. SSO 로 들어왔으면 refresh token 도 함께 지워 다시 갱신되지 않게 합니다. */
 export async function destroySession(): Promise<void> {
   const store = await cookies();
   store.delete(SESSION_COOKIE);
+  // 쿠키는 심을 때의 Path 로 지워야 지워집니다
+  store.set(SSO_REFRESH_COOKIE, "", { path: SSO_REFRESH_PATH, maxAge: 0 });
+  store.set(SSO_EXP_COOKIE, "", { path: "/", maxAge: 0 });
+  store.set(SSO_BACK_COOKIE, "", { path: "/", maxAge: 0 });
 }

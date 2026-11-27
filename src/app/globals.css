@@ -1,75 +1,108 @@
 @import "tailwindcss";
 
 /*
- * 디자인 토큰 — src/config/tokens.ts 와 같은 값을 담습니다. 한쪽만 바꾸면
- * 화면과 서명 HTML 의 색이 어긋납니다.
+ * 디자인 토큰 — DVISION 공통 디자인 기준(v1.3).
  *
- * Primary 는 화면의 5% 이내로만. 섹션 번호·CTA·링크·서명 세로선에만 쓰고,
- * 나머지 위계는 크기·굵기·여백으로 만드세요.
+ * 사내 화면은 역할 이름(canvas · surface · fg · brand …)만 씁니다. hex 를 화면 코드에
+ * 직접 적지 마세요. 서비스마다 다른 값은 brand 6종뿐입니다.
  */
 @theme {
-  /* ---- Color ---- */
-  --color-primary: #931b82;
-  --color-primary-hover: #6a0f5d;
-  --color-primary-soft: #f3e8f7;
+  --font-sans:
+    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Malgun Gothic", sans-serif;
+
+  /* ---- 공통 중립 토큰 — 서비스별로 바꾸지 않습니다 ---- */
+  --color-canvas: #f2f3f7;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f5f7;
+  --color-surface-3: #e5e7eb;
+  --color-line: #eceef1;
+  --color-line-strong: #d1d5db;
+  --color-edge: #e6e8ec;
+  --color-fg: #1c1f26;
+  --color-fg-muted: #5f6673;
+  --color-fg-subtle: #8e95a1;
+  --color-fg-faint: #c4c8cf;
+
+  /*
+   * ---- 서비스 메인 컬러(brand 6종) ----
+   * dingdong 은 로고 심볼의 자주(#931b82)입니다. hover·soft 는 기존에 정해 둔 값을
+   * 그대로 씁니다. src/config/tokens.ts 의 primary 와 같은 값입니다 — 서명 HTML 과
+   * 명함 이미지가 그쪽을 읽으므로 바꿀 땐 둘 다 고치세요.
+   */
+  --color-brand: #931b82;
+  --color-brand-hover: #6a0f5d;
+  --color-on-brand: #ffffff;
+  --color-brand-fg: #931b82;
+  --color-brand-soft: #f3e8f7;
+  --color-brand-line: color-mix(in srgb, var(--color-brand) 30%, #ffffff);
+
+  /* ---- 상태 토큰 — 서비스별로 바꾸지 않습니다 ---- */
+  --color-danger: #e5484d;
+  --color-danger-hover: #cc3a3f;
+  --color-danger-fg: #c42b30;
+  --color-danger-soft: #fdecec;
+  --color-danger-line: #f7c8ca;
+  --color-warn: #c0801f;
+  --color-warn-fg: #a3610b;
+  --color-warn-soft: #fdf3e1;
+  --color-warn-line: #ecd9bc;
+  --color-success: #23936c;
+  --color-success-fg: #137a55;
+  --color-success-soft: #e3f7ef;
+  --color-success-line: #bddfd3;
+  --color-info: #3b7fe0;
+  --color-info-fg: #1f5fc4;
+  --color-info-soft: #e8f1fe;
+  --color-info-line: #c4d9f6;
+
+  /*
+   * ---- 공개 명함(ProfileCard · /c) 전용 ----
+   * 거래처가 보는 명함 화면은 사내 화면 공통 기준 밖에 둡니다(명함 시안을 따릅니다).
+   * 아래 이름은 그쪽만 씁니다 — 사내 화면에서는 위 토큰을 쓰세요. 메인 컬러는
+   * 위 brand 를 가리키게 둬서 정의가 한 곳에만 있게 합니다.
+   */
+  --color-primary: var(--color-brand);
+  --color-primary-hover: var(--color-brand-hover);
+  --color-primary-soft: var(--color-brand-soft);
   --color-text: #212121;
   --color-sub-text: #6b6b6b;
-  --color-border: #d1d5db;
+  --color-border: var(--color-line-strong);
   --color-sub-bg: #f5f5f5;
-  --color-bg: #ffffff;
+  --color-bg: var(--color-surface);
 
-  /* ---- Typography ----
-   * 크기 4단계 · 굵기 2단계. text-display / text-title / text-body /
-   * text-body-bold / text-caption / text-caption-bold 만 사용하세요.
-   * 자간과 행간은 토큰에 붙어 있으므로 따로 지정할 필요가 없습니다. */
   --text-display: 28px;
   --text-display--line-height: 1.6;
   --text-display--letter-spacing: -0.01em;
   --text-display--font-weight: 600;
-
   --text-title: 18px;
   --text-title--line-height: 1.6;
   --text-title--letter-spacing: -0.01em;
   --text-title--font-weight: 600;
-
   --text-body: 15px;
   --text-body--line-height: 1.6;
   --text-body--letter-spacing: -0.01em;
   --text-body--font-weight: 400;
-
   --text-body-bold: 15px;
   --text-body-bold--line-height: 1.6;
   --text-body-bold--letter-spacing: -0.01em;
   --text-body-bold--font-weight: 600;
-
   --text-caption: 13px;
   --text-caption--line-height: 1.6;
   --text-caption--letter-spacing: -0.01em;
   --text-caption--font-weight: 400;
-
   --text-caption-bold: 13px;
   --text-caption-bold--line-height: 1.6;
   --text-caption-bold--letter-spacing: -0.01em;
   --text-caption-bold--font-weight: 600;
+  --radius-card: 8px;
 
-  /* ---- Spacing ----
-   * 다섯 값만. 이름으로 쓰면(p-section, gap-sibling) 의도가 드러나고
-   * 12·20·32 같은 중간값이 섞이는 걸 리뷰에서 잡기 쉬워집니다.
-   * 숫자 유틸(p-4 등)은 아이콘 크기 같은 치수 지정용으로만 남겨둡니다. */
+  /* ---- 이름 있는 간격 ---- 모두 4px 배수입니다. */
   --spacing-tight: 4px;
   --spacing-sibling: 8px;
   --spacing-group: 16px;
   --spacing-section: 24px;
   --spacing-block: 40px;
-
-  /* ---- Shape ----
-   * TODO: 토큰 정의서 하단이 잘려 있어 임시값입니다. (tokens.ts 와 동일) */
-  --radius-card: 8px;
-
-  /* ---- Font ---- */
-  --font-sans:
-    Pretendard Variable, Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto,
-    "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 
 /*
@@ -92,13 +125,15 @@
   }
 }
 
-html {
-  /* 토큰의 기본 자간·행간. 개별 text-* 토큰이 덮어씁니다. */
-  letter-spacing: -0.01em;
+/* 1024px 이상에서 루트 17px — rem 으로 준 크기가 PC 에서 약 6% 커집니다. */
+@media (min-width: 1024px) {
+  html {
+    font-size: 106.25%;
+  }
 }
 
 body {
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--color-surface);
+  color: var(--color-fg);
   font-family: var(--font-sans);
 }
